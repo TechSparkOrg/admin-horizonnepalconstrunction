@@ -1,26 +1,188 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+*::-webkit-scrollbar {
+  width: 0;
+}
+* {
+  scrollbar-width: none;
 }
 
 @theme inline {
-  --color-background: var(--background);
+  /* Brand tokens — direct utility access: bg-brand-primary, text-brand-dark, etc. */
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-secondary: var(--brand-secondary);
+  --color-brand-dark: var(--brand-dark);
+  --color-off-white: var(--off-white);
+  --color-light-gray: var(--light-gray);
+  --color-mid-gray: var(--mid-gray);
+
+  /* Legacy fs-* aliases kept for existing components */
+  --color-fs-secondary: var(--brand-secondary);
+  --color-fs-btn1: var(--brand-primary);
+  --color-fs-bg4: var(--off-white);
+  --color-fs-border3: var(--light-gray);
+  --color-fs-text1: var(--foreground);
+  --color-fs-text2: var(--mid-gray);
+  --color-fs-text3: var(--mid-gray);
+
+  --font-heading: var(--font-sans);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--background);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* Brand palette — Horizon Nepal */
+  --brand-primary: oklch(0.564 0.215 25.6);   /* warm red/orange accent */
+  --brand-secondary: oklch(0.487 0.103 257.4); /* muted blue */
+  --brand-dark: oklch(0.293 0.065 257.8);     /* deep navy text */
+  --off-white: oklch(0.99 0.003 260);
+  --light-gray: oklch(0.925 0.008 70);
+  --mid-gray: oklch(0.44 0.012 75);
+
+  /* shadcn/ui tokens — mapped to brand palette */
+  --background: var(--off-white);
+  --foreground: var(--brand-dark);
+
+  --card: oklch(1 0 0);
+  --card-foreground: var(--brand-dark);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--brand-dark);
+
+  --primary: var(--brand-primary);
+  --primary-foreground: var(--off-white);
+
+  --secondary: var(--light-gray);
+  --secondary-foreground: var(--brand-dark);
+
+  --muted: var(--light-gray);
+  --muted-foreground: var(--mid-gray);
+
+  --accent: var(--brand-secondary);
+  --accent-foreground: var(--off-white);
+
+  --destructive: oklch(0.577 0.245 27.325);
+
+  --border: var(--light-gray);
+  --input: var(--light-gray);
+  --ring: var(--brand-primary);
+
+  --chart-1: var(--brand-primary);
+  --chart-2: var(--brand-secondary);
+  --chart-3: oklch(0.6 0.118 184.704);
+  --chart-4: oklch(0.511 0.096 186.391);
+  --chart-5: oklch(0.437 0.078 188.216);
+
+  --radius: 0.45rem;
+
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: var(--brand-dark);
+  --sidebar-primary: lab(20 23.9 -60.14);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: var(--brand-dark);
+  --sidebar-border: var(--light-gray);
+  --sidebar-ring: lab(20 23.9 -60.14);
+}
+
+.dark {
+  --brand-primary: oklch(0.624 0.215 25.6);
+  --brand-secondary: oklch(0.587 0.103 257.4);
+  --brand-dark: oklch(0.96 0.005 260);
+  --off-white: oklch(0.18 0.01 260);
+  --light-gray: oklch(0.28 0.012 260);
+  --mid-gray: oklch(0.65 0.012 75);
+
+  --background: var(--off-white);
+  --foreground: var(--brand-dark);
+
+  --card: oklch(0.22 0.012 260);
+  --card-foreground: var(--brand-dark);
+  --popover: oklch(0.22 0.012 260);
+  --popover-foreground: var(--brand-dark);
+
+  --primary: var(--brand-primary);
+  --primary-foreground: oklch(0.99 0.003 260);
+
+  --secondary: var(--light-gray);
+  --secondary-foreground: var(--brand-dark);
+
+  --muted: var(--light-gray);
+  --muted-foreground: var(--mid-gray);
+
+  --accent: var(--brand-secondary);
+  --accent-foreground: oklch(0.99 0.003 260);
+
+  --destructive: oklch(0.704 0.191 22.216);
+
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: var(--brand-primary);
+
+  --chart-1: var(--brand-primary);
+  --chart-2: var(--brand-secondary);
+  --chart-3: oklch(0.6 0.118 184.704);
+  --chart-4: oklch(0.511 0.096 186.391);
+  --chart-5: oklch(0.437 0.078 188.216);
+
+  --sidebar: oklch(0.22 0.012 260);
+  --sidebar-foreground: var(--brand-dark);
+  --sidebar-primary: lab(20 23.9 -60.14);
+  --sidebar-primary-foreground: oklch(0.99 0.003 260);
+  --sidebar-accent: oklch(0.28 0.012 260);
+  --sidebar-accent-foreground: var(--brand-dark);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: lab(20 23.9 -60.14);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }
