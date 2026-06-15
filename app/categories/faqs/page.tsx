@@ -59,8 +59,12 @@ export default function FaqCategoriesPage() {
       await fetchAll(1);
       setView("list");
       setEditing(null);
-    } catch {
-      toast.error("Something went wrong");
+    } catch (err) {
+      const data = (err as any)?.response?.data;
+      const msg = data
+        ? Object.values(data).flat().filter(Boolean).join(', ')
+        : "Something went wrong";
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
