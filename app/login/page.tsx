@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,15 +13,6 @@ import { useAuthStore } from "@/app/store/auth-store";
 export default function LoginPage() {
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const isLoading = useAuthStore((s) => s.isLoading);
-  const checkAuth = useAuthStore((s) => s.checkAuth);
-
-  useEffect(() => { checkAuth(); }, [checkAuth]);
-
-  useEffect(() => {
-    if (!isLoading && isAuthenticated) router.replace("/dashboard");
-  }, [isAuthenticated, isLoading, router]);
 
   const {
     register,
@@ -36,12 +26,11 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       await login(data);
+      router.push("/dashboard");
     } catch {
       setError("root", { message: "Invalid email or password" });
     }
   };
-
-  if (isLoading) return null;
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-fs-bg4 via-white to-fs-bg4/50 p-4 sm:p-6">

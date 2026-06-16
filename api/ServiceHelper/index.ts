@@ -97,10 +97,6 @@ class TokenManager {
     }
 }
 
-/* ─── Auth Redirect ─── */
-
-
-
 /* ─── Axios Factory ─── */
 
 const createAxiosClient = (isPrivate = false): AxiosInstance => {
@@ -142,7 +138,9 @@ const createAxiosClient = (isPrivate = false): AxiosInstance => {
             // Clear tokens and redirect on auth failure
             if (status === 401 || status === 403) {
                 await TokenManager.clearTokens();
-               window.location.href = '/login';
+                if (!isServer()) {
+                    window.location.href = '/login';
+                }
             }
 
             return Promise.reject(error);

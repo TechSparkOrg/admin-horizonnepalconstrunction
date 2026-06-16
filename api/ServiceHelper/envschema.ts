@@ -2,7 +2,7 @@ import * as yup from 'yup';
 
 
 const envSchema = yup.object({
-    NEXT_PUBLIC_API_URL: yup.string().url().required("NEXT_PUBLIC_API_URL is missing or invalid"),
+    NEXT_PUBLIC_API_URL: yup.string().url().default('http://127.0.0.1:8000'),
 
 });
 

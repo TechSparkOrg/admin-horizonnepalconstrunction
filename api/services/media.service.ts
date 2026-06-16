@@ -3,31 +3,54 @@ import type { MediaItem, MediaItemCreate, MediaItemUpdate } from '../types/media
 import type { PaginatedResponse } from '../types/consultation.types';
 
 export const MediaService = {
-  list: (page?: number) =>
-    apiPrivate.get<PaginatedResponse<MediaItem>>('/admin/media/', { params: page ? { page } : {} }).then(r => r.data),
+  list: (params?: Record<string, unknown>) =>
+    apiPrivate.get<PaginatedResponse<MediaItem>>('/admin/media', { params }).then(r => r.data),
+
+  listImages: (params?: Record<string, unknown>) =>
+    apiPrivate.get<PaginatedResponse<MediaItem>>('/admin/media', { params: { group_title: 'Images', ...params } }).then(r => r.data),
+
+  listVideos: (params?: Record<string, unknown>) =>
+    apiPrivate.get<PaginatedResponse<MediaItem>>('/admin/media', { params: { group_title: 'Videos', ...params } }).then(r => r.data),
+
+  listModels: (params?: Record<string, unknown>) =>
+    apiPrivate.get<PaginatedResponse<MediaItem>>('/admin/media', { params: { group_title: '3D Models', ...params } }).then(r => r.data),
+
+  listBanners: (params?: Record<string, unknown>) =>
+    apiPrivate.get<PaginatedResponse<MediaItem>>('/admin/media', { params: { banner: true, ...params } }).then(r => r.data),
 
   create: (data: MediaItemCreate) =>
-    apiPrivate.post<MediaItem>('/admin/media/', data).then(r => r.data),
+    apiPrivate.post<MediaItem>('/admin/media', data).then(r => r.data),
+
+  createImage: (data: MediaItemCreate) =>
+    apiPrivate.post<MediaItem>('/admin/media', { ...data, group_title: 'Images' }).then(r => r.data),
+
+  createVideo: (data: MediaItemCreate) =>
+    apiPrivate.post<MediaItem>('/admin/media', { ...data, group_title: 'Videos' }).then(r => r.data),
+
+  createModel: (data: MediaItemCreate) =>
+    apiPrivate.post<MediaItem>('/admin/media', { ...data, group_title: '3D Models' }).then(r => r.data),
+
+  createBanner: (data: MediaItemCreate) =>
+    apiPrivate.post<MediaItem>('/admin/media', { ...data, banner: true }).then(r => r.data),
 
   update: (id: string, data: MediaItemUpdate) =>
-    apiPrivate.put<MediaItem>(`/admin/media/${id}/`, data).then(r => r.data),
+    apiPrivate.patch<MediaItem>(`/admin/media/update/${id}`, data).then(r => r.data),
 
   delete: (id: string) =>
-    apiPrivate.delete<{ ok: boolean }>(`/admin/media/${id}/`).then(r => r.data),
+    apiPrivate.delete(`/admin/media/delete/${id}`).then(r => r.data),
 
-  uploadImage: (file: File, metadata?: Partial<MediaItemCreate>) => {
-    const fd = new FormData();
-    fd.append('file', file);
-    if (metadata) {
-      if (metadata.alt) fd.append('alt', metadata.alt);
-      if (metadata.meta_title) fd.append('meta_title', metadata.meta_title);
-      if (metadata.description) fd.append('description', metadata.description);
-      if (metadata.keywords) fd.append('keywords', metadata.keywords);
-      if (metadata.project_link) fd.append('project_link', metadata.project_link);
-      if (metadata.banner !== undefined) fd.append('banner', String(metadata.banner));
-      if (metadata.group_title) fd.append('group_title', metadata.group_title);
-      if (metadata.custom_fields) fd.append('custom_fields', JSON.stringify(metadata.custom_fields));
-    }
-    return apiPrivate.post<MediaItem>('/admin/media/upload/', fd, { headers: { 'Content-Type': null } }).then(r => r.data);
+  uploadImage: async (file: File, metadata?: Partial<MediaItemCreate>) => {
+    const { upload_url, media } = await apiPrivate.post<{ upload_url: string; media: MediaItem }>(
+      '/admin/media/request-upload',
+      { filename: file.name, ...metadata }
+    ).then(r => r.data);
+
+    await fetch(upload_url, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type },
+    });
+
+    return media;
   },
 };

@@ -60,11 +60,12 @@ const navLinks: NavLink[] = [
     ],
   },
 
-  { label: "Media", href: "/media", icon: ImageIcon,
+  { label: "Media", href: "/media/images", icon: ImageIcon,
     children: [
-        { label: "3D Models", href: "/dashboard/models"  },
-        { label: "Images", href: "/dashboard/images" },
-        { label: "Videos", href: "/dashboard/videos" },
+          { label: "Images", href: "/media/images" },
+        { label: "Videos", href: "/media/videos" },
+        { label: "3D Models", href: "/media/models"  },
+        { label: "Banners", href: "/media/banners" },
       ]
     
    },

@@ -2,11 +2,14 @@ export interface MediaItem {
   id: string;
   url: string;
   alt: string;
+  title: string;
+  slug: string;
   meta_title: string;
-  description: string;
+  meta_description: string;
   keywords: string;
   project_link: string;
   banner: boolean;
+  is_active: boolean;
   group_title: string;
   custom_fields: { key: string; value: string }[];
   created_at: string;
