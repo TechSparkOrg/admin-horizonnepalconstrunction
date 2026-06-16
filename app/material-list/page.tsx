@@ -4,19 +4,11 @@ import { useState, useEffect, useMemo } from "react";
 import { Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { MaterialListAdmin } from "@/api/services/material-list.service";
-import type { MaterialItem, UnitType } from "@/api/types/material-list.types";
-import { UNIT_TYPE_LABELS } from "@/api/types/material-list.types";
+import type { MaterialItem } from "@/api/types/material-list.types";
 import { MaterialListTable } from "@/components/page_ui/material-list-table";
 import { MaterialListForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/material-list-form";
 import type { MaterialListFormData } from "@/components/page_ui/material-list-form";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   InputGroup,
   InputGroupAddon,
@@ -31,10 +23,10 @@ function itemToForm(item: MaterialItem): MaterialListFormData {
   return {
     name: item.name,
     pricePerUnit: item.price_per_unit,
-    unitType: item.unit_type,
-    unit: item.unit,
+    attributeId: item.attribute_id,
+    unitValue: item.unit_value,
+    companyValue: item.company_value,
     photo: item.photo,
-    company: item.company,
     serviceCategoryId: item.service_category_id,
     isActive: item.is_active,
   };
@@ -43,11 +35,11 @@ function itemToForm(item: MaterialItem): MaterialListFormData {
 function formToPayload(form: MaterialListFormData) {
   return {
     name: form.name,
-    price_per_unit: form.pricePerUnit,
-    unit_type: form.unitType,
-    unit: form.unit,
+    price_per_unit: form.pricePerUnit === "" ? 0 : form.pricePerUnit,
+    attribute_id: form.attributeId,
+    unit_value: form.unitValue,
+    company_value: form.companyValue,
     photo: form.photo,
-    company: form.company,
     service_category_id: form.serviceCategoryId,
     is_active: form.isActive,
   };
@@ -62,15 +54,13 @@ export default function AdminMaterialListPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
-  const [unitTypeFilter, setUnitTypeFilter] = useState<UnitType | "all">("all");
   const [currentPage, setCurrentPage] = useState(1);
 
   const searchParams = useMemo(() => ({
     search: search || undefined,
-    unit_type: unitTypeFilter !== "all" ? unitTypeFilter : undefined,
     page: currentPage,
     page_size: ITEMS_PER_PAGE,
-  }), [search, unitTypeFilter, currentPage]);
+  }), [search, currentPage]);
 
   useEffect(() => {
     MaterialListAdmin.search(searchParams)
@@ -153,11 +143,6 @@ export default function AdminMaterialListPage() {
     setCurrentPage(1);
   };
 
-  const handleUnitTypeFilterChange = (v: string) => {
-    setUnitTypeFilter(v as UnitType | "all");
-    setCurrentPage(1);
-  };
-
   return (
     <>
       {view === "list" ? (
@@ -188,20 +173,6 @@ export default function AdminMaterialListPage() {
                 placeholder="Search"
               />
             </InputGroup>
-            <Select
-              value={unitTypeFilter}
-              onValueChange={handleUnitTypeFilterChange}
-            >
-              <SelectTrigger className="w-40 h-9 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {(Object.keys(UNIT_TYPE_LABELS) as UnitType[]).map((ut) => (
-                  <SelectItem key={ut} value={ut}>{UNIT_TYPE_LABELS[ut]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <p className="text-sm text-[lab(20_23.9_-60.14)] font-medium whitespace-nowrap">
               Total: {total} {total === 1 ? "item" : "items"} found.
             </p>

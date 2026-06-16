@@ -2,7 +2,7 @@
 
 import { Package, Pencil, Trash2 } from "lucide-react";
 import Image from "next/image";
-import type { MaterialItem, UnitType } from "@/api/types/material-list.types";
+import type { MaterialItem } from "@/api/types/material-list.types";
 import {
   Table,
   TableBody,
@@ -23,12 +23,6 @@ import {
   PaginationPrevious,
   PaginationNext,
 } from "@/components/ui/pagination";
-
-const TYPE_STYLES: Record<UnitType, { color: string; label: string }> = {
-  weight: { color: "border-blue-200 bg-blue-50 text-blue-600", label: "Weight" },
-  volume: { color: "border-green-200 bg-green-50 text-green-600", label: "Volume" },
-  dimension: { color: "border-amber-200 bg-amber-50 text-amber-600", label: "Dimension" },
-};
 
 interface Props {
   items: MaterialItem[];
@@ -64,7 +58,6 @@ export function MaterialListTable({ items, onEdit, onDelete, deleteId, setDelete
             <TableRow className="border-gray-200 hover:bg-transparent">
               <TableHead className="text-gray-900 font-semibold">Name</TableHead>
               <TableHead className="text-gray-900 font-semibold">Price / Unit</TableHead>
-              <TableHead className="text-gray-900 font-semibold">Type</TableHead>
               <TableHead className="text-gray-900 font-semibold">Unit</TableHead>
               <TableHead className="text-gray-900 font-semibold">Company</TableHead>
               <TableHead className="text-gray-900 font-semibold">Status</TableHead>
@@ -72,80 +65,72 @@ export function MaterialListTable({ items, onEdit, onDelete, deleteId, setDelete
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((item) => {
-              const typeStyle = TYPE_STYLES[item.unit_type];
-              return (
-                <TableRow
-                  key={item.id}
-                  className="border-gray-200 cursor-pointer hover:bg-gray-50"
-                  onClick={() => onEdit(item)}
-                >
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
-                        {item.photo ? (
-                          <Image src={item.photo} alt={item.name} width={32} height={32} className="object-cover w-full h-full" />
-                        ) : (
-                          <Package className="w-4 h-4 text-gray-400" />
-                        )}
-                      </div>
-                      <span className="text-sm text-gray-900">{item.name}</span>
+            {items.map((item) => (
+              <TableRow
+                key={item.id}
+                className="border-gray-200 cursor-pointer hover:bg-gray-50"
+                onClick={() => onEdit(item)}
+              >
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
+                      {item.photo ? (
+                        <Image src={item.photo} alt={item.name} width={32} height={32} className="object-cover w-full h-full" />
+                      ) : (
+                        <Package className="w-4 h-4 text-gray-400" />
+                      )}
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-gray-900 font-medium">
-                      {new Intl.NumberFormat("en-IN").format(item.price_per_unit)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={`font-normal gap-1.5 ${typeStyle.color}`}>
-                      {typeStyle.label}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-gray-600">{item.unit}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-gray-600">{item.company || "\u2014"}</span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
+                    <span className="text-sm text-gray-900">{item.name}</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <span className="text-sm text-gray-900 font-medium">
+                    {new Intl.NumberFormat("en-IN").format(item.price_per_unit)}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <span className="text-sm text-gray-600">{item.unit_value || "\u2014"}</span>
+                </TableCell>
+                <TableCell>
+                  <span className="text-sm text-gray-600">{item.company_value || "\u2014"}</span>
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant="outline"
+                    className={`font-normal gap-1.5 ${
+                      item.is_active
+                        ? "border-green-200 bg-green-50 text-green-600"
+                        : "border-gray-200 bg-gray-50 text-gray-500"
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${item.is_active ? "bg-green-500" : "bg-gray-400"}`} />
+                    {item.is_active ? "Active" : "Inactive"}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
                       variant="outline"
-                      className={`font-normal gap-1.5 ${
-                        item.is_active
-                          ? "border-green-200 bg-green-50 text-green-600"
-                          : "border-gray-200 bg-gray-50 text-gray-500"
-                      }`}
+                      size="sm"
+                      className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20 hover:bg-[lab(20_23.9_-60.14)]/5"
+                      onClick={(e) => { e.stopPropagation(); onEdit(item); }}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full ${item.is_active ? "bg-green-500" : "bg-gray-400"}`} />
-                      {item.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20 hover:bg-[lab(20_23.9_-60.14)]/5"
-                        onClick={(e) => { e.stopPropagation(); onEdit(item); }}
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                        Details
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-red-500 border-red-200 hover:bg-red-50"
-                        onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Delete
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+                      <Pencil className="w-3.5 h-3.5" />
+                      Details
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-500 border-red-200 hover:bg-red-50"
+                      onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </div>

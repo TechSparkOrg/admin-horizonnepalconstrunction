@@ -3,7 +3,7 @@ import type { AttributeItem, CreateAttribute, UpdateAttribute } from '../types/a
 import type { PaginatedResponse } from '../types/consultation.types';
 
 export const AttributeAdmin = {
-  search: (params: { search?: string; page?: number; page_size?: number }) =>
+  search: (params: { search?: string; used_in?: string; page?: number; page_size?: number }) =>
     apiPrivate.get<PaginatedResponse<AttributeItem>>('/admin/attributes', { params }).then(r => r.data),
 
   adminGet: (id: string) =>

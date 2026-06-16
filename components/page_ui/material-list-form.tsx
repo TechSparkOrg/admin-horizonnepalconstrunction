@@ -23,17 +23,17 @@ import {
 import { MediaPickerDialog } from "@/components/global_ui/MediahanlderPicker";
 import type { MediaItem } from "@/components/global_ui/MediahanlderPicker";
 import { CategoryAdmin } from "@/api/services/category.service";
+import { AttributeAdmin } from "@/api/services/attribute.service";
 import type { Category } from "@/api/types/category.types";
-import type { UnitType } from "@/api/types/material-list.types";
-import { UNIT_OPTIONS, UNIT_TYPE_LABELS } from "@/api/types/material-list.types";
+import type { AttributeItem } from "@/api/types/attribute.types";
 
 interface MaterialListFormData {
   name: string;
-  pricePerUnit: number;
-  unitType: UnitType;
-  unit: string;
+  pricePerUnit: number | "";
+  attributeId: string | null;
+  unitValue: string;
+  companyValue: string;
   photo: string;
-  company: string;
   serviceCategoryId: string | null;
   isActive: boolean;
 }
@@ -49,11 +49,11 @@ interface Props {
 
 const EMPTY: MaterialListFormData = {
   name: "",
-  pricePerUnit: 0,
-  unitType: "weight",
-  unit: "kg",
+  pricePerUnit: "",
+  attributeId: null,
+  unitValue: "",
+  companyValue: "",
   photo: "",
-  company: "",
   serviceCategoryId: null,
   isActive: true,
 };
@@ -71,20 +71,37 @@ export function MaterialListForm({
 }: Props) {
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [serviceCategories, setServiceCategories] = useState<Category[]>([]);
+  const [attributes, setAttributes] = useState<AttributeItem[]>([]);
+  const [unitLabel, setUnitLabel] = useState("");
+  const [companyLabel, setCompanyLabel] = useState("");
 
   useEffect(() => {
+    AttributeAdmin.search({ used_in: "all", page_size: 100 })
+      .then((res) => setAttributes(res.results ?? []))
+      .catch(() => {});
     CategoryAdmin.listServices()
       .then((res) => setServiceCategories(res.results ?? []))
       .catch(() => {});
   }, []);
 
-  const unitOptions = UNIT_OPTIONS[form.unitType];
+  const selectedAttribute = attributes.find((a) => a.id === form.attributeId);
 
-  const handleUnitTypeChange = (unitType: UnitType) => {
-    const options = UNIT_OPTIONS[unitType];
-    onChange("unitType", unitType);
-    onChange("unit", options[0]);
-  };
+  useEffect(() => {
+    if (!selectedAttribute || !editingId) return;
+    const findLabel = (value: string) => {
+      for (const f of selectedAttribute.values) {
+        if (f.values.includes(value)) return f.label;
+      }
+      return "";
+    };
+    if (form.unitValue && !unitLabel) setUnitLabel(findLabel(form.unitValue));
+    if (form.companyValue && !companyLabel) setCompanyLabel(findLabel(form.companyValue));
+  }, [selectedAttribute, editingId]);
+
+  const fieldLabels = selectedAttribute ? selectedAttribute.values.map((v) => v.label) : [];
+
+  const selectedUnitField = selectedAttribute?.values.find((v) => v.label === unitLabel);
+  const selectedCompanyField = selectedAttribute?.values.find((v) => v.label === companyLabel);
 
   const handleMediaSelect = (item: MediaItem) => {
     onChange("photo", item.url);
@@ -146,50 +163,108 @@ export function MaterialListForm({
                       min={0}
                       step="0.01"
                       value={form.pricePerUnit}
-                      onChange={(e) => onChange("pricePerUnit", parseFloat(e.target.value) || 0)}
+                      onChange={(e) => onChange("pricePerUnit", e.target.value === "" ? "" : parseFloat(e.target.value))}
                       placeholder="0.00"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label>Unit Type</Label>
-                  <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-                    {(Object.keys(UNIT_OPTIONS) as UnitType[]).map((ut) => (
-                      <button
-                        key={ut}
-                        type="button"
-                        onClick={() => handleUnitTypeChange(ut)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                          form.unitType === ut
-                            ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                            : "text-gray-500 hover:text-gray-900"
-                        }`}
-                      >
-                        {UNIT_TYPE_LABELS[ut]}
-                      </button>
-                    ))}
-                  </div>
+                  <Label>Attribute Type</Label>
+                  <Select
+                    value={form.attributeId ?? "none"}
+                    onValueChange={(v) => {
+                      const id = v === "none" ? null : v;
+                      onChange("attributeId", id);
+                      setUnitLabel("");
+                      setCompanyLabel("");
+                      onChange("unitValue", "");
+                      onChange("companyValue", "");
+                    }}
+                  >
+                    <SelectTrigger className="w-full h-9 text-sm max-w-xs">
+                      <SelectValue placeholder="Select an attribute" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {attributes.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label>Unit</Label>
-                    <Select
-                      value={form.unit}
-                      onValueChange={(v) => onChange("unit", v)}
-                    >
-                      <SelectTrigger className="w-full h-9 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {unitOptions.map((u) => (
-                          <SelectItem key={u} value={u}>{u}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                {selectedAttribute && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <Label className="text-sm font-semibold text-gray-900">Unit</Label>
+                      <div className="space-y-2">
+                        <Select value={unitLabel} onValueChange={(v) => { setUnitLabel(v); onChange("unitValue", ""); }}>
+                          <SelectTrigger className="w-full h-9 text-sm">
+                            <SelectValue placeholder="Pick a field" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {fieldLabels.map((l) => (
+                              <SelectItem key={l} value={l}>{l}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {selectedUnitField && (
+                          <div className="flex flex-wrap gap-2">
+                            {selectedUnitField.values.map((val) => (
+                              <button
+                                key={val}
+                                type="button"
+                                onClick={() => onChange("unitValue", val)}
+                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition border ${
+                                  form.unitValue === val
+                                    ? "bg-[lab(20_23.9_-60.14)] text-white border-[lab(20_23.9_-60.14)]"
+                                    : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
+                                }`}
+                              >
+                                {val}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label className="text-sm font-semibold text-gray-900">Company</Label>
+                      <div className="space-y-2">
+                        <Select value={companyLabel} onValueChange={(v) => { setCompanyLabel(v); onChange("companyValue", ""); }}>
+                          <SelectTrigger className="w-full h-9 text-sm">
+                            <SelectValue placeholder="Pick a field" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {fieldLabels.map((l) => (
+                              <SelectItem key={l} value={l}>{l}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {selectedCompanyField && (
+                          <div className="flex flex-wrap gap-2">
+                            {selectedCompanyField.values.map((val) => (
+                              <button
+                                key={val}
+                                type="button"
+                                onClick={() => onChange("companyValue", val)}
+                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition border ${
+                                  form.companyValue === val
+                                    ? "bg-[lab(20_23.9_-60.14)] text-white border-[lab(20_23.9_-60.14)]"
+                                    : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
+                                }`}
+                              >
+                                {val}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -198,14 +273,6 @@ export function MaterialListForm({
             <Card className="bg-white border border-gray-200 rounded-xl">
               <CardContent className="p-5 space-y-4">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label>Company</Label>
-                    <Input
-                      value={form.company}
-                      onChange={(e) => onChange("company", e.target.value)}
-                      placeholder="Company name"
-                    />
-                  </div>
                   <div className="space-y-1.5">
                     <Label>Service Category</Label>
                     <Select
