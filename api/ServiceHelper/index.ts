@@ -77,7 +77,7 @@ class TokenManager {
                 if (!refresh) throw new Error('Missing refresh token');
 
                 const { data } = await axios.post<TokenPair>(
-                    `${env.NEXT_PUBLIC_API_URL}/auth/refresh-token`,
+                    `${env.NEXT_PUBLIC_API_URL}/auth/refresh-token/`,
                     { refresh }
                 );
 

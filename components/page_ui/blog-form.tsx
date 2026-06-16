@@ -135,7 +135,6 @@ export function BlogForm({
   const authorInputRef = useRef<HTMLInputElement>(null);
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [mediaPickerMode, setMediaPickerMode] = useState<"banner" | "model3d" | "video">("banner");
-  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [editingBannerId, setEditingBannerId] = useState<string | null>(null);
   const [bannerPage, setBannerPage] = useState(1);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -150,21 +149,6 @@ export function BlogForm({
     (bannerPage - 1) * BANNER_PER_PAGE,
     bannerPage * BANNER_PER_PAGE
   );
-
-  useEffect(() => {
-    MediaService.list()
-      .then((res) => {
-        const items: MediaItem[] = (res.results ?? []).map((apiItem) => ({
-          id: apiItem.id,
-          name: apiItem.alt || apiItem.url.split("/").pop() || "Untitled",
-          url: apiItem.url,
-          thumbnail: apiItem.url,
-          category: apiItem.group_title || "General",
-        }));
-        setMediaItems(items);
-      })
-      .catch(() => toast.error("Failed to load media"));
-  }, []);
 
   useEffect(() => {
     CategoryAdmin.listBlog()
@@ -207,7 +191,6 @@ export function BlogForm({
         ...bannerImages,
         { ...newItem, name: altText || newItem.name },
       ]);
-      setMediaItems((prev) => [...prev, { ...newItem, name: altText || newItem.name }]);
     }
   };
 
@@ -715,7 +698,6 @@ export function BlogForm({
                   ? "Videos"
                   : undefined
               }
-              items={mediaItems}
               onSelect={handleMediaSelect}
             />
           </TabsContent>

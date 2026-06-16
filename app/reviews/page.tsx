@@ -3,12 +3,10 @@
 import { useState, useEffect } from "react";
 import { Plus, Search } from "lucide-react";
 import { toast } from "sonner";
-import { FaqAdmin } from "@/api/services/faq.service";
-import { CategoryAdmin } from "@/api/services/category.service";
-import type { FaqGroup, FaqItemData } from "@/api/types/faq.types";
-import type { Category } from "@/api/types/category.types";
-import { FaqTable } from "@/components/page_ui/faq-table";
-import { FaqForm } from "@/components/page_ui/faq-form";
+import { ReviewAdmin } from "@/api/services/review.service";
+import type { ReviewGroup, ReviewItemData } from "@/api/types/review.types";
+import { ReviewTable } from "@/components/page_ui/review-table";
+import { ReviewForm } from "@/components/page_ui/review-form";
 import { toSlug } from "@/lib/slug";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,19 +15,17 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 
-interface FaqFormData {
+interface ReviewFormData {
   title: string;
   slug: string;
-  categoryId: string;
   order: number;
   isActive: boolean;
-  items: FaqItemData[];
+  items: ReviewItemData[];
 }
 
-const EMPTY: FaqFormData = {
+const EMPTY: ReviewFormData = {
   title: "",
   slug: "",
-  categoryId: "",
   order: 0,
   isActive: true,
   items: [],
@@ -39,33 +35,26 @@ const ITEMS_PER_PAGE = 10;
 
 type View = "list" | "form";
 
-export default function AdminFaqsPage() {
-  const [groups, setGroups] = useState<FaqGroup[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+export default function AdminReviewsPage() {
+  const [groups, setGroups] = useState<ReviewGroup[]>([]);
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<FaqFormData>(EMPTY);
+  const [form, setForm] = useState<ReviewFormData>(EMPTY);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    Promise.all([
-      FaqAdmin.list(),
-      CategoryAdmin.listFaq(),
-    ])
-      .then(([faqRes, catRes]) => {
-        setGroups(faqRes.results ?? []);
-        setCategories(catRes.results ?? []);
-      })
+    ReviewAdmin.list()
+      .then((res) => setGroups(res.results ?? []))
       .catch(() => toast.error("Failed to load data"));
   }, []);
 
   const refetch = () =>
-    FaqAdmin.list()
+    ReviewAdmin.list()
       .then((res) => setGroups(res.results ?? []))
-      .catch(() => toast.error("Failed to load FAQs"));
+      .catch(() => toast.error("Failed to load reviews"));
 
   const openNew = () => {
     setForm(EMPTY);
@@ -73,11 +62,10 @@ export default function AdminFaqsPage() {
     setView("form");
   };
 
-  const openEdit = (item: FaqGroup) => {
+  const openEdit = (item: ReviewGroup) => {
     setForm({
       title: item.title,
       slug: item.slug,
-      categoryId: item.category_id,
       order: item.order,
       isActive: item.is_active,
       items: item.items.map((it) => ({ ...it })),
@@ -101,7 +89,7 @@ export default function AdminFaqsPage() {
         : {}),
     }));
 
-  const handleItemsChange = (items: FaqItemData[]) =>
+  const handleItemsChange = (items: ReviewItemData[]) =>
     setForm((prev) => ({ ...prev, items }));
 
   const save = async () => {
@@ -111,21 +99,22 @@ export default function AdminFaqsPage() {
       const payload = {
         title: form.title,
         slug: form.slug,
-        category_id: form.categoryId,
         order: form.order,
         is_active: form.isActive,
         items: form.items.map((it, i) => ({
-          question: it.question,
-          answer: it.answer,
+          name: it.name,
+          role: it.role,
+          quote: it.quote,
+          rating: it.rating,
           order: it.order || i + 1,
         })),
       };
       if (editingId) {
-        await FaqAdmin.update(editingId, payload);
-        toast.success("FAQ group updated");
+        await ReviewAdmin.update(editingId, payload);
+        toast.success("Review group updated");
       } else {
-        await FaqAdmin.create(payload);
-        toast.success("FAQ group created");
+        await ReviewAdmin.create(payload);
+        toast.success("Review group created");
       }
       await refetch();
       back();
@@ -138,9 +127,9 @@ export default function AdminFaqsPage() {
 
   const confirmDelete = async (id: string) => {
     try {
-      await FaqAdmin.delete(id);
+      await ReviewAdmin.delete(id);
       setGroups((prev) => prev.filter((g) => g.id !== id));
-      toast.success("FAQ group deleted");
+      toast.success("Review group deleted");
     } catch {
       toast.error("Failed to delete");
     }
@@ -168,14 +157,14 @@ export default function AdminFaqsPage() {
         <div className="px-4">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 leading-none">FAQs</h1>
-              <p className="text-xs text-gray-500 mt-1">FAQ groups list</p>
+              <h1 className="text-2xl font-bold text-gray-900 leading-none">Reviews</h1>
+              <p className="text-xs text-gray-500 mt-1">Review groups list</p>
             </div>
             <button
               onClick={openNew}
               className="inline-flex items-center gap-1.5 h-10 px-4 rounded-lg bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white text-sm font-medium transition"
             >
-              <Plus className="w-4 h-4" /> Create FAQ
+              <Plus className="w-4 h-4" /> Create Review
             </button>
           </div>
           <div className="flex items-center gap-3 mb-4">
@@ -194,7 +183,7 @@ export default function AdminFaqsPage() {
             </p>
           </div>
 
-          <FaqTable
+          <ReviewTable
             groups={paginatedGroups}
             onEdit={openEdit}
             onDelete={confirmDelete}
@@ -207,11 +196,10 @@ export default function AdminFaqsPage() {
         </div>
       ) : (
         <div className="px-4">
-          <FaqForm
+          <ReviewForm
             form={form}
             editingId={editingId}
             saving={saving}
-            categories={categories}
             onChange={handleChange}
             onItemsChange={handleItemsChange}
             onSave={save}

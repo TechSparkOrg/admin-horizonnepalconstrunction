@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Image as ImageIcon,
   UploadCloud,
@@ -39,8 +39,15 @@ interface MediaPickerDialogProps {
   title?: string;
   defaultCategory?: string;
   onSelect: (item: MediaItem, altText: string, file?: File) => void;
-  items?: MediaItem[];
 }
+
+const CATEGORY_MAP: Record<string, string> = {
+  all: "",
+  Images: "Images",
+  Banners: "Banners",
+  Videos: "Videos",
+  "3D Models": "3D Models",
+};
 
 export function MediaPickerDialog({
   open,
@@ -49,7 +56,6 @@ export function MediaPickerDialog({
   title,
   defaultCategory,
   onSelect,
-  items = [],
 }: MediaPickerDialogProps) {
   const isModel = mode === "model";
   const acceptTypes = isModel ? ".glb,.gltf,.obj" : "image/*";
@@ -61,23 +67,55 @@ export function MediaPickerDialog({
   const [altText, setAltText] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
-  const [localItems, setLocalItems] = useState<MediaItem[]>(items);
+  const [serverItems, setServerItems] = useState<MediaItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    setLocalItems(items);
-  }, [items]);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  useEffect(() => {
-    if (open) {
-      setCategoryFilter(defaultCategory || "all");
+  const fetchItems = useCallback(async (s: string, cat: string) => {
+    setLoading(true);
+    try {
+      const catValue = CATEGORY_MAP[cat];
+      const params: Record<string, unknown> = { page_size: 100 };
+      if (s) params.search = s;
+      if (catValue) params.group_title = catValue;
+      const res = await MediaService.list(params);
+      setServerItems(
+        (res.results ?? []).map((apiItem) => ({
+          id: apiItem.id,
+          name: apiItem.alt || apiItem.title || "",
+          url: apiItem.url,
+          thumbnail: apiItem.url,
+          category: apiItem.group_title || "General",
+          type: undefined,
+        }))
+      );
+    } catch {
+      setServerItems([]);
+    } finally {
+      setLoading(false);
     }
-  }, [open, defaultCategory]);
+  }, []);
 
-  const filtered = localItems.filter((item) => {
-    const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = categoryFilter === "all" || item.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  useEffect(() => {
+    if (open && tab === "existing") {
+      setCategoryFilter(defaultCategory || "all");
+      fetchItems(search, categoryFilter);
+    }
+  }, [open, tab]);
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchItems(value, categoryFilter);
+    }, 300);
+  };
+
+  const handleCategoryChange = (cat: string) => {
+    setCategoryFilter(cat);
+    fetchItems(search, cat);
+  };
 
   const handleSelectExisting = (item: MediaItem) => {
     setSelected(item);
@@ -104,6 +142,7 @@ export function MediaPickerDialog({
     setAltText("");
     setUploadFile(null);
     setUploadPreview(null);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
   };
 
   const handleConfirm = async () => {
@@ -111,24 +150,36 @@ export function MediaPickerDialog({
       if (altText !== selected.name) {
         try {
           await MediaService.update(selected.id, { alt: altText });
-          setLocalItems((prev) =>
-            prev.map((i) => (i.id === selected.id ? { ...i, name: altText } : i))
-          );
         } catch {
-          // alt update failed — still proceed with the local alt text
+          // alt update failed — still proceed
         }
       }
       onSelect(selected, altText);
     } else if (tab === "upload" && uploadFile) {
-      const newItem: MediaItem = {
-        id: `upload-${Date.now()}`,
-        name: uploadFile.name,
-        url: uploadPreview ?? URL.createObjectURL(uploadFile),
-        thumbnail: uploadPreview ?? undefined,
-        category: "General",
-        type: isModel ? uploadFile.name.split(".").pop() : undefined,
-      };
-      onSelect(newItem, altText, uploadFile);
+      try {
+        const apiMedia = await MediaService.uploadImage(uploadFile, {
+          alt: altText,
+        });
+        const persisted: MediaItem = {
+          id: apiMedia.id,
+          name: apiMedia.alt || apiMedia.title || uploadFile.name,
+          url: apiMedia.url,
+          thumbnail: apiMedia.url,
+          category: apiMedia.group_title || "General",
+          type: isModel ? uploadFile.name.split(".").pop() : undefined,
+        };
+        onSelect(persisted, altText);
+      } catch {
+        const newItem: MediaItem = {
+          id: `upload-${Date.now()}`,
+          name: uploadFile.name,
+          url: uploadPreview ?? URL.createObjectURL(uploadFile),
+          thumbnail: uploadPreview ?? undefined,
+          category: "General",
+          type: isModel ? uploadFile.name.split(".").pop() : undefined,
+        };
+        onSelect(newItem, altText, uploadFile);
+      }
     }
     reset();
     onOpenChange(false);
@@ -179,7 +230,7 @@ export function MediaPickerDialog({
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
                     <Input
                       value={search}
-                      onChange={(e) => setSearch(e.target.value)}
+                      onChange={(e) => handleSearchChange(e.target.value)}
                       placeholder={`Search ${isModel ? "models" : "images"}`}
                       className="pl-8 h-8 text-xs"
                     />
@@ -189,7 +240,7 @@ export function MediaPickerDialog({
                       <button
                         key={cat}
                         type="button"
-                        onClick={() => setCategoryFilter(cat)}
+                        onClick={() => handleCategoryChange(cat)}
                         className={cn(
                           "px-2.5 py-1 text-[11px] font-medium rounded-md transition whitespace-nowrap",
                           categoryFilter === cat
@@ -203,13 +254,15 @@ export function MediaPickerDialog({
                   </div>
                 </div>
 
-                {filtered.length === 0 ? (
+                {loading ? (
+                  <div className="py-10 text-center text-xs text-gray-400">Loading\u2026</div>
+                ) : serverItems.length === 0 ? (
                   <div className="py-10 text-center text-xs text-gray-400">
                     No {isModel ? "models" : "images"} found.
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {filtered.map((item) => {
+                    {serverItems.map((item) => {
                       const thumb = item.thumbnail ?? item.url;
                       const active = selected?.id === item.id;
                       return (
@@ -333,7 +386,7 @@ export function MediaPickerDialog({
         <div className="flex items-center justify-between px-4 py-2.5 border-t border-gray-200">
           <p className="text-[11px] text-gray-400">
             {tab === "existing"
-              ? `${filtered.length} of ${localItems.length} ${isModel ? "models" : "images"}`
+              ? `${serverItems.length} ${isModel ? "models" : "images"}`
               : "Uploads are saved on confirm"}
           </p>
           <Button onClick={handleConfirm} disabled={!canConfirm} size="sm" className="h-7 text-xs px-3 bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] disabled:opacity-50">

@@ -57,6 +57,7 @@ const navLinks: NavLink[] = [
       { label: "Blog Category", href: "/categories/blogs" },
       { label: "FAQ Category", href: "/categories/faqs" },
       { label: "Project Category", href: "/categories/projects" },
+            { label: "Attribute Categories", href: "/categories/attributes" },
     ],
   },
 
@@ -82,14 +83,14 @@ const navLinks: NavLink[] = [
   { label: "Pages", href: "/pages", icon: FileText ,
     children: [
       { label: "Pages", href: "/pages" },
-      { label: "FAQs", href: "/pages/faqs" },
+      { label: "FAQs", href: "/faqs" },
     ],
   },
   { label: "Costumer Relations", href: "/dashboard/content-management", icon: Activity ,
     children: [
       { label: "Enquiries", href: "/dashboard/enquiries" },
       { label: "Testimonials", href: "/dashboard/testimonials" },
-        { label: "Reviews", href: "/dashboard/reviews"},
+        { label: "Reviews", href: "/reviews"},
           { label: "Consultation", href: "/dashboard/consultation" }
     ],
   },
@@ -97,11 +98,11 @@ const navLinks: NavLink[] = [
 
   { label: "Resources Management", href: "/dashboard/calculator", icon: Calculator ,
     children: [
-      { label: "Material Calculator", href: "/dashboard/calculator/material" },
+      { label: "Material list", href: "/material-list" },
       { label: "Cost Estimation", href: "/dashboard/calculator/cost" },
          { label: "Team Allcocation", href: "/dashboard/calculator/cost" },
-        { label: "Vastu", href: "/dashboard/vastu"},
-          { label: "Building Permit", href: "/dashboard/building-permit" }
+        { label: "Vastu", href: "/vastu"},
+          { label: "Building Permit", href: "/building-permit" }
     ],
   },
 

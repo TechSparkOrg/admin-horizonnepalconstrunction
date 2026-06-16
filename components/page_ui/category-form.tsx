@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ArrowLeft, Loader2, ImagePlus, Eye, Pencil, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -81,13 +81,11 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
   const slugEdited = useRef(false);
 
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
-  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [editingBannerId, setEditingBannerId] = useState<string | null>(null);
   const [bannerPage, setBannerPage] = useState(1);
 
   const [parentCats, setParentCats] = useState<Category[]>([]);
   const [activeTab, setActiveTab] = useState("content");
-  const mediaFetched = useRef(false);
 
   const BANNER_PER_PAGE = 5;
 
@@ -134,24 +132,6 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
       .then((res) => setParentCats(res.results ?? []))
       .catch(() => {});
   }, [propParentCats]);
-
-  const loadMedia = useCallback(() => {
-    if (mediaFetched.current) return;
-    mediaFetched.current = true;
-    MediaService.list()
-      .then((res) => {
-        const items: MediaItem[] = (res.results ?? []).map((apiItem) => ({
-          id: apiItem.id,
-          name: apiItem.alt || apiItem.url.split("/").pop() || "Untitled",
-          url: apiItem.url,
-          thumbnail: apiItem.url,
-          category: apiItem.group_title || "General",
-        }));
-        setMediaItems(items);
-      })
-      .catch(() => toast.error("Failed to load media"));
-  }, []);
-
   useEffect(() => {
     if (editing) {
       reset({
@@ -233,7 +213,6 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
         ...bannerImages,
         { ...newItem, name: altText || newItem.name },
       ]);
-      setMediaItems((prev) => [...prev, { ...newItem, name: altText || newItem.name }]);
     }
   };
 
@@ -304,7 +283,7 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
         <input type="hidden" {...register("parent_id")} />
         <input type="hidden" {...register("bannerImages")} />
 
-        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v === "media") loadMedia(); }} className="w-full flex flex-col">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v)} className="w-full flex flex-col">
           <div>
             <TabsList className="bg-gray-100 rounded-lg p-0.5 gap-0 w-auto h-auto">
               <TabsTrigger value="content" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium [&_svg]:size-3.5">
@@ -604,7 +583,6 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
         }}
         mode="image"
         title={editingBannerId ? "Update Banner Image" : "Select Banner Image"}
-        items={mediaItems}
         onSelect={handleBannerSelect}
       />
 

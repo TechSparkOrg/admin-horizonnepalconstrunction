@@ -1,16 +1,16 @@
 import { apiPrivate } from '../ServiceHelper/index';
-import type { FaqItem, FaqItemCreate, FaqItemUpdate } from '../types/faq.types';
+import type { FaqGroup, FaqGroupCreate, FaqGroupUpdate } from '../types/faq.types';
 import type { PaginatedResponse } from '../types/consultation.types';
 
 export const FaqAdmin = {
-  list: () =>
-    apiPrivate.get<PaginatedResponse<FaqItem>>('/admin/faq/').then(r => r.data),
+  list: (params?: Record<string, unknown>) =>
+    apiPrivate.get<PaginatedResponse<FaqGroup>>('/admin/faq/', { params }).then(r => r.data),
   adminGet: (id: string) =>
-    apiPrivate.get<FaqItem>(`/admin/faq/${id}/`).then(r => r.data),
-  create: (data: FaqItemCreate) =>
-    apiPrivate.post<FaqItem>('/admin/faq/', data).then(r => r.data),
-  update: (id: string, data: FaqItemUpdate) =>
-    apiPrivate.put<FaqItem>(`/admin/faq/${id}/`, data).then(r => r.data),
+    apiPrivate.get<FaqGroup>(`/admin/faq/${id}/`).then(r => r.data),
+  create: (data: FaqGroupCreate) =>
+    apiPrivate.post<FaqGroup>('/admin/faq/', data).then(r => r.data),
+  update: (id: string, data: FaqGroupUpdate) =>
+    apiPrivate.put<FaqGroup>(`/admin/faq/${id}/`, data).then(r => r.data),
   delete: (id: string) =>
     apiPrivate.delete<{ ok: boolean }>(`/admin/faq/${id}/`).then(r => r.data),
 };
