@@ -12,7 +12,16 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { DeleteDialog } from "@/components/global_ui/delete_dailog";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+} from "@/components/ui/pagination";
 
 interface Props {
   blogs: BlogPost[];
@@ -20,18 +29,23 @@ interface Props {
   onDelete: (slug: string) => void;
   deleteSlug: string | null;
   setDeleteSlug: (slug: string | null) => void;
+  page: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
 }
 
-export function BlogTable({ blogs, onEdit, onDelete, deleteSlug, setDeleteSlug }: Props) {
+export function BlogTable({ blogs, onEdit, onDelete, deleteSlug, setDeleteSlug, page, totalPages, onPageChange }: Props) {
   if (blogs.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-16 text-center">
-        <div className="w-12 h-12 rounded-lg bg-gray-100 mx-auto flex items-center justify-center mb-4">
-          <FileText className="w-5 h-5 text-gray-400" />
-        </div>
-        <p className="text-sm font-medium text-gray-900 mb-1">No blogs yet</p>
-        <p className="text-sm text-gray-500">Create your first blog to get started.</p>
-      </div>
+      <Card className="bg-white border border-gray-200 rounded-xl">
+        <CardContent className="p-16 text-center">
+          <div className="w-12 h-12 rounded-lg bg-gray-100 mx-auto flex items-center justify-center mb-4">
+            <FileText className="w-5 h-5 text-gray-400" />
+          </div>
+          <p className="text-sm font-medium text-gray-900 mb-1">No blogs yet</p>
+          <p className="text-sm text-gray-500">Create your first blog to get started.</p>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -109,6 +123,38 @@ export function BlogTable({ blogs, onEdit, onDelete, deleteSlug, setDeleteSlug }
           </TableBody>
         </Table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-6">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => onPageChange(Math.max(1, page - 1))}
+                  className={page === 1 ? "pointer-events-none opacity-40" : "cursor-pointer"}
+                />
+              </PaginationItem>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <PaginationItem key={p}>
+                  <PaginationLink
+                    isActive={p === page}
+                    onClick={() => onPageChange(p)}
+                    className="cursor-pointer"
+                  >
+                    {p}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+                  className={page === totalPages ? "pointer-events-none opacity-40" : "cursor-pointer"}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
 
       <DeleteDialog
         open={!!deleteSlug}

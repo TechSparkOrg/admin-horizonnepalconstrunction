@@ -29,6 +29,11 @@ export interface BlogPost {
   is_published?: boolean;
   publish_date?: string;
   banner_images?: { id: string; url: string; name: string }[];
+  model_3d_block?: string;
+  video_block_url?: string;
+  video_embed_url?: string;
+  youtube_embed_url?: string;
+  reel_blocks?: { url: string }[];
   content_html?: string;
   created_at: string;
   updated_at: string;

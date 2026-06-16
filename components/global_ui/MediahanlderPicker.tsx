@@ -37,6 +37,7 @@ interface MediaPickerDialogProps {
   onOpenChange: (open: boolean) => void;
   mode?: MediaPickerMode;
   title?: string;
+  defaultCategory?: string;
   onSelect: (item: MediaItem, altText: string, file?: File) => void;
   items?: MediaItem[];
 }
@@ -46,6 +47,7 @@ export function MediaPickerDialog({
   onOpenChange,
   mode = "image",
   title,
+  defaultCategory,
   onSelect,
   items = [],
 }: MediaPickerDialogProps) {
@@ -54,6 +56,7 @@ export function MediaPickerDialog({
 
   const [tab, setTab] = useState<"existing" | "upload">("existing");
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>(defaultCategory || "all");
   const [selected, setSelected] = useState<MediaItem | null>(null);
   const [altText, setAltText] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -64,9 +67,17 @@ export function MediaPickerDialog({
     setLocalItems(items);
   }, [items]);
 
-  const filtered = localItems.filter((item) =>
-    item.name.toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => {
+    if (open) {
+      setCategoryFilter(defaultCategory || "all");
+    }
+  }, [open, defaultCategory]);
+
+  const filtered = localItems.filter((item) => {
+    const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = categoryFilter === "all" || item.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
 
   const handleSelectExisting = (item: MediaItem) => {
     setSelected(item);
@@ -88,6 +99,7 @@ export function MediaPickerDialog({
   const reset = () => {
     setTab("existing");
     setSearch("");
+    setCategoryFilter("all");
     setSelected(null);
     setAltText("");
     setUploadFile(null);
@@ -162,14 +174,33 @@ export function MediaPickerDialog({
           <TabsContent value="existing" className="m-0">
             <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] divide-x divide-gray-200">
               <div className="p-3 max-h-[55vh] overflow-y-auto">
-                <div className="relative mb-2">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
-                  <Input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder={`Search ${isModel ? "models" : "images"}`}
-                    className="pl-8 h-8 text-xs"
-                  />
+                <div className="space-y-2 mb-2">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
+                    <Input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder={`Search ${isModel ? "models" : "images"}`}
+                      className="pl-8 h-8 text-xs"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
+                    {["all", "Images", "Banners", "Videos", "3D Models"].map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setCategoryFilter(cat)}
+                        className={cn(
+                          "px-2.5 py-1 text-[11px] font-medium rounded-md transition whitespace-nowrap",
+                          categoryFilter === cat
+                            ? "bg-white text-gray-900 shadow-sm border border-gray-200"
+                            : "text-gray-500 hover:text-gray-900"
+                        )}
+                      >
+                        {cat === "all" ? "All" : cat === "Images" ? "Single Image" : cat}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {filtered.length === 0 ? (
@@ -302,7 +333,7 @@ export function MediaPickerDialog({
         <div className="flex items-center justify-between px-4 py-2.5 border-t border-gray-200">
           <p className="text-[11px] text-gray-400">
             {tab === "existing"
-              ? `${localItems.length} ${isModel ? "models" : "images"} total`
+              ? `${filtered.length} of ${localItems.length} ${isModel ? "models" : "images"}`
               : "Uploads are saved on confirm"}
           </p>
           <Button onClick={handleConfirm} disabled={!canConfirm} size="sm" className="h-7 text-xs px-3 bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] disabled:opacity-50">

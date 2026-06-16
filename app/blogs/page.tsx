@@ -12,14 +12,6 @@ import type { TeamMember } from "@/api/types/team.types";
 import { BlogTable } from "@/components/page_ui/blog-table";
 import { BlogForm } from "@/components/page_ui/blog-form";
 import { toSlug } from "@/lib/slug";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationPrevious,
-  PaginationNext,
-} from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -43,6 +35,9 @@ interface BlogFormData {
   authorImage: string;
   authorTeamId: string;
   categoryId: string;
+  model3dBlock: string;
+  videoBlockUrl: string;
+  videoEmbedUrl: string;
 }
 
 const EMPTY: BlogFormData = {
@@ -51,6 +46,7 @@ const EMPTY: BlogFormData = {
   isActive: true, isPublished: false, publishDate: "",
   projectId: "", authorMode: "manual", authorName: "", authorImage: "", authorTeamId: "",
   categoryId: "",
+  model3dBlock: "", videoBlockUrl: "", videoEmbedUrl: "",
 };
 
 const ITEMS_PER_PAGE = 10;
@@ -74,6 +70,9 @@ function apiToForm(p: BlogPost): BlogFormData {
     authorImage: p.author_image ?? "",
     authorTeamId: "",
     categoryId: p.category_id ?? "",
+    model3dBlock: p.model_3d_block ?? "",
+    videoBlockUrl: p.video_block_url ?? "",
+    videoEmbedUrl: p.video_embed_url ?? "",
   };
 }
 
@@ -85,6 +84,7 @@ export default function AdminBlogsPage() {
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [form, setForm] = useState<BlogFormData>(EMPTY);
   const [bannerImages, setBannerImages] = useState<{ id: string; url: string; name: string }[]>([]);
+  const [reelBlocks, setReelBlocks] = useState<{ url: string }[]>([]);
   const [deleteSlug, setDeleteSlug] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
@@ -112,6 +112,7 @@ export default function AdminBlogsPage() {
   const openNew = () => {
     setForm(EMPTY);
     setBannerImages([]);
+    setReelBlocks([]);
     setEditingSlug(null);
     setView("form");
   };
@@ -119,12 +120,14 @@ export default function AdminBlogsPage() {
   const openEdit = (item: BlogPost) => {
     setForm(apiToForm(item));
     setBannerImages(item.banner_images ?? []);
+    setReelBlocks(item.reel_blocks ?? []);
     setEditingSlug(item.slug);
     setView("form");
   };
 
   const back = () => {
     setForm(EMPTY);
+    setReelBlocks([]);
     setDeleteSlug(null);
     setView("list");
   };
@@ -165,6 +168,10 @@ export default function AdminBlogsPage() {
         is_published: form.isPublished,
         publish_date: form.publishDate,
         banner_images: bannerImages,
+        model_3d_block: form.model3dBlock,
+        video_block_url: form.videoBlockUrl,
+        video_embed_url: form.videoEmbedUrl,
+        reel_blocks: reelBlocks,
       };
       if (editingSlug) {
         await BlogAdmin.update(editingSlug, payload);
@@ -246,39 +253,10 @@ export default function AdminBlogsPage() {
             onDelete={confirmDelete}
             deleteSlug={deleteSlug}
             setDeleteSlug={setDeleteSlug}
+            page={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
           />
-
-          {totalPages > 1 && (
-            <div className="mt-6">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      className={currentPage === 1 ? "pointer-events-none opacity-40" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <PaginationItem key={page}>
-                      <PaginationLink
-                        isActive={page === currentPage}
-                        onClick={() => setCurrentPage(page)}
-                        className="cursor-pointer"
-                      >
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      className={currentPage === totalPages ? "pointer-events-none opacity-40" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
         </div>
       ) : (
         <div className="px-4">
@@ -290,6 +268,8 @@ export default function AdminBlogsPage() {
             teamMembers={teamMembers}
             bannerImages={bannerImages}
             onBannerImagesChange={setBannerImages}
+            reelBlocks={reelBlocks}
+            onReelBlocksChange={setReelBlocks}
             onChange={handleChange}
             onSave={save}
             onBack={back}

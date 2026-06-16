@@ -1,11 +1,13 @@
 "use client";
 
-import { ArrowLeft, Loader2, ImagePlus, Eye, Pencil, Trash2, Upload, X } from "lucide-react";
+import { ArrowLeft, Loader2, ImagePlus, Eye, Pencil, Trash2, Upload, X, Box } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
+import Image from "next/image";
 import { RichEditor } from "@/components/page_ui/rich-editor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Tabs,
   TabsContent,
@@ -40,7 +42,32 @@ import type { MediaItem } from "@/components/global_ui/MediahanlderPicker";
 import { MediaService } from "@/api/services/media.service";
 import { CategoryAdmin } from "@/api/services/category.service";
 import type { Category } from "@/api/types/category.types";
+import { isVideoUrl } from "@/lib/media";
+import { ModelViewer } from "@/components/global_ui/ModelViewer";
 import { toast } from "sonner";
+
+function detectPlatform(url: string): { name: string; color: string; icon: string } {
+  const u = url.toLowerCase();
+  if (u.includes("youtube.com") || u.includes("youtu.be")) {
+    return { name: "YouTube", color: "bg-red-100 text-red-700", icon: "▶️" };
+  }
+  if (u.includes("vimeo.com")) {
+    return { name: "Vimeo", color: "bg-blue-100 text-blue-700", icon: "🎬" };
+  }
+  if (u.includes("dailymotion.com") || u.includes("dai.ly")) {
+    return { name: "Dailymotion", color: "bg-gray-100 text-gray-700", icon: "▶️" };
+  }
+  if (u.includes("facebook.com") || u.includes("fb.watch")) {
+    return { name: "Facebook", color: "bg-blue-100 text-blue-700", icon: "📱" };
+  }
+  if (u.includes("instagram.com")) {
+    return { name: "Instagram", color: "bg-pink-100 text-pink-700", icon: "📸" };
+  }
+  if (u.includes("tiktok.com")) {
+    return { name: "TikTok", color: "bg-gray-100 text-gray-700", icon: "🎵" };
+  }
+  return { name: "Video", color: "bg-gray-100 text-gray-600", icon: "▶️" };
+}
 
 interface TeamMember {
   id: string;
@@ -69,6 +96,9 @@ interface BlogFormData {
   authorImage: string;
   authorTeamId: string;
   categoryId: string;
+  model3dBlock: string;
+  videoBlockUrl: string;
+  videoEmbedUrl: string;
 }
 
 interface Props {
@@ -79,6 +109,8 @@ interface Props {
   teamMembers?: TeamMember[];
   bannerImages: { id: string; url: string; name: string }[];
   onBannerImagesChange: (images: { id: string; url: string; name: string }[]) => void;
+  reelBlocks: { url: string }[];
+  onReelBlocksChange: (blocks: { url: string }[]) => void;
   onChange: (key: string, value: string | boolean) => void;
   onSave: () => void;
   onBack: () => void;
@@ -92,6 +124,8 @@ export function BlogForm({
   teamMembers = [],
   bannerImages,
   onBannerImagesChange,
+  reelBlocks,
+  onReelBlocksChange,
   onChange,
   onSave,
   onBack,
@@ -100,10 +134,15 @@ export function BlogForm({
   const [authorPreview, setAuthorPreview] = useState<string | null>(form.authorImage || null);
   const authorInputRef = useRef<HTMLInputElement>(null);
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [mediaPickerMode, setMediaPickerMode] = useState<"banner" | "model3d" | "video">("banner");
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [editingBannerId, setEditingBannerId] = useState<string | null>(null);
   const [bannerPage, setBannerPage] = useState(1);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [videoMode, setVideoMode] = useState<"library" | "embed">("library");
+  const [reelInput, setReelInput] = useState("");
+  const [modelViewerPreview, setModelViewerPreview] = useState<string | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
 
   const BANNER_PER_PAGE = 5;
   const totalBannerPages = Math.ceil(bannerImages.length / BANNER_PER_PAGE);
@@ -176,6 +215,39 @@ export function BlogForm({
     onBannerImagesChange(bannerImages.filter((img) => img.id !== id));
   };
 
+  const handleMediaSelect = async (item: MediaItem, altText: string, file?: File) => {
+    if (mediaPickerMode === "model3d") {
+      onChange("model3dBlock", item.url);
+    } else if (mediaPickerMode === "video") {
+      onChange("videoBlockUrl", item.url);
+    } else {
+      await handleBannerSelect(item, altText, file);
+    }
+  };
+
+  const openMediaPicker = (mode: "model3d" | "video") => {
+    setMediaPickerMode(mode);
+    setEditingBannerId(null);
+    setMediaPickerOpen(true);
+  };
+
+  const openBannerPicker = (bannerId?: string) => {
+    setMediaPickerMode("banner");
+    setEditingBannerId(bannerId ?? null);
+    setMediaPickerOpen(true);
+  };
+
+  const addReel = () => {
+    const url = reelInput.trim();
+    if (!url) return;
+    onReelBlocksChange([...reelBlocks, { url }]);
+    setReelInput("");
+  };
+
+  const removeReel = (index: number) => {
+    onReelBlocksChange(reelBlocks.filter((_, i) => i !== index));
+  };
+
   const handleImagePick = (
     e: React.ChangeEvent<HTMLInputElement>,
     setPreview: (v: string | null) => void,
@@ -228,7 +300,8 @@ export function BlogForm({
 
         <div>
           <TabsContent value="content" className="space-y-5 mt-4">
-            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 w-full">
+            <Card className="bg-white border border-gray-200 rounded-xl">
+              <CardContent className="p-5 space-y-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label>Title</Label>
@@ -281,18 +354,20 @@ export function BlogForm({
                   minHeight={380}
                 />
               </div>
-            </div>
+            </CardContent>
+            </Card>
           </TabsContent>
 
-          <TabsContent value="media" className="mt-4">
-            <div className="bg-white rounded-xl border border-gray-200 p-5 w-full">
+          <TabsContent value="media" className="mt-4 space-y-4">
+            <Card className="bg-white border border-gray-200 rounded-xl">
+              <CardContent className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm font-semibold text-gray-900">Banner Images</p>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setMediaPickerOpen(true)}
+                  onClick={() => openBannerPicker()}
                 >
                   <ImagePlus className="size-4" />
                   Add Banner
@@ -318,8 +393,8 @@ export function BlogForm({
                       {paginatedBanners.map((img) => (
                         <TableRow key={img.id} className="border-gray-200 hover:bg-gray-50">
                           <TableCell>
-                            <div className="size-10 rounded-md overflow-hidden bg-gray-100">
-                              <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
+                            <div className="size-10 rounded-md overflow-hidden bg-gray-100 relative">
+                              <Image src={img.url} alt={img.name} fill className="object-cover" />
                             </div>
                           </TableCell>
                           <TableCell className="text-sm text-gray-900 truncate max-w-[280px]">
@@ -339,10 +414,7 @@ export function BlogForm({
                                 variant="outline"
                                 size="sm"
                                 className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20 hover:bg-[lab(20_23.9_-60.14)]/5"
-                                onClick={() => {
-                                  setEditingBannerId(img.id);
-                                  setMediaPickerOpen(true);
-                                }}
+                                onClick={() => openBannerPicker(img.id)}
                               >
                                 <Pencil className="w-3.5 h-3.5" />
                                 Details
@@ -396,7 +468,229 @@ export function BlogForm({
                   )}
                 </div>
               )}
-            </div>
+            </CardContent>
+            </Card>
+
+            <Card className="bg-white border border-gray-200 rounded-xl">
+              <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-semibold text-gray-900">3D Model</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openMediaPicker("model3d")}
+                >
+                  <Box className="size-4" />
+                  Select Model
+                </Button>
+              </div>
+              {form.model3dBlock ? (
+                <div>
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="size-14 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 shrink-0 flex items-center justify-center">
+                      <ModelViewer src={form.model3dBlock} className="w-full h-full" />
+                    </div>
+                    <span className="text-sm text-gray-700 truncate flex-1">{form.model3dBlock.split("/").pop()}</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-gray-500 border-gray-200 hover:bg-gray-100"
+                        onClick={(e) => { e.stopPropagation(); setModelViewerPreview(form.model3dBlock); }}
+                      >
+                        <Eye className="size-3.5" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-500 border-red-200 hover:bg-red-50"
+                        onClick={() => onChange("model3dBlock", "")}
+                      >
+                        <Trash2 className="size-3.5" />
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-gray-200 py-10 flex flex-col items-center justify-center gap-2 text-gray-500">
+                  <Box className="size-6" />
+                  <span className="text-sm">No 3D model selected</span>
+                </div>
+              )}
+            </CardContent>
+            </Card>
+
+            <Card className="bg-white border border-gray-200 rounded-xl">
+              <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-semibold text-gray-900">Video</p>
+                <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
+                  <button
+                    type="button"
+                    onClick={() => setVideoMode("library")}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-md transition ${
+                      videoMode === "library"
+                        ? "bg-white text-gray-900 shadow-sm border border-gray-200"
+                        : "text-gray-500 hover:text-gray-900"
+                    }`}
+                  >
+                    Library
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVideoMode("embed")}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-md transition ${
+                      videoMode === "embed"
+                        ? "bg-white text-gray-900 shadow-sm border border-gray-200"
+                        : "text-gray-500 hover:text-gray-900"
+                    }`}
+                  >
+                    Embed
+                  </button>
+                </div>
+              </div>
+              {videoMode === "library" ? (
+                form.videoBlockUrl ? (
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="size-14 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center shrink-0">
+                      {isVideoUrl(form.videoBlockUrl) ? (
+                        <video src={form.videoBlockUrl} className="w-full h-full object-cover" muted />
+                      ) : (
+                        <span className="text-lg">📹</span>
+                      )}
+                    </div>
+                    <span className="text-sm text-gray-700 truncate flex-1">{form.videoBlockUrl.split("/").pop()}</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-gray-500 border-gray-200 hover:bg-gray-100"
+                        onClick={() => setVideoPreview(form.videoBlockUrl)}
+                      >
+                        <Eye className="size-3.5" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-500 border-red-200 hover:bg-red-50"
+                        onClick={() => onChange("videoBlockUrl", "")}
+                      >
+                        <Trash2 className="size-3.5" />
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed border-gray-200 py-10 flex flex-col items-center justify-center gap-2 text-gray-500">
+                    <span className="text-lg">📹</span>
+                    <span className="text-sm">No video selected</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openMediaPicker("video")}
+                    >
+                      Select Video
+                    </Button>
+                  </div>
+                )
+              ) : (
+                <div className="space-y-2">
+                  <Input
+                    value={form.videoEmbedUrl}
+                    onChange={(e) => onChange("videoEmbedUrl", e.target.value)}
+                    placeholder="Paste video URL (YouTube, Vimeo, Dailymotion, etc.)"
+                    className="text-xs"
+                  />
+                  {form.videoEmbedUrl && (
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium shrink-0 ${detectPlatform(form.videoEmbedUrl).color}`}>
+                        {detectPlatform(form.videoEmbedUrl).icon} {detectPlatform(form.videoEmbedUrl).name}
+                      </span>
+                      <a href={form.videoEmbedUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-[lab(20_23.9_-60.14)] underline truncate flex-1 hover:text-[lab(15_23.9_-60.14)]">
+                        {form.videoEmbedUrl}
+                      </a>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-500 border-red-200 hover:bg-red-50 shrink-0"
+                        onClick={() => onChange("videoEmbedUrl", "")}
+                      >
+                        <Trash2 className="size-3.5" />
+                        Remove
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+            </Card>
+
+            <Card className="bg-white border border-gray-200 rounded-xl">
+              <CardContent className="p-5">
+              <p className="text-sm font-semibold text-gray-900 mb-4">Reels</p>
+              <div className="flex items-center gap-2 mb-3">
+                <Input
+                  value={reelInput}
+                  onChange={(e) => setReelInput(e.target.value)}
+                  placeholder="Paste Instagram / TikTok / Facebook reel URL"
+                  className="text-xs"
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addReel(); } }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addReel}
+                  disabled={!reelInput.trim()}
+                  className="shrink-0"
+                >
+                  Add
+                </Button>
+              </div>
+              {reelBlocks.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-200 py-8 flex flex-col items-center justify-center gap-2 text-gray-500">
+                  <span className="text-lg">📱</span>
+                  <span className="text-sm">No reels added yet</span>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {reelBlocks.map((block, i) => {
+                    const platform = detectPlatform(block.url);
+                    return (
+                      <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium shrink-0 ${platform.color}`}>
+                          {platform.icon} {platform.name}
+                        </span>
+                      <span className="text-sm text-gray-700 truncate flex-1">{block.url}</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-gray-500 border-gray-200 hover:bg-gray-100"
+                          onClick={() => window.open(block.url, "_blank")}
+                        >
+                          <Eye className="size-3.5" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-red-500 border-red-200 hover:bg-red-50"
+                          onClick={() => removeReel(i)}
+                        >
+                          <Trash2 className="size-3.5" />
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+                </div>
+              )}
+            </CardContent>
+            </Card>
 
             <MediaPickerDialog
               open={mediaPickerOpen}
@@ -404,15 +698,31 @@ export function BlogForm({
                 setMediaPickerOpen(o);
                 if (!o) setEditingBannerId(null);
               }}
-              mode="image"
-              title={editingBannerId ? "Update Banner Image" : "Select Banner Image"}
+              mode={mediaPickerMode === "model3d" ? "model" : "image"}
+              title={
+                mediaPickerMode === "model3d"
+                  ? "Select 3D Model"
+                  : mediaPickerMode === "video"
+                  ? "Select Video"
+                  : editingBannerId
+                  ? "Update Banner Image"
+                  : "Select Banner Image"
+              }
+              defaultCategory={
+                mediaPickerMode === "model3d"
+                  ? "3D Models"
+                  : mediaPickerMode === "video"
+                  ? "Videos"
+                  : undefined
+              }
               items={mediaItems}
-              onSelect={handleBannerSelect}
+              onSelect={handleMediaSelect}
             />
           </TabsContent>
 
           <TabsContent value="seo" className="mt-4">
-            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 w-full">
+            <Card className="bg-white border border-gray-200 rounded-xl">
+              <CardContent className="p-5 space-y-4">
               <div className="space-y-1.5">
                 <Label>Meta Title</Label>
                 <Input
@@ -442,11 +752,13 @@ export function BlogForm({
                 />
                 <p className="text-xs text-gray-400">Comma-separated keywords for search engines.</p>
               </div>
-            </div>
+            </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="settings" className="mt-4 space-y-5">
-            <div className="bg-white rounded-xl border border-gray-200 p-5 w-full">
+            <Card className="bg-white border border-gray-200 rounded-xl">
+              <CardContent className="p-5">
               <p className="text-sm font-semibold text-gray-900 mb-4">Status</p>
               <div className="flex items-end gap-6 flex-wrap">
                 <div className="space-y-1.5">
@@ -486,9 +798,11 @@ export function BlogForm({
                   />
                 </div>
               </div>
-            </div>
+            </CardContent>
+            </Card>
 
-            <div className="bg-white rounded-xl border border-gray-200 p-5 w-full">
+            <Card className="bg-white border border-gray-200 rounded-xl">
+              <CardContent className="p-5">
               <p className="text-sm font-semibold text-gray-900 mb-4">Project</p>
               <div className="space-y-1.5">
                 <Label>Linked Project</Label>
@@ -509,9 +823,11 @@ export function BlogForm({
                 </Select>
                 <p className="text-xs text-gray-400">Link this blog to an existing project.</p>
               </div>
-            </div>
+            </CardContent>
+            </Card>
 
-            <div className="bg-white rounded-xl border border-gray-200 p-5 w-full">
+            <Card className="bg-white border border-gray-200 rounded-xl">
+              <CardContent className="p-5">
               <p className="text-sm font-semibold text-gray-900 mb-4">Author</p>
 
               <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-1 w-fit mb-4">
@@ -545,7 +861,7 @@ export function BlogForm({
                     <Label>Author Image</Label>
                     {authorPreview ? (
                       <div className="relative size-16 rounded-full border border-gray-200 overflow-hidden group">
-                        <img src={authorPreview} alt="Author" className="w-full h-full object-cover" />
+                        <Image src={authorPreview} alt="Author" fill className="object-cover" />
                         <button
                           type="button"
                           onClick={() => {
@@ -603,10 +919,41 @@ export function BlogForm({
                   </Select>
                 </div>
               )}
-            </div>
+            </CardContent>
+            </Card>
           </TabsContent>
         </div>
       </Tabs>
+
+      {modelViewerPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setModelViewerPreview(null)}>
+          <div className="relative w-[80vw] h-[80vh] rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <ModelViewer src={modelViewerPreview} className="w-full h-full" ar arModes="webxr scene-viewer quick-look" />
+            <button
+              type="button"
+              onClick={() => setModelViewerPreview(null)}
+              className="absolute top-3 right-3 size-8 rounded-full bg-white/80 flex items-center justify-center hover:bg-white transition"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {videoPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setVideoPreview(null)}>
+          <div className="relative" onClick={(e) => e.stopPropagation()}>
+            <video src={videoPreview} controls autoPlay className="max-w-[90vw] max-h-[90vh] rounded-lg" />
+            <button
+              type="button"
+              onClick={() => setVideoPreview(null)}
+              className="absolute -top-3 -right-3 size-8 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-gray-100 transition"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

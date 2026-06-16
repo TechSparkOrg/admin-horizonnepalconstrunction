@@ -26,6 +26,7 @@ import {
 import type { MediaItem } from "@/api/types/media.types";
 import { toSlug } from "@/lib/slug";
 import { isVideoUrl, isModelUrl } from "@/lib/media";
+import { ModelViewer } from "@/components/global_ui/ModelViewer";
 
 const mediaSchema = z.object({
   alt: z.string().min(1, "Alt text is required"),
@@ -68,7 +69,6 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
   const [files, setFiles] = useState<File[]>([]);
   const [preview, setPreview] = useState<string>(editing?.url || "");
   const [viewerOpen, setViewerOpen] = useState(false);
-  const [modelViewerLoaded, setModelViewerLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
   const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -146,14 +146,6 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
       setValue("slug", toSlug(watchTitle));
     }
   }, [watchTitle, setValue]);
-
-  useEffect(() => {
-    if (!viewerOpen) return;
-    const isModel = (editing?.url && isModelUrl(editing.url)) || (files[0]?.name || "").match(/\.(glb|gltf)$/i);
-    if (isModel) {
-      import("@google/model-viewer").then(() => setModelViewerLoaded(true));
-    }
-  }, [viewerOpen, editing, files]);
 
   return (
     <div>
@@ -468,22 +460,9 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
           {files[0]?.type.startsWith("video/") || isVideoUrl(preview) ? (
             <video src={preview} controls autoPlay className="max-w-[90vw] max-h-[90vh] rounded-lg" onClick={(e) => e.stopPropagation()} />
           ) : isModelUrl(preview) || (files[0]?.name || preview).match(/\.(glb|gltf)$/i) ? (
-            modelViewerLoaded ? (
-              <model-viewer
-                src={preview}
-                alt="3D Model"
-                auto-rotate
-                camera-controls
-                ar
-                ar-modes="webxr scene-viewer quick-look"
-                class="w-[80vw] h-[80vh] rounded-lg"
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <div className="flex items-center justify-center w-[80vw] h-[80vh] bg-black/30 rounded-lg" onClick={(e) => e.stopPropagation()}>
-                <Loader2 className="w-8 h-8 text-white animate-spin" />
-              </div>
-            )
+            <div className="w-[80vw] h-[80vh] rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <ModelViewer src={preview} className="w-full h-full" ar arModes="webxr scene-viewer quick-look" />
+            </div>
           ) : (
             <div className="relative w-full h-full max-w-[90vw] max-h-[90vh]">
               <Image src={preview} alt="Full preview" fill className="object-contain rounded-lg" />
