@@ -77,6 +77,8 @@ const navLinks: NavLink[] = [
     children: [
       { label: "Blogs", href: "/blogs" },
             { label: "Projects", href: "/blogs/projects" },
+                      { label: "Vastu", href: "/vastu"},
+          { label: "Building Permit", href: "/building-permit" },
   
     ],
   },
@@ -101,17 +103,19 @@ const navLinks: NavLink[] = [
       { label: "Material list", href: "/material-list" },
       { label: "Cost Estimation", href: "/dashboard/calculator/cost" },
          { label: "Team Allcocation", href: "/dashboard/calculator/cost" },
-        { label: "Vastu", href: "/vastu"},
-          { label: "Building Permit", href: "/building-permit" }
+
+               { label: "Unit Converter", href: "/material-list/unit-converter" }
     ],
   },
 
 
-  { label: "Documents", href: "/dashboard/documents", icon: Calculator ,
+  { label: "Documents", href: "/documents/templates", icon: Calculator ,
     children: [
-      { label: "Agreements", href: "/dashboard/agreements" },
-      { label: "Costumer Agreements", href: "/dashboard/costumer-agreements" },
-        { label: "Bid Documents", href: "/dashboard/vastu"}
+         { label: "Templates", href: "/documents/templates" },
+      { label: "Project Agreements", href: "/documents/project-agreements" },
+      { label: "Costumer Agreements", href: "/documents/costumer-agreements" },
+        { label: "Bid Documents", href: "/documents/bid-documents"}
+      
   
     ],
   },
@@ -119,9 +123,10 @@ const navLinks: NavLink[] = [
 
 
   { label: "System Admin", href: "/team", icon: Users ,    children: [
-      { label: "Roles", href: "/team/roles" },
-      { label: "Admin users", href: "/team/admin-users" },
-            { label: "Remote users", href: "/team/remote-users" },
+        { label: "Staff", href: "/team" },
+                  { label: "Roles & Permissions", href: "/team/roles-permissions" },
+      { label: "Admin Users", href: "/team/admin-users" }
+        
     ],},
 
   { label: "Settings", href: "/dashboard/settings", icon: Settings },

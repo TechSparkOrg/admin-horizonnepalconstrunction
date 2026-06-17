@@ -2,21 +2,15 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Plus, Search } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
-import { StaffAdmin } from "@/api/services/staff.service";
-import type { StaffMember } from "@/api/types/staff.types";
-import { STAFF_TYPE_OPTIONS } from "@/api/types/staff.types";
-import { StaffTable } from "@/components/page_ui/staff-table";
-import { StaffForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/staff-form";
-import type { StaffFormData } from "@/components/page_ui/staff-form";
+import { UnitConversionAdmin } from "@/api/services/unit-converter.service";
+import type { UnitConversionItem } from "@/api/types/unit-converter.types";
+import { UnitConverterTable } from "@/components/page_ui/unit-converter-table";
+import { UnitConverterForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/unit-converter-form";
+import type { UnitConverterFormData } from "@/components/page_ui/unit-converter-form";
+import type { ConversionRule } from "@/api/types/unit-converter.types";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   InputGroup,
   InputGroupAddon,
@@ -27,82 +21,63 @@ const ITEMS_PER_PAGE = 10;
 
 type View = "list" | "form";
 
-function itemToForm(item: StaffMember): StaffFormData {
+function itemToForm(item: UnitConversionItem): UnitConverterFormData {
   return {
-    name: item.name,
-    employeeId: item.employee_id,
-    type: item.type,
+    title: item.title,
+    slug: item.slug,
     attributeId: item.attribute_id,
-    designationLabel: item.designation_label,
-    designationValue: item.designation,
-    departmentLabel: item.department_label,
-    departmentValue: item.department,
-    joiningDate: item.joining_date ?? "",
-    currentlyWorking: item.is_currently_working,
-    endDate: item.end_date ?? "",
-    photo: item.photo,
-    email: item.email,
-    phone: item.phone,
-    socialLinks: item.social_links,
+    fieldLabel: item.field_label,
+    baseUnit: item.base_unit,
+    conversions: item.conversions,
     isActive: item.is_active,
-    showOnPublic: item.show_on_public,
   };
 }
 
-function formToPayload(form: StaffFormData) {
+function formToPayload(form: UnitConverterFormData) {
   return {
-    name: form.name,
-    employee_id: form.employeeId,
-    type: form.type,
+    title: form.title,
+    slug: form.slug,
     attribute_id: form.attributeId,
-    designation_label: form.designationLabel || null,
-    designation: form.designationValue || null,
-    department_label: form.departmentLabel || null,
-    department: form.departmentValue || null,
-    joining_date: form.joiningDate || null,
-    is_currently_working: form.currentlyWorking,
-    end_date: form.currentlyWorking ? null : (form.endDate || null),
-    photo: form.photo,
-    email: form.email,
-    phone: form.phone,
-    social_links: form.socialLinks,
+    field_label: form.fieldLabel,
+    base_unit: form.baseUnit,
+    conversions: form.conversions,
     is_active: form.isActive,
-    show_on_public: form.showOnPublic,
   };
 }
 
-export default function AdminStaffPage() {
-  const [items, setItems] = useState<StaffMember[]>([]);
+export default function AdminUnitConverterPage() {
+  const [items, setItems] = useState<UnitConversionItem[]>([]);
   const [total, setTotal] = useState(0);
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<StaffFormData>(EMPTY_FORM);
+  const [form, setForm] = useState<UnitConverterFormData>(EMPTY_FORM);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
 
   const searchParams = useMemo(() => ({
     search: search || undefined,
-    type: typeFilter !== "all" ? typeFilter : undefined,
     page: currentPage,
     page_size: ITEMS_PER_PAGE,
-  }), [search, typeFilter, currentPage]);
+  }), [search, currentPage]);
 
-  const loadData = () =>
-    StaffAdmin.search(searchParams)
+  useEffect(() => {
+    UnitConversionAdmin.search(searchParams)
       .then((res) => {
         setItems(res.results ?? []);
         setTotal(res.count ?? 0);
       })
       .catch(() => toast.error("Failed to load data"));
-
-  useEffect(() => {
-    loadData();
   }, [searchParams]);
 
-  const refetch = loadData;
+  const refetch = () =>
+    UnitConversionAdmin.search(searchParams)
+      .then((res) => {
+        setItems(res.results ?? []);
+        setTotal(res.count ?? 0);
+      })
+      .catch(() => toast.error("Failed to load conversions"));
 
   const openNew = () => {
     setForm(EMPTY_FORM);
@@ -110,7 +85,7 @@ export default function AdminStaffPage() {
     setView("form");
   };
 
-  const openEdit = (item: StaffMember) => {
+  const openEdit = (item: UnitConversionItem) => {
     setForm(itemToForm(item));
     setEditingId(item.id);
     setView("form");
@@ -122,7 +97,7 @@ export default function AdminStaffPage() {
     setView("list");
   };
 
-  const handleChange = (key: string, value: string | boolean | { platform: string; url: string }[] | null) => {
+  const handleChange = (key: string, value: string | boolean | number | ConversionRule[] | null) => {
     setForm((prev) => ({
       ...prev,
       [key]: value,
@@ -130,16 +105,16 @@ export default function AdminStaffPage() {
   };
 
   const save = async () => {
-    if (!form.name.trim()) return;
+    if (!form.title.trim()) return;
     setSaving(true);
     try {
       const payload = formToPayload(form);
       if (editingId) {
-        await StaffAdmin.update(editingId, payload);
-        toast.success("Staff member updated");
+        await UnitConversionAdmin.update(editingId, payload);
+        toast.success("Conversion updated");
       } else {
-        await StaffAdmin.create(payload);
-        toast.success("Staff member created");
+        await UnitConversionAdmin.create(payload);
+        toast.success("Conversion created");
       }
       await refetch();
       back();
@@ -152,9 +127,9 @@ export default function AdminStaffPage() {
 
   const confirmDelete = async (id: string) => {
     try {
-      await StaffAdmin.delete(id);
+      await UnitConversionAdmin.delete(id);
       setItems((prev) => prev.filter((g) => g.id !== id));
-      toast.success("Staff member deleted");
+      toast.success("Conversion deleted");
     } catch {
       toast.error("Failed to delete");
     }
@@ -168,19 +143,19 @@ export default function AdminStaffPage() {
     setCurrentPage(1);
   };
 
-  const handleTypeFilterChange = (v: string) => {
-    setTypeFilter(v);
-    setCurrentPage(1);
-  };
-
   return (
     <>
       {view === "list" ? (
         <div className="px-4">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 leading-none">Staff</h1>
-              <p className="text-xs text-gray-500 mt-1">Manage your team members</p>
+              <div className="flex items-center gap-2">
+                <Link href="/material-list" className="text-xs text-gray-500 hover:text-gray-700">
+                  ← Material List
+                </Link>
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 leading-none mt-1">Unit Converter</h1>
+              <p className="text-xs text-gray-500 mt-1">Manage unit conversion rules</p>
             </div>
             <Button
               variant="outline"
@@ -188,7 +163,7 @@ export default function AdminStaffPage() {
               onClick={openNew}
               className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20"
             >
-              <Plus className="w-4 h-4" /> Add Member
+              <Plus className="w-4 h-4" /> Add Conversion
             </Button>
           </div>
 
@@ -203,26 +178,12 @@ export default function AdminStaffPage() {
                 placeholder="Search"
               />
             </InputGroup>
-            <Select
-              value={typeFilter}
-              onValueChange={handleTypeFilterChange}
-            >
-              <SelectTrigger className="w-36 h-9 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {STAFF_TYPE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <p className="text-sm text-[lab(20_23.9_-60.14)] font-medium whitespace-nowrap">
               Total: {total} {total === 1 ? "item" : "items"} found.
             </p>
           </div>
 
-          <StaffTable
+          <UnitConverterTable
             items={items}
             onEdit={openEdit}
             onDelete={confirmDelete}
@@ -235,7 +196,7 @@ export default function AdminStaffPage() {
         </div>
       ) : (
         <div className="px-4">
-          <StaffForm
+          <UnitConverterForm
             form={form}
             editingId={editingId}
             saving={saving}

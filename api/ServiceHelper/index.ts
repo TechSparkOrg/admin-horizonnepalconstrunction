@@ -136,7 +136,7 @@ const createAxiosClient = (isPrivate = false): AxiosInstance => {
             }
 
             // Clear tokens and redirect on auth failure
-            if (status === 401 || status === 403) {
+            if (status === 401) {
                 await TokenManager.clearTokens();
                 if (!isServer()) {
                     window.location.href = '/login';

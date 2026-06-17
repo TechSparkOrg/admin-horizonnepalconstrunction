@@ -196,9 +196,9 @@ export function MaterialListForm({
 
                 {selectedAttribute && (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div className="space-y-3">
+                    <div className="space-y-1.5">
                       <Label className="text-sm font-semibold text-gray-900">Unit</Label>
-                      <div className="space-y-2">
+                      <div className="flex items-center gap-2">
                         <Select value={unitLabel} onValueChange={(v) => { setUnitLabel(v); onChange("unitValue", ""); }}>
                           <SelectTrigger className="w-full h-9 text-sm">
                             <SelectValue placeholder="Pick a field" />
@@ -209,30 +209,27 @@ export function MaterialListForm({
                             ))}
                           </SelectContent>
                         </Select>
-                        {selectedUnitField && (
-                          <div className="flex flex-wrap gap-2">
-                            {selectedUnitField.values.map((val) => (
-                              <button
-                                key={val}
-                                type="button"
-                                onClick={() => onChange("unitValue", val)}
-                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition border ${
-                                  form.unitValue === val
-                                    ? "bg-[lab(20_23.9_-60.14)] text-white border-[lab(20_23.9_-60.14)]"
-                                    : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
-                                }`}
-                              >
-                                {val}
-                              </button>
+                        <span className="text-gray-300 select-none shrink-0 text-sm font-medium">|</span>
+                        <Select
+                          value={form.unitValue}
+                          onValueChange={(v) => onChange("unitValue", v)}
+                          disabled={!unitLabel}
+                        >
+                          <SelectTrigger className="w-full h-9 text-sm">
+                            <SelectValue placeholder="Select value" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {selectedUnitField?.values.map((val) => (
+                              <SelectItem key={val} value={val}>{val}</SelectItem>
                             ))}
-                          </div>
-                        )}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-1.5">
                       <Label className="text-sm font-semibold text-gray-900">Company</Label>
-                      <div className="space-y-2">
+                      <div className="flex items-center gap-2">
                         <Select value={companyLabel} onValueChange={(v) => { setCompanyLabel(v); onChange("companyValue", ""); }}>
                           <SelectTrigger className="w-full h-9 text-sm">
                             <SelectValue placeholder="Pick a field" />
@@ -243,24 +240,21 @@ export function MaterialListForm({
                             ))}
                           </SelectContent>
                         </Select>
-                        {selectedCompanyField && (
-                          <div className="flex flex-wrap gap-2">
-                            {selectedCompanyField.values.map((val) => (
-                              <button
-                                key={val}
-                                type="button"
-                                onClick={() => onChange("companyValue", val)}
-                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition border ${
-                                  form.companyValue === val
-                                    ? "bg-[lab(20_23.9_-60.14)] text-white border-[lab(20_23.9_-60.14)]"
-                                    : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
-                                }`}
-                              >
-                                {val}
-                              </button>
+                        <span className="text-gray-300 select-none shrink-0 text-sm font-medium">|</span>
+                        <Select
+                          value={form.companyValue}
+                          onValueChange={(v) => onChange("companyValue", v)}
+                          disabled={!companyLabel}
+                        >
+                          <SelectTrigger className="w-full h-9 text-sm">
+                            <SelectValue placeholder="Select value" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {selectedCompanyField?.values.map((val) => (
+                              <SelectItem key={val} value={val}>{val}</SelectItem>
                             ))}
-                          </div>
-                        )}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   </div>

@@ -1,57 +1,47 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Search, ArrowLeftRight } from "lucide-react";
-import Link from "next/link";
+import { Plus, Search } from "lucide-react";
 import { toast } from "sonner";
-import { MaterialListAdmin } from "@/api/services/material-list.service";
-import type { MaterialItem } from "@/api/types/material-list.types";
-import { MaterialListTable } from "@/components/page_ui/material-list-table";
-import { MaterialListForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/material-list-form";
-import type { MaterialListFormData } from "@/components/page_ui/material-list-form";
+import { AgreementAdmin } from "@/api/services/agreement.service";
+import type { AgreementItem } from "@/api/types/agreement.types";
+import { AgreementTable } from "@/components/page_ui/agreement-table";
+import { AgreementForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/agreement-form";
+import type { AgreementFormData } from "@/components/page_ui/agreement-form";
 import { Button } from "@/components/ui/button";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 
 const ITEMS_PER_PAGE = 10;
-
 type View = "list" | "form";
 
-function itemToForm(item: MaterialItem): MaterialListFormData {
+function itemToForm(item: AgreementItem): AgreementFormData {
   return {
     name: item.name,
-    pricePerUnit: item.price_per_unit,
-    attributeId: item.attribute_id,
-    unitValue: item.unit_value,
-    companyValue: item.company_value,
-    photo: item.photo,
-    serviceCategoryId: item.service_category_id,
-    isActive: item.is_active,
+    clientName: item.client_name,
+    templateId: item.template,
+    variables: item.variables ?? {},
+    projectId: item.project ?? "",
+    status: (item.status as "draft" | "completed") || "draft",
   };
 }
 
-function formToPayload(form: MaterialListFormData) {
+function formToPayload(form: AgreementFormData) {
   return {
     name: form.name,
-    price_per_unit: form.pricePerUnit === "" ? 0 : form.pricePerUnit,
-    attribute_id: form.attributeId,
-    unit_value: form.unitValue,
-    company_value: form.companyValue,
-    photo: form.photo,
-    service_category_id: form.serviceCategoryId,
-    is_active: form.isActive,
+    client_name: form.clientName,
+    template: form.templateId,
+    variables: form.variables,
+    project: form.projectId || null,
+    status: form.status,
   };
 }
 
-export default function AdminMaterialListPage() {
-  const [items, setItems] = useState<MaterialItem[]>([]);
+export default function ProjectAgreementsPage() {
+  const [items, setItems] = useState<AgreementItem[]>([]);
   const [total, setTotal] = useState(0);
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<MaterialListFormData>(EMPTY_FORM);
+  const [form, setForm] = useState<AgreementFormData>(EMPTY_FORM);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
@@ -64,21 +54,22 @@ export default function AdminMaterialListPage() {
   }), [search, currentPage]);
 
   useEffect(() => {
-    MaterialListAdmin.search(searchParams)
+    AgreementAdmin.search(searchParams)
       .then((res) => {
         setItems(res.results ?? []);
         setTotal(res.count ?? 0);
       })
-      .catch(() => toast.error("Failed to load data"));
+      .catch(() => toast.error("Failed to load agreements"));
   }, [searchParams]);
 
-  const refetch = () =>
-    MaterialListAdmin.search(searchParams)
+  const refetch = () => {
+    AgreementAdmin.search(searchParams)
       .then((res) => {
         setItems(res.results ?? []);
         setTotal(res.count ?? 0);
       })
-      .catch(() => toast.error("Failed to load materials"));
+      .catch(() => toast.error("Failed to load agreements"));
+  };
 
   const openNew = () => {
     setForm(EMPTY_FORM);
@@ -86,7 +77,7 @@ export default function AdminMaterialListPage() {
     setView("form");
   };
 
-  const openEdit = (item: MaterialItem) => {
+  const openEdit = (item: AgreementItem) => {
     setForm(itemToForm(item));
     setEditingId(item.id);
     setView("form");
@@ -98,24 +89,25 @@ export default function AdminMaterialListPage() {
     setView("list");
   };
 
-  const handleChange = (key: string, value: string | boolean | number | null) => {
-    setForm((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+  const handleChange = (key: string, value: string | boolean) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleVariablesChange = (vars: Record<string, string>) => {
+    setForm((prev) => ({ ...prev, variables: vars }));
   };
 
   const save = async () => {
-    if (!form.name.trim()) return;
+    if (!form.name.trim() || !form.templateId) return;
     setSaving(true);
     try {
       const payload = formToPayload(form);
       if (editingId) {
-        await MaterialListAdmin.update(editingId, payload);
-        toast.success("Material updated");
+        await AgreementAdmin.update(editingId, payload);
+        toast.success("Agreement updated");
       } else {
-        await MaterialListAdmin.create(payload);
-        toast.success("Material created");
+        await AgreementAdmin.create(payload);
+        toast.success("Agreement created");
       }
       await refetch();
       back();
@@ -128,9 +120,9 @@ export default function AdminMaterialListPage() {
 
   const confirmDelete = async (id: string) => {
     try {
-      await MaterialListAdmin.delete(id);
-      setItems((prev) => prev.filter((g) => g.id !== id));
-      toast.success("Material deleted");
+      await AgreementAdmin.delete(id);
+      setItems((prev) => prev.filter((t) => t.id !== id));
+      toast.success("Agreement deleted");
     } catch {
       toast.error("Failed to delete");
     }
@@ -150,15 +142,8 @@ export default function AdminMaterialListPage() {
         <div className="px-4">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 leading-none">Material List</h1>
-              <p className="text-xs text-gray-500 mt-1">
-                Manage materials and their pricing
-                <span className="mx-2">·</span>
-                <Link href="/material-list/unit-converter" className="text-[lab(20_23.9_-60.14)] hover:underline inline-flex items-center gap-1">
-                  <ArrowLeftRight className="size-3" />
-                  Unit Converter
-                </Link>
-              </p>
+              <h1 className="text-2xl font-bold text-gray-900 leading-none">Project Agreements</h1>
+              <p className="text-xs text-gray-500 mt-1">Manage client agreements and contracts</p>
             </div>
             <Button
               variant="outline"
@@ -166,19 +151,19 @@ export default function AdminMaterialListPage() {
               onClick={openNew}
               className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20"
             >
-              <Plus className="w-4 h-4" /> Add Material
+              <Plus className="w-4 h-4" /> Add Agreement
             </Button>
           </div>
 
-          <div className="flex items-center gap-3 mb-4">
-            <InputGroup className="flex-1 max-w-sm h-9">
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <InputGroup className="max-w-sm h-9">
               <InputGroupAddon align="inline-start">
                 <Search className="size-4 text-muted-foreground" />
               </InputGroupAddon>
               <InputGroupInput
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="Search"
+                placeholder="Search agreements..."
               />
             </InputGroup>
             <p className="text-sm text-[lab(20_23.9_-60.14)] font-medium whitespace-nowrap">
@@ -186,7 +171,7 @@ export default function AdminMaterialListPage() {
             </p>
           </div>
 
-          <MaterialListTable
+          <AgreementTable
             items={items}
             onEdit={openEdit}
             onDelete={confirmDelete}
@@ -199,11 +184,12 @@ export default function AdminMaterialListPage() {
         </div>
       ) : (
         <div className="px-4">
-          <MaterialListForm
+          <AgreementForm
             form={form}
             editingId={editingId}
             saving={saving}
             onChange={handleChange}
+            onVariablesChange={handleVariablesChange}
             onSave={save}
             onBack={back}
           />

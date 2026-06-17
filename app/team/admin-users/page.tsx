@@ -3,12 +3,14 @@
 import { useState, useEffect, useMemo } from "react";
 import { Plus, Search } from "lucide-react";
 import { toast } from "sonner";
-import { StaffAdmin } from "@/api/services/staff.service";
-import type { StaffMember } from "@/api/types/staff.types";
-import { STAFF_TYPE_OPTIONS } from "@/api/types/staff.types";
-import { StaffTable } from "@/components/page_ui/staff-table";
-import { StaffForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/staff-form";
-import type { StaffFormData } from "@/components/page_ui/staff-form";
+import axios from "axios";
+import { useAuthStore } from "@/app/store/auth-store";
+import { AdminUserAdmin } from "@/api/services/admin-user.service";
+import { PermissionAdmin } from "@/api/services/permission.service";
+import type { AdminUser } from "@/api/types/admin-user.types";
+import { AdminUserTable } from "@/components/page_ui/admin-user-table";
+import { AdminUserForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/admin-user-form";
+import type { AdminUserFormData, RoleOption } from "@/components/page_ui/admin-user-form";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -27,71 +29,56 @@ const ITEMS_PER_PAGE = 10;
 
 type View = "list" | "form";
 
-function itemToForm(item: StaffMember): StaffFormData {
+function itemToForm(item: AdminUser): AdminUserFormData {
   return {
     name: item.name,
-    employeeId: item.employee_id,
-    type: item.type,
-    attributeId: item.attribute_id,
-    designationLabel: item.designation_label,
-    designationValue: item.designation,
-    departmentLabel: item.department_label,
-    departmentValue: item.department,
-    joiningDate: item.joining_date ?? "",
-    currentlyWorking: item.is_currently_working,
-    endDate: item.end_date ?? "",
-    photo: item.photo,
     email: item.email,
-    phone: item.phone,
-    socialLinks: item.social_links,
+    role: item.role,
+    password: "",
+    currentPassword: "",
+    staffMemberId: item.staff_member_id,
     isActive: item.is_active,
-    showOnPublic: item.show_on_public,
   };
 }
 
-function formToPayload(form: StaffFormData) {
-  return {
+function formToPayload(form: AdminUserFormData) {
+  const payload: Record<string, unknown> = {
     name: form.name,
-    employee_id: form.employeeId,
-    type: form.type,
-    attribute_id: form.attributeId,
-    designation_label: form.designationLabel || null,
-    designation: form.designationValue || null,
-    department_label: form.departmentLabel || null,
-    department: form.departmentValue || null,
-    joining_date: form.joiningDate || null,
-    is_currently_working: form.currentlyWorking,
-    end_date: form.currentlyWorking ? null : (form.endDate || null),
-    photo: form.photo,
     email: form.email,
-    phone: form.phone,
-    social_links: form.socialLinks,
+    role: form.role,
+    current_password: form.currentPassword,
+    staff_member_id: form.staffMemberId,
     is_active: form.isActive,
-    show_on_public: form.showOnPublic,
   };
+  if (form.password) payload.password = form.password;
+  return payload;
 }
 
-export default function AdminStaffPage() {
-  const [items, setItems] = useState<StaffMember[]>([]);
+export default function AdminUsersPage() {
+  const [items, setItems] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<StaffFormData>(EMPTY_FORM);
+  const [editingSuperuser, setEditingSuperuser] = useState(false);
+  const [form, setForm] = useState<AdminUserFormData>(EMPTY_FORM);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [roleOptions, setRoleOptions] = useState<RoleOption[]>([]);
+  const currentUser = useAuthStore((s) => s.user);
+  const canDelete = currentUser?.is_superuser === true;
 
   const searchParams = useMemo(() => ({
     search: search || undefined,
-    type: typeFilter !== "all" ? typeFilter : undefined,
+    role: roleFilter !== "all" ? roleFilter : undefined,
     page: currentPage,
     page_size: ITEMS_PER_PAGE,
-  }), [search, typeFilter, currentPage]);
+  }), [search, roleFilter, currentPage]);
 
   const loadData = () =>
-    StaffAdmin.search(searchParams)
+    AdminUserAdmin.search(searchParams)
       .then((res) => {
         setItems(res.results ?? []);
         setTotal(res.count ?? 0);
@@ -102,17 +89,25 @@ export default function AdminStaffPage() {
     loadData();
   }, [searchParams]);
 
+  useEffect(() => {
+    PermissionAdmin.search().then((roles) => {
+      setRoleOptions(roles.map((r) => ({ value: r.name, label: r.name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) })));
+    }).catch(() => {});
+  }, []);
+
   const refetch = loadData;
 
   const openNew = () => {
     setForm(EMPTY_FORM);
     setEditingId(null);
+    setEditingSuperuser(false);
     setView("form");
   };
 
-  const openEdit = (item: StaffMember) => {
+  const openEdit = (item: AdminUser) => {
     setForm(itemToForm(item));
     setEditingId(item.id);
+    setEditingSuperuser(item.is_superuser);
     setView("form");
   };
 
@@ -122,7 +117,7 @@ export default function AdminStaffPage() {
     setView("list");
   };
 
-  const handleChange = (key: string, value: string | boolean | { platform: string; url: string }[] | null) => {
+  const handleChange = (key: string, value: string | boolean | null) => {
     setForm((prev) => ({
       ...prev,
       [key]: value,
@@ -130,21 +125,33 @@ export default function AdminStaffPage() {
   };
 
   const save = async () => {
-    if (!form.name.trim()) return;
+    if (!form.name.trim() || !form.email.trim()) return;
+    if (!form.currentPassword.trim()) {
+      toast.error("Current password is required for verification");
+      return;
+    }
+    if (!editingId && !form.password) {
+      toast.error("Password is required for new users");
+      return;
+    }
     setSaving(true);
     try {
       const payload = formToPayload(form);
       if (editingId) {
-        await StaffAdmin.update(editingId, payload);
-        toast.success("Staff member updated");
+        await AdminUserAdmin.update(editingId, payload);
+        toast.success("Admin user updated");
       } else {
-        await StaffAdmin.create(payload);
-        toast.success("Staff member created");
+        await AdminUserAdmin.create(payload);
+        toast.success("Admin user created");
       }
       await refetch();
       back();
-    } catch {
-      toast.error("Something went wrong");
+    } catch (err: unknown) {
+      let msg = "Something went wrong";
+      if (axios.isAxiosError<{ current_password?: string[]; detail?: string }>(err) && err.response?.data) {
+        msg = err.response.data.current_password?.[0] ?? err.response.data.detail ?? msg;
+      }
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -152,11 +159,15 @@ export default function AdminStaffPage() {
 
   const confirmDelete = async (id: string) => {
     try {
-      await StaffAdmin.delete(id);
+      await AdminUserAdmin.delete(id);
       setItems((prev) => prev.filter((g) => g.id !== id));
-      toast.success("Staff member deleted");
-    } catch {
-      toast.error("Failed to delete");
+      toast.success("Admin user deleted");
+    } catch (err: unknown) {
+      let msg = "Failed to delete";
+      if (axios.isAxiosError<{ detail?: string }>(err) && err.response?.data?.detail) {
+        msg = err.response.data.detail;
+      }
+      toast.error(msg);
     }
     setDeleteId(null);
   };
@@ -168,8 +179,8 @@ export default function AdminStaffPage() {
     setCurrentPage(1);
   };
 
-  const handleTypeFilterChange = (v: string) => {
-    setTypeFilter(v);
+  const handleRoleFilterChange = (v: string) => {
+    setRoleFilter(v);
     setCurrentPage(1);
   };
 
@@ -179,8 +190,8 @@ export default function AdminStaffPage() {
         <div className="px-4">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 leading-none">Staff</h1>
-              <p className="text-xs text-gray-500 mt-1">Manage your team members</p>
+              <h1 className="text-2xl font-bold text-gray-900 leading-none">Admin Users</h1>
+              <p className="text-xs text-gray-500 mt-1">Manage system admin users and roles</p>
             </div>
             <Button
               variant="outline"
@@ -188,7 +199,7 @@ export default function AdminStaffPage() {
               onClick={openNew}
               className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20"
             >
-              <Plus className="w-4 h-4" /> Add Member
+              <Plus className="w-4 h-4" /> Add User
             </Button>
           </div>
 
@@ -204,15 +215,15 @@ export default function AdminStaffPage() {
               />
             </InputGroup>
             <Select
-              value={typeFilter}
-              onValueChange={handleTypeFilterChange}
+              value={roleFilter}
+              onValueChange={handleRoleFilterChange}
             >
-              <SelectTrigger className="w-36 h-9 text-sm">
+              <SelectTrigger className="w-40 h-9 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {STAFF_TYPE_OPTIONS.map((opt) => (
+                <SelectItem value="all">All Roles</SelectItem>
+                {roleOptions.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                 ))}
               </SelectContent>
@@ -222,7 +233,7 @@ export default function AdminStaffPage() {
             </p>
           </div>
 
-          <StaffTable
+          <AdminUserTable
             items={items}
             onEdit={openEdit}
             onDelete={confirmDelete}
@@ -231,17 +242,20 @@ export default function AdminStaffPage() {
             page={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
+            canDelete={canDelete}
           />
         </div>
       ) : (
         <div className="px-4">
-          <StaffForm
+          <AdminUserForm
             form={form}
             editingId={editingId}
+            isSuperuser={editingSuperuser}
             saving={saving}
             onChange={handleChange}
             onSave={save}
             onBack={back}
+            roleOptions={roleOptions}
           />
         </div>
       )}

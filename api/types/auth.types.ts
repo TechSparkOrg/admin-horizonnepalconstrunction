@@ -9,8 +9,12 @@ export interface AuthUser {
     username: string;
     first_name: string;
     last_name: string;
+    name: string;
+    role: string;
+    is_superuser: boolean;
     is_active: boolean;
     created_at: string;
+    permissions: string[];
 }
 
 export interface LoginResponse {

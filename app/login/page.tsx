@@ -1,18 +1,26 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Lock, ArrowRight, Building2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupButton,
+} from "@/components/ui/input-group";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Building2, Loader2 } from "lucide-react";
 import { loginSchema, type LoginFormValues } from "./validation";
 import { useAuthStore } from "@/app/store/auth-store";
 
 export default function LoginPage() {
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -33,95 +41,101 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-fs-bg4 via-white to-fs-bg4/50 p-4 sm:p-6">
-      <div className="w-full max-w-[420px]">
-        <div className="text-center mb-10 flex flex-col items-center space-y-3">
-          <div className="relative">
-            <div className="absolute inset-0 bg-fs-secondary/10 rounded-2xl blur-xl" />
-            <div className="relative bg-white rounded-2xl p-3 shadow-sm border border-fs-border3/10">
-              <Building2 className="w-8 h-8 text-fs-secondary" />
-            </div>
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-50 p-4 sm:p-6">
+      <div className="w-full max-w-[400px]">
+        <div className="text-center mb-8 flex flex-col items-center gap-3">
+          <div className="w-14 h-14 rounded-xl bg-[lab(20_23.9_-60.14)] flex items-center justify-center shadow-lg shadow-[lab(20_23.9_-60.14)]/20">
+            <Building2 className="w-7 h-7 text-white" />
           </div>
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight text-fs-text1">
-              Construction Admin
-            </h1>
-            <p className="text-sm text-fs-text3">Sign in to your dashboard</p>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Construction Admin</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Sign in to your dashboard</p>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg shadow-fs-border3/5 border border-fs-border3/10 p-6 sm:p-8">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {errors.root && (
-              <div className="rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm p-3 text-center">
-                {errors.root.message}
-              </div>
-            )}
-
-            <div className="space-y-2.5">
-              <Label htmlFor="email" className="text-sm font-semibold text-fs-text2">
-                Email Address
-              </Label>
-              <div className="relative group">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-fs-text3/60 w-[18px] h-[18px] transition-colors group-focus-within:text-fs-secondary" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="admin@example.com"
-                  {...register("email")}
-                  className="pl-11 h-11 bg-fs-bg4/50 border-fs-border3/20 rounded-xl text-sm placeholder:text-fs-text3/40 focus:border-fs-secondary focus:ring-2 focus:ring-fs-secondary/10 transition-all duration-200"
-                />
-              </div>
-              {errors.email && (
-                <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>
+        <Card className="bg-white border border-gray-200 rounded-xl shadow-sm">
+          <CardContent className="p-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+              {errors.root && (
+                <div className="rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm p-3 text-center">
+                  {errors.root.message}
+                </div>
               )}
-            </div>
 
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-sm font-semibold text-fs-text2">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                  Email
+                </Label>
+                <InputGroup className="h-10">
+                  <InputGroupAddon align="inline-start">
+                    <Mail className="size-4 text-gray-400" />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    id="email"
+                    type="email"
+                    placeholder="admin@example.com"
+                    {...register("email")}
+                  />
+                </InputGroup>
+                {errors.email && (
+                  <p className="text-xs text-red-500">{errors.email.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm font-medium text-gray-700">
                   Password
                 </Label>
-                <a href="#" className="text-xs font-medium text-fs-secondary hover:text-fs-btn1 transition-colors">
-                  Forgot password?
-                </a>
+                <InputGroup className="h-10">
+                  <InputGroupAddon align="inline-start">
+                    <Lock className="size-4 text-gray-400" />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    {...register("password")}
+                  />
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupButton
+                      type="button"
+                      size="icon-sm"
+                      variant="ghost"
+                      tabIndex={-1}
+                      onClick={() => setShowPassword((p) => !p)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                    </InputGroupButton>
+                  </InputGroupAddon>
+                </InputGroup>
+                {errors.password && (
+                  <p className="text-xs text-red-500">{errors.password.message}</p>
+                )}
               </div>
-              <div className="relative group">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-fs-text3/60 w-[18px] h-[18px] transition-colors group-focus-within:text-fs-secondary" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  {...register("password")}
-                  className="pl-11 h-11 bg-fs-bg4/50 border-fs-border3/20 rounded-xl text-sm placeholder:text-fs-text3/40 focus:border-fs-secondary focus:ring-2 focus:ring-fs-secondary/10 transition-all duration-200"
-                />
-              </div>
-              {errors.password && (
-                <p className="text-xs text-red-500 mt-1">{errors.password.message}</p>
-              )}
-            </div>
 
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full h-11 bg-fs-secondary hover:bg-fs-btn1 disabled:opacity-60 text-white font-semibold rounded-xl shadow-md hover:shadow-lg shadow-fs-secondary/20 hover:shadow-fs-btn1/20 transition-all duration-300 text-sm group"
-            >
-              {isSubmitting ? "Signing in..." : "Sign In"}
-              <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-            </Button>
-          </form>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full h-10 bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white font-medium rounded-lg text-sm shadow-sm"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  <>
+                    Sign In
+                    <ArrowRight className="ml-1.5 size-4" />
+                  </>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-          <div className="mt-6 pt-6 border-t border-fs-border3/10 text-center">
-            <p className="text-xs text-fs-text3/70">
-              Need help? Contact{" "}
-              <a href="#" className="text-fs-secondary hover:text-fs-btn1 font-medium transition-colors">
-                Support
-              </a>
-            </p>
-          </div>
-        </div>
-
-        <p className="text-center text-xs text-fs-text3/50 mt-6">
+        <p className="text-center text-xs text-gray-400 mt-6">
           &copy; 2026 Construction Admin. All rights reserved.
         </p>
       </div>
