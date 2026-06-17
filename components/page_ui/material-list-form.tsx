@@ -24,8 +24,10 @@ import { MediaPickerDialog } from "@/components/global_ui/MediahanlderPicker";
 import type { MediaItem } from "@/components/global_ui/MediahanlderPicker";
 import { CategoryAdmin } from "@/api/services/category.service";
 import { AttributeAdmin } from "@/api/services/attribute.service";
+import { BlogAdmin } from "@/api/services/blog.service";
 import type { Category } from "@/api/types/category.types";
 import type { AttributeItem } from "@/api/types/attribute.types";
+import type { BlogPost } from "@/api/types/blog.types";
 
 interface MaterialListFormData {
   name: string;
@@ -36,6 +38,7 @@ interface MaterialListFormData {
   photo: string;
   serviceCategoryId: string | null;
   isActive: boolean;
+  blogId: string;
 }
 
 interface Props {
@@ -56,6 +59,7 @@ const EMPTY: MaterialListFormData = {
   photo: "",
   serviceCategoryId: null,
   isActive: true,
+  blogId: "",
 };
 
 export { EMPTY };
@@ -72,6 +76,7 @@ export function MaterialListForm({
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [serviceCategories, setServiceCategories] = useState<Category[]>([]);
   const [attributes, setAttributes] = useState<AttributeItem[]>([]);
+  const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [unitLabel, setUnitLabel] = useState("");
   const [companyLabel, setCompanyLabel] = useState("");
 
@@ -81,6 +86,9 @@ export function MaterialListForm({
       .catch(() => {});
     CategoryAdmin.listServices()
       .then((res) => setServiceCategories(res.results ?? []))
+      .catch(() => {});
+    BlogAdmin.list()
+      .then((res) => setBlogs(res.results ?? []))
       .catch(() => {});
   }, []);
 
@@ -348,6 +356,24 @@ export function MaterialListForm({
                     >
                       Inactive
                     </button>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 pt-4">
+                  <p className="text-sm font-semibold text-gray-900 mb-3">Linked Blog</p>
+                  <div className="space-y-1.5 max-w-md">
+                    <Label>Blog Post</Label>
+                    <Select value={form.blogId} onValueChange={(v) => onChange("blogId", v)}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="None" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {blogs.map((b) => (
+                          <SelectItem key={b.id} value={b.id}>{b.title}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-400">Link this material to a blog post for public rendering.</p>
                   </div>
                 </div>
               </CardContent>

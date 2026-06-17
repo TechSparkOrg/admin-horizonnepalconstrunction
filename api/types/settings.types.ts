@@ -1,8 +1,12 @@
 export type SocialLink = {
   platform: string;
   url: string;
-  label: string;
   id: string;
+};
+
+export type CompanyInfo = {
+  name: string;
+  description: string;
 };
 
 export type ContactInfo = {
@@ -25,6 +29,7 @@ export type ScriptSettings = {
 };
 
 export type SiteSettings = {
+  company_info: CompanyInfo;
   social_links: SocialLink[];
   contact_info: ContactInfo;
   seo: SeoSettings;

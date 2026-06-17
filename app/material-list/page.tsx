@@ -30,6 +30,7 @@ function itemToForm(item: MaterialItem): MaterialListFormData {
     photo: item.photo,
     serviceCategoryId: item.service_category_id,
     isActive: item.is_active,
+    blogId: item.blog_id,
   };
 }
 
@@ -43,6 +44,7 @@ function formToPayload(form: MaterialListFormData) {
     photo: form.photo,
     service_category_id: form.serviceCategoryId,
     is_active: form.isActive,
+    blog_id: form.blogId,
   };
 }
 

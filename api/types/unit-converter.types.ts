@@ -12,6 +12,7 @@ export interface UnitConversionItem {
   base_unit: string;
   conversions: ConversionRule[];
   is_active: boolean;
+  blog_id: string;
   created_at: string;
   updated_at: string;
 }

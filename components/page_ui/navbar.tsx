@@ -129,7 +129,7 @@ const navLinks: NavLink[] = [
         
     ],},
 
-  { label: "Settings", href: "/dashboard/settings", icon: Settings },
+  { label: "Settings", href: "/core", icon: Settings },
 ];
 
 function NavItem({

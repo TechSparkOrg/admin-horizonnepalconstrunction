@@ -30,6 +30,7 @@ function itemToForm(item: UnitConversionItem): UnitConverterFormData {
     baseUnit: item.base_unit,
     conversions: item.conversions,
     isActive: item.is_active,
+    blogId: item.blog_id,
   };
 }
 
@@ -42,6 +43,7 @@ function formToPayload(form: UnitConverterFormData) {
     base_unit: form.baseUnit,
     conversions: form.conversions,
     is_active: form.isActive,
+    blog_id: form.blogId,
   };
 }
 

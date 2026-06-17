@@ -8,6 +8,7 @@ export interface MaterialItem {
   photo: string;
   service_category_id: string | null;
   is_active: boolean;
+  blog_id: string;
   created_at: string;
   updated_at: string;
 }

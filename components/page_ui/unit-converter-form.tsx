@@ -20,8 +20,10 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { AttributeAdmin } from "@/api/services/attribute.service";
+import { BlogAdmin } from "@/api/services/blog.service";
 import type { AttributeItem } from "@/api/types/attribute.types";
 import type { ConversionRule } from "@/api/types/unit-converter.types";
+import type { BlogPost } from "@/api/types/blog.types";
 import { toSlug } from "@/lib/slug";
 
 interface UnitConverterFormData {
@@ -32,6 +34,7 @@ interface UnitConverterFormData {
   baseUnit: string;
   conversions: ConversionRule[];
   isActive: boolean;
+  blogId: string;
 }
 
 interface Props {
@@ -51,6 +54,7 @@ const EMPTY: UnitConverterFormData = {
   baseUnit: "",
   conversions: [],
   isActive: true,
+  blogId: "",
 };
 
 export { EMPTY };
@@ -65,10 +69,14 @@ export function UnitConverterForm({
   onBack,
 }: Props) {
   const [attributes, setAttributes] = useState<AttributeItem[]>([]);
+  const [blogs, setBlogs] = useState<BlogPost[]>([]);
 
   useEffect(() => {
     AttributeAdmin.search({ used_in: "all", page_size: 100 })
       .then((res) => setAttributes(res.results ?? []))
+      .catch(() => {});
+    BlogAdmin.list()
+      .then((res) => setBlogs(res.results ?? []))
       .catch(() => {});
   }, []);
 
@@ -308,6 +316,24 @@ export function UnitConverterForm({
                     >
                       Inactive
                     </button>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 pt-4">
+                  <p className="text-sm font-semibold text-gray-900 mb-3">Linked Blog</p>
+                  <div className="space-y-1.5 max-w-md">
+                    <Label>Blog Post</Label>
+                    <Select value={form.blogId} onValueChange={(v) => onChange("blogId", v)}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="None" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {blogs.map((b) => (
+                          <SelectItem key={b.id} value={b.id}>{b.title}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-400">Link this conversion to a blog post for public rendering.</p>
                   </div>
                 </div>
               </CardContent>

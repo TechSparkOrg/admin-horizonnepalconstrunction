@@ -166,7 +166,7 @@ export default function AdminBlogsPage() {
         meta_keywords: form.metaKeywords,
         is_active: form.isActive,
         is_published: form.isPublished,
-        publish_date: form.publishDate,
+        publish_date: form.publishDate || undefined,
         banner_images: bannerImages,
         model_3d_block: form.model3dBlock,
         video_block_url: form.videoBlockUrl,
@@ -182,8 +182,12 @@ export default function AdminBlogsPage() {
       }
       await refetch();
       back();
-    } catch {
-      toast.error("Something went wrong");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: Record<string, string[]> } })?.response?.data;
+      const text = msg
+        ? Object.values(msg).flat().join(", ")
+        : "Something went wrong";
+      toast.error(text);
     } finally {
       setSaving(false);
     }
