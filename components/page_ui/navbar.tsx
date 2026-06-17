@@ -98,11 +98,12 @@ const navLinks: NavLink[] = [
   },
 
 
-  { label: "Resources Management", href: "/dashboard/calculator", icon: Calculator ,
+  { label: "Resources Management", href: "/material-list", icon: Calculator ,
     children: [
       { label: "Material list", href: "/material-list" },
       { label: "Cost Estimation", href: "/dashboard/calculator/cost" },
-         { label: "Team Allcocation", href: "/dashboard/calculator/cost" },
+         { label: "Team Allocation", href: "/resource-allocation/team" },
+             { label: "Material Allocation", href: "/resource-allocation/material" },
 
                { label: "Unit Converter", href: "/material-list/unit-converter" }
     ],
