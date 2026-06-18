@@ -1,5 +1,5 @@
 import { apiPrivate } from '../ServiceHelper/index';
-import type { AgreementItem, AgreementFormData } from '../types/agreement.types';
+import type { AgreementItem } from '../types/agreement.types';
 import type { PaginatedResponse } from '../types/consultation.types';
 
 export const AgreementAdmin = {

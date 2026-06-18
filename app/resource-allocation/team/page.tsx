@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { StaffAdmin } from "@/api/services/staff.service";
 import { ProjectAdmin } from "@/api/services/project.service";
+import { TeamAllocationAdmin } from "@/api/services/resource-allocation.service";
 import type { StaffMember } from "@/api/types/staff.types";
 import type { Project } from "@/api/types/project.types";
-import type { SalaryEntry, ProjectBasisEntry, ProjectAssignment } from "@/api/types/resource-allocation.types";
+import type { TeamAllocation, SalaryEntry, ProjectBasisEntry, ProjectAssignment } from "@/api/types/resource-allocation.types";
 import { TeamAllocationForm, EMPTY_FORM } from "@/components/page_ui/team-allocation-form";
 import type { TeamAllocationFormData } from "@/components/page_ui/team-allocation-form";
 import { Button } from "@/components/ui/button";
@@ -15,18 +16,11 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 
 type View = "list" | "form";
 
-interface AllocationRecord {
-  id: string;
-  form: TeamAllocationFormData;
-  salaryEntries: SalaryEntry[];
-  projectBasisEntries: ProjectBasisEntry[];
-  projectAssignments: ProjectAssignment[];
-}
-
 const ITEMS_PER_PAGE = 10;
 
 export default function TeamAllocationPage() {
-  const [records, setRecords] = useState<AllocationRecord[]>([]);
+  const [allocations, setAllocations] = useState<TeamAllocation[]>([]);
+  const [total, setTotal] = useState(0);
   const [teamMembers, setTeamMembers] = useState<StaffMember[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [view, setView] = useState<View>("list");
@@ -38,6 +32,12 @@ export default function TeamAllocationPage() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+
+  const searchParams = useMemo(() => ({
+    search: search || undefined,
+    page: currentPage,
+    page_size: ITEMS_PER_PAGE,
+  }), [search, currentPage]);
 
   useEffect(() => {
     Promise.all([
@@ -51,6 +51,23 @@ export default function TeamAllocationPage() {
       .catch(() => toast.error("Failed to load data"));
   }, []);
 
+  useEffect(() => {
+    TeamAllocationAdmin.list(searchParams)
+      .then((res) => {
+        setAllocations(res.results ?? []);
+        setTotal(res.count ?? 0);
+      })
+      .catch(() => toast.error("Failed to load allocations"));
+  }, [searchParams]);
+
+  const refetch = () =>
+    TeamAllocationAdmin.list(searchParams)
+      .then((res) => {
+        setAllocations(res.results ?? []);
+        setTotal(res.count ?? 0);
+      })
+      .catch(() => toast.error("Failed to load allocations"));
+
   const openNew = () => {
     setForm(EMPTY_FORM);
     setSalaryEntries([]);
@@ -60,12 +77,18 @@ export default function TeamAllocationPage() {
     setView("form");
   };
 
-  const openEdit = (record: AllocationRecord) => {
-    setForm(record.form);
-    setSalaryEntries(record.salaryEntries);
-    setProjectBasisEntries(record.projectBasisEntries);
-    setProjectAssignments(record.projectAssignments);
-    setEditingId(record.id);
+  const openEdit = (item: TeamAllocation) => {
+    setForm({
+      staff_member_id: item.staff_member_id,
+      user_type: item.user_type,
+      pay_type: item.pay_type,
+      is_active: item.is_active,
+      notes: item.notes,
+    });
+    setSalaryEntries(item.salary_entries);
+    setProjectBasisEntries(item.project_basis_entries);
+    setProjectAssignments(item.project_assignments);
+    setEditingId(item.id);
     setView("form");
   };
 
@@ -85,33 +108,24 @@ export default function TeamAllocationPage() {
   const getProjectTitle = (id: string) => projects.find((p) => p.id === id)?.title ?? id;
 
   const save = async () => {
-    if (!form.teamMemberId) return;
+    if (!form.staff_member_id) return;
     setSaving(true);
     try {
       const payload = {
         ...form,
-        salaryEntries,
-        projectBasisEntries,
-        projectAssignments,
+        salary_entries: salaryEntries,
+        project_basis_entries: projectBasisEntries,
+        project_assignments: projectAssignments,
       };
-      console.log("Team allocation payload:", payload);
 
       if (editingId) {
-        setRecords((prev) =>
-          prev.map((r) => r.id === editingId ? { ...r, form, salaryEntries, projectBasisEntries, projectAssignments } : r)
-        );
+        await TeamAllocationAdmin.update(editingId, payload);
         toast.success("Allocation updated");
       } else {
-        const newRecord: AllocationRecord = {
-          id: crypto.randomUUID?.() ?? `${Date.now()}`,
-          form,
-          salaryEntries,
-          projectBasisEntries,
-          projectAssignments,
-        };
-        setRecords((prev) => [...prev, newRecord]);
+        await TeamAllocationAdmin.create(payload);
         toast.success("Allocation created");
       }
+      await refetch();
       back();
     } catch {
       toast.error("Something went wrong");
@@ -120,17 +134,22 @@ export default function TeamAllocationPage() {
     }
   };
 
-  const confirmDelete = (id: string) => {
-    setRecords((prev) => prev.filter((r) => r.id !== id));
-    toast.success("Allocation deleted");
+  const confirmDelete = async (id: string) => {
+    try {
+      await TeamAllocationAdmin.delete(id);
+      setAllocations((prev) => prev.filter((a) => a.id !== id));
+      toast.success("Allocation deleted");
+    } catch {
+      toast.error("Failed to delete");
+    }
   };
 
-  const filtered = records.filter((r) =>
-    getMemberName(r.form.teamMemberId).toLowerCase().includes(search.toLowerCase())
-  );
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setCurrentPage(1);
+  };
 
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
   return (
     <div className="px-4">
@@ -151,14 +170,14 @@ export default function TeamAllocationPage() {
               <InputGroupAddon align="inline-start">
                 <Search className="size-4 text-muted-foreground" />
               </InputGroupAddon>
-              <InputGroupInput value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} placeholder="Search by member name" />
+              <InputGroupInput value={search} onChange={(e) => handleSearchChange(e.target.value)} placeholder="Search by member name" />
             </InputGroup>
             <p className="text-sm text-[lab(20_23.9_-60.14)] font-medium whitespace-nowrap">
-              Total: {filtered.length} {filtered.length === 1 ? "item" : "items"}
+              Total: {total} {total === 1 ? "item" : "items"}
             </p>
           </div>
 
-          {paginated.length === 0 ? (
+          {allocations.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-16 text-center">
               <p className="text-sm font-medium text-gray-900 mb-1">No allocations yet</p>
               <p className="text-sm text-gray-500">Click &quot;Add Allocation&quot; to create one.</p>
@@ -177,24 +196,24 @@ export default function TeamAllocationPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginated.map((record) => (
+                  {allocations.map((record) => (
                     <tr key={record.id} className="border-b border-gray-200 hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm text-gray-900">{getMemberName(record.form.teamMemberId)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{getMemberName(record.staff_member_id)}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${
-                          record.form.payType === "salary" ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"
+                          record.pay_type === "salary" ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"
                         }`}>
-                          {record.form.payType === "salary" ? "Salary" : "Project-based"}
+                          {record.pay_type === "salary" ? "Salary" : "Project-based"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 capitalize">{record.form.userType}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{record.projectAssignments.length + record.projectBasisEntries.length}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 capitalize">{record.user_type}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{record.project_assignments.length + record.project_basis_entries.length}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${
-                          record.form.isActive ? "border border-green-200 bg-green-50 text-green-600" : "border border-gray-200 bg-gray-50 text-gray-500"
+                          record.is_active ? "border border-green-200 bg-green-50 text-green-600" : "border border-gray-200 bg-gray-50 text-gray-500"
                         }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${record.form.isActive ? "bg-green-500" : "bg-gray-400"}`} />
-                          {record.form.isActive ? "Active" : "Inactive"}
+                          <span className={`w-1.5 h-1.5 rounded-full ${record.is_active ? "bg-green-500" : "bg-gray-400"}`} />
+                          {record.is_active ? "Active" : "Inactive"}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -213,7 +232,7 @@ export default function TeamAllocationPage() {
               </table>
               {totalPages > 1 && (
                 <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200">
-                  <span className="text-sm text-gray-500">{filtered.length} total</span>
+                  <span className="text-sm text-gray-500">{total} total</span>
                   <div className="flex items-center gap-1">
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                       <button key={p} onClick={() => setCurrentPage(p)}

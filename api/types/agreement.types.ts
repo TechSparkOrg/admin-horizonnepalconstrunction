@@ -1,11 +1,11 @@
-export interface AgreementFormData {
-  name: string;
-  clientName: string;
-  templateId: string;
-  variables: Record<string, string>;
-  projectId: string;
-  status: "draft" | "completed";
-}
+// export interface AgreementFormData {
+//   name: string;
+//   clientName: string;
+//   templateId: string;
+//   variables: Record<string, string>;
+//   projectId: string;
+//   status: "draft" | "completed";
+// }
 
 export interface AgreementItem {
   id: string;
@@ -20,12 +20,3 @@ export interface AgreementItem {
   created_at: string;
   updated_at: string;
 }
-
-export const EMPTY_AGREEMENT: AgreementFormData = {
-  name: "",
-  clientName: "",
-  templateId: "",
-  variables: {},
-  projectId: "",
-  status: "draft",
-};

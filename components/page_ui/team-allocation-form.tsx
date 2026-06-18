@@ -14,10 +14,10 @@ import type { Project } from "@/api/types/project.types";
 import type { SalaryEntry, ProjectBasisEntry, ProjectAssignment } from "@/api/types/resource-allocation.types";
 
 interface TeamAllocationFormData {
-  teamMemberId: string;
-  userType: "core" | "remote";
-  payType: "salary" | "project-based";
-  isActive: boolean;
+  staff_member_id: string;
+  user_type: "core" | "remote";
+  pay_type: "salary" | "project-based";
+  is_active: boolean;
   notes: string;
 }
 
@@ -38,19 +38,19 @@ interface Props {
   onBack: () => void;
 }
 
-const EMPTY_SALARY: SalaryEntry = { id: "", amount: 0, effectiveDate: "", status: "unpaid" };
-const EMPTY_PROJECT_BASIS: ProjectBasisEntry = { id: "", projectId: "", budgetPlan: 0, paymentCondition: "", progressRate: 0, status: "ongoing", workersUnder: 0 };
-const EMPTY_ASSIGNMENT: ProjectAssignment = { id: "", projectId: "", status: "ongoing" };
+const EMPTY_SALARY: SalaryEntry = { id: "", amount: 0, effective_date: "", status: "unpaid" };
+const EMPTY_PROJECT_BASIS: ProjectBasisEntry = { id: "", project_id: "", budget_plan: 0, payment_condition: "", progress_rate: 0, status: "ongoing", workers_under: 0 };
+const EMPTY_ASSIGNMENT: ProjectAssignment = { id: "", project_id: "", status: "ongoing" };
 
 function genId() { return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`; }
 
 export type { TeamAllocationFormData };
 
 const EMPTY_FORM: TeamAllocationFormData = {
-  teamMemberId: "",
-  userType: "core",
-  payType: "salary",
-  isActive: true,
+  staff_member_id: "",
+  user_type: "core",
+  pay_type: "salary",
+  is_active: true,
   notes: "",
 };
 
@@ -101,16 +101,16 @@ export function TeamAllocationForm({
   };
 
   const filteredMembers = useMemo(
-    () => teamMembers.filter((m) => m.type === form.userType),
-    [teamMembers, form.userType]
+    () => teamMembers.filter((m) => m.type === form.user_type),
+    [teamMembers, form.user_type]
   );
 
   const handleUserTypeChange = (type: "core" | "remote") => {
-    const currentMember = teamMembers.find((m) => m.id === form.teamMemberId);
+    const currentMember = teamMembers.find((m) => m.id === form.staff_member_id);
     if (currentMember && currentMember.type !== type) {
-      onChange("teamMemberId", "");
+      onChange("staff_member_id", "");
     }
-    onChange("userType", type);
+    onChange("user_type", type);
   };
 
   return (
@@ -125,7 +125,7 @@ export function TeamAllocationForm({
             </h1>
           </div>
         </div>
-        <Button onClick={onSave} disabled={!form.teamMemberId || saving}
+        <Button onClick={onSave} disabled={!form.staff_member_id || saving}
           className="bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white">
           {saving && <Loader2 className="size-4 animate-spin" />}
           {saving ? "Saving\u2026" : editingId ? "Update" : "Create"}
@@ -153,20 +153,20 @@ export function TeamAllocationForm({
                   <div className="grid grid-cols-2 gap-3">
                     <button type="button" onClick={() => handleUserTypeChange("core")}
                       className={`relative flex items-center gap-3 p-4 rounded-xl border-2 transition text-left ${
-                        form.userType === "core"
+                        form.user_type === "core"
                           ? "border-[lab(20_23.9_-60.14)] bg-[lab(20_23.9_-60.14)]/5"
                           : "border-gray-200 bg-white hover:border-gray-300"
                       }`}>
                       <div className={`size-10 rounded-lg flex items-center justify-center ${
-                        form.userType === "core" ? "bg-[lab(20_23.9_-60.14)] text-white" : "bg-gray-100 text-gray-500"
+                        form.user_type === "core" ? "bg-[lab(20_23.9_-60.14)] text-white" : "bg-gray-100 text-gray-500"
                       }`}>
                         <Users className="size-5" />
                       </div>
                       <div className="flex-1">
-                        <p className={`text-sm font-semibold ${form.userType === "core" ? "text-[lab(20_23.9_-60.14)]" : "text-gray-900"}`}>Core Team</p>
+                        <p className={`text-sm font-semibold ${form.user_type === "core" ? "text-[lab(20_23.9_-60.14)]" : "text-gray-900"}`}>Core Team</p>
                         <p className="text-[11px] text-gray-500">On-site employees</p>
                       </div>
-                      {form.userType === "core" && (
+                      {form.user_type === "core" && (
                         <div className="absolute top-2 right-2 size-5 rounded-full bg-[lab(20_23.9_-60.14)] flex items-center justify-center">
                           <Check className="size-3 text-white" />
                         </div>
@@ -175,20 +175,20 @@ export function TeamAllocationForm({
 
                     <button type="button" onClick={() => handleUserTypeChange("remote")}
                       className={`relative flex items-center gap-3 p-4 rounded-xl border-2 transition text-left ${
-                        form.userType === "remote"
+                        form.user_type === "remote"
                           ? "border-[lab(20_23.9_-60.14)] bg-[lab(20_23.9_-60.14)]/5"
                           : "border-gray-200 bg-white hover:border-gray-300"
                       }`}>
                       <div className={`size-10 rounded-lg flex items-center justify-center ${
-                        form.userType === "remote" ? "bg-[lab(20_23.9_-60.14)] text-white" : "bg-gray-100 text-gray-500"
+                        form.user_type === "remote" ? "bg-[lab(20_23.9_-60.14)] text-white" : "bg-gray-100 text-gray-500"
                       }`}>
                         <Wifi className="size-5" />
                       </div>
                       <div className="flex-1">
-                        <p className={`text-sm font-semibold ${form.userType === "remote" ? "text-[lab(20_23.9_-60.14)]" : "text-gray-900"}`}>Remote User</p>
+                        <p className={`text-sm font-semibold ${form.user_type === "remote" ? "text-[lab(20_23.9_-60.14)]" : "text-gray-900"}`}>Remote User</p>
                         <p className="text-[11px] text-gray-500">Off-site workers</p>
                       </div>
-                      {form.userType === "remote" && (
+                      {form.user_type === "remote" && (
                         <div className="absolute top-2 right-2 size-5 rounded-full bg-[lab(20_23.9_-60.14)] flex items-center justify-center">
                           <Check className="size-3 text-white" />
                         </div>
@@ -199,9 +199,9 @@ export function TeamAllocationForm({
 
                 <div className="space-y-1.5">
                   <Label>Team Member</Label>
-                  <Select value={form.teamMemberId} onValueChange={(v) => onChange("teamMemberId", v)}>
+                  <Select value={form.staff_member_id} onValueChange={(v) => onChange("staff_member_id", v)}>
                     <SelectTrigger className="max-w-sm">
-                      <SelectValue placeholder={`Select ${form.userType === "core" ? "core" : "remote"} member`} />
+                      <SelectValue placeholder={`Select ${form.user_type === "core" ? "core" : "remote"} member`} />
                     </SelectTrigger>
                     <SelectContent>
                       {filteredMembers.map((m) => (
@@ -209,33 +209,33 @@ export function TeamAllocationForm({
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-gray-400">{filteredMembers.length} {form.userType === "core" ? "core" : "remote"} member{filteredMembers.length !== 1 ? "s" : ""} available</p>
+                  <p className="text-xs text-gray-400">{filteredMembers.length} {form.user_type === "core" ? "core" : "remote"} member{filteredMembers.length !== 1 ? "s" : ""} available</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 pt-1">
                   <div className="space-y-1.5">
                     <Label className="text-xs text-gray-500">Pay Type</Label>
                     <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-                      <button type="button" onClick={() => onChange("payType", "salary")}
+                      <button type="button" onClick={() => onChange("pay_type", "salary")}
                         className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                          form.payType === "salary" ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
+                          form.pay_type === "salary" ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
                         }`}>Salary</button>
-                      <button type="button" onClick={() => onChange("payType", "project-based")}
+                      <button type="button" onClick={() => onChange("pay_type", "project-based")}
                         className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                          form.payType === "project-based" ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
+                          form.pay_type === "project-based" ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
                         }`}>Project-based</button>
                     </div>
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs text-gray-500">Status</Label>
                     <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-                      <button type="button" onClick={() => onChange("isActive", true)}
+                      <button type="button" onClick={() => onChange("is_active", true)}
                         className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                          form.isActive ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
+                          form.is_active ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
                         }`}>Active</button>
-                      <button type="button" onClick={() => onChange("isActive", false)}
+                      <button type="button" onClick={() => onChange("is_active", false)}
                         className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                          !form.isActive ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
+                          !form.is_active ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
                         }`}>Inactive</button>
                     </div>
                   </div>
@@ -245,7 +245,7 @@ export function TeamAllocationForm({
           </TabsContent>
 
           <TabsContent value="compensation" className="mt-4">
-            {form.payType === "salary" ? (
+            {form.pay_type === "salary" ? (
               <Card className="bg-white border border-gray-200 rounded-xl">
                 <CardContent className="p-5 space-y-4">
                   <div className="flex items-center justify-between">
@@ -269,7 +269,7 @@ export function TeamAllocationForm({
                           </div>
                           <div className="space-y-1 w-36">
                             <Label className="text-[11px] text-gray-500">Effective Date</Label>
-                            <Input type="date" value={entry.effectiveDate} onChange={(e) => updateSalaryEntry(entry.id, "effectiveDate", e.target.value)} className="h-7 text-xs" />
+                            <Input type="date" value={entry.effective_date} onChange={(e) => updateSalaryEntry(entry.id, "effective_date", e.target.value)} className="h-7 text-xs" />
                           </div>
                           <div className="space-y-1">
                             <Label className="text-[11px] text-gray-500">Status</Label>
@@ -320,7 +320,7 @@ export function TeamAllocationForm({
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                             <div className="space-y-1">
                               <Label className="text-[11px] text-gray-500">Project</Label>
-                              <Select value={entry.projectId} onValueChange={(v) => updateProjectBasisEntry(entry.id, "projectId", v)}>
+                              <Select value={entry.project_id} onValueChange={(v) => updateProjectBasisEntry(entry.id, "project_id", v)}>
                                 <SelectTrigger className="w-full h-7 text-xs">
                                   <SelectValue placeholder="Select project" />
                                 </SelectTrigger>
@@ -333,15 +333,15 @@ export function TeamAllocationForm({
                             </div>
                             <div className="space-y-1">
                               <Label className="text-[11px] text-gray-500">Budget Plan</Label>
-                              <Input type="number" value={entry.budgetPlan || ""} onChange={(e) => updateProjectBasisEntry(entry.id, "budgetPlan", Number(e.target.value))} placeholder="0" className="h-7 text-xs" />
+                              <Input type="number" value={entry.budget_plan || ""} onChange={(e) => updateProjectBasisEntry(entry.id, "budget_plan", Number(e.target.value))} placeholder="0" className="h-7 text-xs" />
                             </div>
                             <div className="space-y-1">
                               <Label className="text-[11px] text-gray-500">Progress Rate (%)</Label>
-                              <Input type="number" min={0} max={100} value={entry.progressRate || ""} onChange={(e) => updateProjectBasisEntry(entry.id, "progressRate", Number(e.target.value))} placeholder="0" className="h-7 text-xs" />
+                              <Input type="number" min={0} max={100} value={entry.progress_rate || ""} onChange={(e) => updateProjectBasisEntry(entry.id, "progress_rate", Number(e.target.value))} placeholder="0" className="h-7 text-xs" />
                             </div>
                             <div className="space-y-1">
                               <Label className="text-[11px] text-gray-500">Workers Under</Label>
-                              <Input type="number" value={entry.workersUnder || ""} onChange={(e) => updateProjectBasisEntry(entry.id, "workersUnder", Number(e.target.value))} placeholder="0" className="h-7 text-xs" />
+                              <Input type="number" value={entry.workers_under || ""} onChange={(e) => updateProjectBasisEntry(entry.id, "workers_under", Number(e.target.value))} placeholder="0" className="h-7 text-xs" />
                             </div>
                             <div className="space-y-1">
                               <Label className="text-[11px] text-gray-500">Status</Label>
@@ -359,7 +359,7 @@ export function TeamAllocationForm({
                           </div>
                           <div className="space-y-1">
                             <Label className="text-[11px] text-gray-500">Payment Condition</Label>
-                            <Textarea value={entry.paymentCondition} onChange={(e) => updateProjectBasisEntry(entry.id, "paymentCondition", e.target.value)} placeholder="Describe payment terms..." rows={2} className="text-xs" />
+                            <Textarea value={entry.payment_condition} onChange={(e) => updateProjectBasisEntry(entry.id, "payment_condition", e.target.value)} placeholder="Describe payment terms..." rows={2} className="text-xs" />
                           </div>
                         </div>
                       ))}
@@ -390,7 +390,7 @@ export function TeamAllocationForm({
                       <div key={a.id} className="flex items-end gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 flex-wrap">
                         <div className="space-y-1 min-w-40 flex-1">
                           <Label className="text-[11px] text-gray-500">Project</Label>
-                          <Select value={a.projectId} onValueChange={(v) => updateAssignment(a.id, "projectId", v)}>
+                          <Select value={a.project_id} onValueChange={(v) => updateAssignment(a.id, "project_id", v)}>
                             <SelectTrigger className="w-full h-7 text-xs">
                               <SelectValue placeholder="Select project" />
                             </SelectTrigger>

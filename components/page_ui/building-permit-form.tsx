@@ -71,7 +71,7 @@ const EMPTY: BuildingPermitFormData = {
   metaDescription: "",
 };
 
-export { EMPTY, EMPTY_PAIR };
+export { EMPTY };
 export type { BuildingPermitFormData };
 
 function ListEditor({ items, onChange, label }: {

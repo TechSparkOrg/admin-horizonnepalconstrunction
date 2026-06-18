@@ -89,7 +89,7 @@ const EMPTY: VastuFormData = {
   authorTeamId: "",
 };
 
-export { EMPTY, EMPTY_PAIR };
+export { EMPTY };
 export type { VastuFormData };
 
 function ListEditor({ items, onChange, label }: {

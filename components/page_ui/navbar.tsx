@@ -23,6 +23,7 @@ import {
   LogOut,
   ChevronDown,
   VideoIcon,
+  Landmark,
 } from "lucide-react";
 import { useAuthStore } from "@/app/store/auth-store";
 import {
@@ -60,6 +61,14 @@ const navLinks: NavLink[] = [
             { label: "Attribute Categories", href: "/categories/attributes" },
     ],
   },
+    { label: "Emi", href: "/emi/banks", icon: Landmark,
+    children: [
+          { label: "Banks", href: "/emi/banks" },
+        { label: "Emi Requests", href: "/emi/requests" },
+
+      ]
+    
+   },
 
   { label: "Media", href: "/media/images", icon: ImageIcon,
     children: [
@@ -76,7 +85,7 @@ const navLinks: NavLink[] = [
     icon: Newspaper,
     children: [
       { label: "Blogs", href: "/blogs" },
-            { label: "Projects", href: "/blogs/projects" },
+            { label: "Projects", href: "/projects" },
                       { label: "Vastu", href: "/vastu"},
           { label: "Building Permit", href: "/building-permit" },
   
@@ -114,7 +123,7 @@ const navLinks: NavLink[] = [
     children: [
          { label: "Templates", href: "/documents/templates" },
       { label: "Project Agreements", href: "/documents/project-agreements" },
-      { label: "Costumer Agreements", href: "/documents/costumer-agreements" },
+      { label: "Project Documents", href: "/documents/private-documents" },
         { label: "Bid Documents", href: "/documents/bid-documents"}
       
   
