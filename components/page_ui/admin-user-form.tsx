@@ -1,9 +1,12 @@
 "use client";
 
-import { ArrowLeft, Loader2, ShieldAlert } from "lucide-react";
-import { useState, useEffect } from "react";
+import { ShieldAlert } from "lucide-react";
+import { FormHeader } from "@/components/global_ui/form-header";
+import { FormTabs } from "@/components/global_ui/form-tabs";
+import { useState, useEffect, useRef } from "react";
 import { PasswordInput } from "@/components/global_ui/password-input";
 import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
+import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,12 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { StaffAdmin } from "@/api/services/staff.service";
 import type { StaffMember } from "@/api/types/staff.types";
 
@@ -74,34 +72,32 @@ export function AdminUserForm({
   roleOptions,
 }: Props) {
   const [coreStaff, setCoreStaff] = useState<StaffMember[]>([]);
+  const [staffSearch, setStaffSearch] = useState("");
 
+  const debounceFetch = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
-    StaffAdmin.search({ type: "core", page_size: 200 })
-      .then((res) => setCoreStaff(res.results ?? []))
-      .catch(() => {});
-  }, []);
+    clearTimeout(debounceFetch.current);
+    debounceFetch.current = setTimeout(() => {
+      StaffAdmin.search({ type: "core", search: staffSearch || undefined, page_size: 10 })
+        .then((res) => setCoreStaff(res.results ?? []))
+        .catch(() => {});
+    }, 300);
+    return () => clearTimeout(debounceFetch.current);
+  }, [staffSearch]);
 
   const canSave = form.name.trim() && form.email.trim() && form.currentPassword.trim() && !saving;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={onBack}>
-            <ArrowLeft className="size-4" />
-          </Button>
-          <div>
-            <p className="text-xs text-gray-500 mb-0.5">Admin Users</p>
-            <h1 className="text-2xl font-bold text-gray-900 leading-none">
-              {editingId ? form.name || "Edit User" : "New User"}
-            </h1>
-          </div>
-        </div>
-        <Button onClick={onSave} disabled={!canSave} className="bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white">
-          {saving && <Loader2 className="size-4 animate-spin" />}
-          {saving ? "Saving\u2026" : editingId ? "Update" : "Create"}
-        </Button>
-      </div>
+      <FormHeader
+        breadcrumb="Admin Users"
+        title={editingId ? form.name || "Edit User" : "New User"}
+        onBack={onBack}
+        onSave={onSave}
+        saving={saving}
+        saveDisabled={!canSave}
+        saveLabel={editingId ? "Update" : "Create"}
+      />
 
       {isSuperuser && (
         <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
@@ -112,17 +108,7 @@ export function AdminUserForm({
 
       <Tabs defaultValue="overview" className="w-full flex flex-col">
         <div>
-          <TabsList className="bg-gray-100 rounded-lg p-0.5 gap-0 w-auto h-auto">
-            <TabsTrigger value="overview" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="password" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">
-              Password
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">
-              Settings
-            </TabsTrigger>
-          </TabsList>
+          <FormTabs tabs={[{"value":"overview","label":"Overview"},{"value":"password","label":"Password"},{"value":"settings","label":"Settings"}]} />
         </div>
 
         <div>
@@ -171,23 +157,21 @@ export function AdminUserForm({
                   </div>
                   <div className="space-y-1.5">
                     <Label>Link Staff Member</Label>
-                    <Select
-                      value={form.staffMemberId ?? "none"}
-                      onValueChange={(v) => onChange("staffMemberId", v === "none" ? null : v)}
+                    <SearchableSelect
+                      options={[
+                        { value: "", label: "None" },
+                        ...coreStaff.map((s) => ({
+                          value: s.id,
+                          label: s.name + (s.designation ? ` — ${s.designation}` : ""),
+                        })),
+                      ]}
+                      value={form.staffMemberId ?? ""}
+                      onChange={(v) => onChange("staffMemberId", v || null)}
+                      placeholder="Select core team"
+                      searchPlaceholder="Search staff..."
                       disabled={isSuperuser}
-                    >
-                      <SelectTrigger className="w-full h-9 text-sm">
-                        <SelectValue placeholder="Select core team" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {coreStaff.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>
-                            {s.name} {s.designation ? `— ${s.designation}` : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onSearchChange={setStaffSearch}
+                    />
                     <p className="text-xs text-gray-400">Link a core team member to grant system access.</p>
                   </div>
                 </div>

@@ -1,28 +1,17 @@
 "use client";
 
-import { Users, Pencil, Trash2, Shield } from "lucide-react";
+import { Users, Shield } from "lucide-react";
 import type { AdminUser } from "@/api/types/admin-user.types";
 import { ROLE_BADGE_STYLES, ROLE_LABELS } from "@/api/types/admin-user.types";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableRow,
 } from "@/components/ui/table";
+import { TableHeaderRow } from "@/components/global_ui/table-header-row";
+import { ActionButtons } from "@/components/global_ui/action-buttons";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { DeleteDialog } from "@/components/global_ui/delete_dailog";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationPrevious,
-  PaginationNext,
-} from "@/components/ui/pagination";
+import { DeleteDialog } from "@/components/global_ui/delete-dialog";
+import { PaginationBar } from "@/components/global_ui/pagination-bar";
 
 interface Props {
   items: AdminUser[];
@@ -64,15 +53,13 @@ export function AdminUserTable({ items, onEdit, onDelete, deleteId, setDeleteId,
     <>
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <Table>
-          <TableHeader>
-            <TableRow className="border-gray-200 hover:bg-transparent">
-              <TableHead className="text-gray-900 font-semibold">Name</TableHead>
-              <TableHead className="text-gray-900 font-semibold">Email</TableHead>
-              <TableHead className="text-gray-900 font-semibold">Role</TableHead>
-              <TableHead className="text-gray-900 font-semibold">Status</TableHead>
-              <TableHead className="text-gray-900 font-semibold text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
+          <TableHeaderRow columns={[
+            { label: "Name" },
+            { label: "Email" },
+            { label: "Role" },
+            { label: "Status" },
+            { label: "Actions", className: "text-right" },
+          ]} />
           <TableBody>
             {items.map((item) => {
               const roleBadge = item.is_superuser
@@ -115,28 +102,7 @@ export function AdminUserTable({ items, onEdit, onDelete, deleteId, setDeleteId,
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20 hover:bg-[lab(20_23.9_-60.14)]/5"
-                        onClick={(e) => { e.stopPropagation(); onEdit(item); }}
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                        Details
-                      </Button>
-                      {canDelete && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-red-500 border-red-200 hover:bg-red-50"
-                          onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Delete
-                        </Button>
-                      )}
-                    </div>
+                    <ActionButtons onEdit={() => onEdit(item)} onDelete={() => setDeleteId(item.id)} showDelete={canDelete} editLabel="Details" />
                   </TableCell>
                 </TableRow>
               );
@@ -145,37 +111,7 @@ export function AdminUserTable({ items, onEdit, onDelete, deleteId, setDeleteId,
         </Table>
       </div>
 
-      {totalPages > 1 && (
-        <div className="mt-6">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => onPageChange(Math.max(1, page - 1))}
-                  className={page === 1 ? "pointer-events-none opacity-40" : "cursor-pointer"}
-                />
-              </PaginationItem>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <PaginationItem key={p}>
-                  <PaginationLink
-                    isActive={p === page}
-                    onClick={() => onPageChange(p)}
-                    className="cursor-pointer"
-                  >
-                    {p}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-                  className={page === totalPages ? "pointer-events-none opacity-40" : "cursor-pointer"}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      )}
+      <PaginationBar page={page} totalPages={totalPages} onPageChange={onPageChange} />
 
       <DeleteDialog
         open={!!deleteId}

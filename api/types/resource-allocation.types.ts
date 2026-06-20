@@ -45,7 +45,7 @@ export interface ProjectScopeEntry {
   status: "completed" | "ongoing";
 }
 
-export interface MaterialAllocation {
+interface MaterialAllocation {
   id: string;
   material_id: string;
   tool_type: "rent" | "company" | "incharge";

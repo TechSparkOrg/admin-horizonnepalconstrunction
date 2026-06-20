@@ -1,6 +1,8 @@
 "use client";
 
-import { ArrowLeft, Loader2, Plus, Trash2, X } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
+import { FormHeader } from "@/components/global_ui/form-header";
+import { FormTabs } from "@/components/global_ui/form-tabs";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,12 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import type { AttributeValue, UsedIn } from "@/api/types/attribute.types";
 import { USED_IN_OPTIONS } from "@/api/types/attribute.types";
 
@@ -93,37 +90,19 @@ export function AttributeForm({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={onBack}>
-            <ArrowLeft className="size-4" />
-          </Button>
-          <div>
-            <p className="text-xs text-gray-500 mb-0.5">Attributes</p>
-            <h1 className="text-2xl font-bold text-gray-900 leading-none">
-              {editingId ? form.title || "Edit Attribute" : "New Attribute"}
-            </h1>
-          </div>
-        </div>
-        <Button onClick={onSave} disabled={!form.title.trim() || saving} className="bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white">
-          {saving && <Loader2 className="size-4 animate-spin" />}
-          {saving ? "Saving\u2026" : editingId ? "Update" : "Create"}
-        </Button>
-      </div>
+      <FormHeader
+        breadcrumb="Attributes"
+        title={editingId ? form.title || "Edit Attribute" : "New Attribute"}
+        onBack={onBack}
+        onSave={onSave}
+        saving={saving}
+        saveDisabled={!form.title.trim() || saving}
+        saveLabel={editingId ? "Update" : "Create"}
+      />
 
       <Tabs defaultValue="overview" className="w-full flex flex-col">
         <div>
-          <TabsList className="bg-gray-100 rounded-lg p-0.5 gap-0 w-auto h-auto">
-            <TabsTrigger value="overview" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="content" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">
-              Content
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">
-              Settings
-            </TabsTrigger>
-          </TabsList>
+          <FormTabs tabs={[{"value":"overview","label":"Overview"},{"value":"content","label":"Content"},{"value":"settings","label":"Settings"}]} />
         </div>
 
         <div>

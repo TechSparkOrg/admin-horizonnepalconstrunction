@@ -134,7 +134,7 @@ export default function RolesPermissionsPage() {
               variant="outline"
               size="sm"
               onClick={openNew}
-              className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20"
+              className="text-sidebar-primary border-sidebar-primary/20"
             >
               <Plus className="w-4 h-4" /> Add Role
             </Button>

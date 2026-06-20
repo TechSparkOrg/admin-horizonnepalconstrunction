@@ -197,7 +197,7 @@ export default function AdminUsersPage() {
               variant="outline"
               size="sm"
               onClick={openNew}
-              className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20"
+              className="text-sidebar-primary border-sidebar-primary/20"
             >
               <Plus className="w-4 h-4" /> Add User
             </Button>
@@ -228,7 +228,7 @@ export default function AdminUsersPage() {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-sm text-[lab(20_23.9_-60.14)] font-medium whitespace-nowrap">
+            <p className="text-sm text-sidebar-primary font-medium whitespace-nowrap">
               Total: {total} {total === 1 ? "item" : "items"} found.
             </p>
           </div>

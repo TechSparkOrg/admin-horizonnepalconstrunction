@@ -1,187 +1,79 @@
 "use client";
 
-import { Users, Pencil, Trash2 } from "lucide-react";
+import { Users } from "lucide-react";
 import Image from "next/image";
-import type { StaffMember, StaffType } from "@/api/types/staff.types";
+import type { StaffMember } from "@/api/types/staff.types";
 import { STAFF_TYPE_STYLES } from "@/api/types/staff.types";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { DeleteDialog } from "@/components/global_ui/delete_dailog";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationPrevious,
-  PaginationNext,
-} from "@/components/ui/pagination";
+import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
+import { StatusBadge } from "@/components/global_ui/status-badge";
 
 interface Props {
   items: StaffMember[];
   onEdit: (item: StaffMember) => void;
   onDelete: (id: string) => void;
-  deleteId: string | null;
-  setDeleteId: (id: string | null) => void;
   page: number;
   totalPages: number;
   onPageChange: (page: number) => void;
 }
 
-export function StaffTable({ items, onEdit, onDelete, deleteId, setDeleteId, page, totalPages, onPageChange }: Props) {
-  if (items.length === 0) {
-    return (
-      <Card className="bg-white border border-gray-200 rounded-xl">
-        <CardContent className="p-16 text-center">
-          <div className="w-12 h-12 rounded-lg bg-gray-100 mx-auto flex items-center justify-center mb-4">
-            <Users className="w-5 h-5 text-gray-400" />
+export function StaffTable({ items, onEdit, onDelete, page, totalPages, onPageChange }: Props) {
+  const columns: ColumnDef<StaffMember>[] = [
+    {
+      header: "Name",
+      render: (item) => (
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
+            {item.photo ? (
+              <Image src={item.photo} alt={item.name} width={32} height={32} className="object-cover w-full h-full" />
+            ) : (
+              <Users className="w-4 h-4 text-gray-400" />
+            )}
           </div>
-          <p className="text-sm font-medium text-gray-900 mb-1">No staff members yet</p>
-          <p className="text-sm text-gray-500">Add a staff member to get started.</p>
-        </CardContent>
-      </Card>
-    );
-  }
+          <span className="text-sm text-gray-900">{item.name}</span>
+        </div>
+      ),
+    },
+    {
+      header: "Email",
+      render: (item) => <span className="text-sm text-gray-600">{item.email}</span>,
+    },
+    {
+      header: "Designation",
+      render: (item) => <span className="text-sm text-gray-600">{item.designation || "\u2014"}</span>,
+    },
+    {
+      header: "Department",
+      render: (item) => <span className="text-sm text-gray-600">{item.department || "\u2014"}</span>,
+    },
+    {
+      header: "Type",
+      render: (item) => {
+        const typeStyle = STAFF_TYPE_STYLES[item.type];
+        return (
+          <Badge variant="outline" className={`font-normal ${typeStyle.color}`}>
+            {typeStyle.label}
+          </Badge>
+        );
+      },
+    },
+    {
+      header: "Status",
+      render: (item) => <StatusBadge active={item.is_active} />,
+    },
+  ];
 
   return (
-    <>
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-gray-200 hover:bg-transparent">
-              <TableHead className="text-gray-900 font-semibold">Name</TableHead>
-              <TableHead className="text-gray-900 font-semibold">Email</TableHead>
-              <TableHead className="text-gray-900 font-semibold">Designation</TableHead>
-              <TableHead className="text-gray-900 font-semibold">Department</TableHead>
-              <TableHead className="text-gray-900 font-semibold">Type</TableHead>
-              <TableHead className="text-gray-900 font-semibold">Status</TableHead>
-              <TableHead className="text-gray-900 font-semibold text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((item) => {
-              const typeStyle = STAFF_TYPE_STYLES[item.type];
-              return (
-                <TableRow
-                  key={item.id}
-                  className="border-gray-200 cursor-pointer hover:bg-gray-50"
-                  onClick={() => onEdit(item)}
-                >
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
-                        {item.photo ? (
-                          <Image src={item.photo} alt={item.name} width={32} height={32} className="object-cover w-full h-full" />
-                        ) : (
-                          <Users className="w-4 h-4 text-gray-400" />
-                        )}
-                      </div>
-                      <span className="text-sm text-gray-900">{item.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-gray-600">{item.email}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-gray-600">{item.designation || "\u2014"}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-gray-600">{item.department || "\u2014"}</span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={`font-normal ${typeStyle.color}`}>
-                      {typeStyle.label}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={`font-normal gap-1.5 ${
-                        item.is_active
-                          ? "border-green-200 bg-green-50 text-green-600"
-                          : "border-gray-200 bg-gray-50 text-gray-500"
-                      }`}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full ${item.is_active ? "bg-green-500" : "bg-gray-400"}`} />
-                      {item.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20 hover:bg-[lab(20_23.9_-60.14)]/5"
-                        onClick={(e) => { e.stopPropagation(); onEdit(item); }}
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                        Details
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-red-500 border-red-200 hover:bg-red-50"
-                        onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Delete
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-
-      {totalPages > 1 && (
-        <div className="mt-6">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => onPageChange(Math.max(1, page - 1))}
-                  className={page === 1 ? "pointer-events-none opacity-40" : "cursor-pointer"}
-                />
-              </PaginationItem>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <PaginationItem key={p}>
-                  <PaginationLink
-                    isActive={p === page}
-                    onClick={() => onPageChange(p)}
-                    className="cursor-pointer"
-                  >
-                    {p}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-                  className={page === totalPages ? "pointer-events-none opacity-40" : "cursor-pointer"}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      )}
-
-      <DeleteDialog
-        open={!!deleteId}
-        onOpenChange={(open) => !open && setDeleteId(null)}
-        onConfirm={() => deleteId && onDelete(deleteId)}
-        title="Delete this staff member?"
-        description="This cannot be undone."
-      />
-    </>
+    <DataTable
+      data={items}
+      columns={columns}
+      onEdit={onEdit}
+      onDelete={onDelete}
+      getIdentifier={(item) => item.id}
+      page={page}
+      totalPages={totalPages}
+      onPageChange={onPageChange}
+      emptyState={{ icon: Users, title: "No staff members yet", description: "Add a staff member to get started." }}
+    />
   );
 }

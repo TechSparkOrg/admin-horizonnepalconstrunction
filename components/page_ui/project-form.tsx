@@ -1,41 +1,32 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { ArrowLeft, Loader2, Plus, Trash2, ImagePlus, Eye, Upload, X, Box } from "lucide-react";
+import { Plus, Trash2, ImagePlus, Eye, Upload, X, Box } from "lucide-react";
+import { FormHeader } from "@/components/global_ui/form-header";
 import Image from "next/image";
 import { RichEditor } from "@/components/page_ui/rich-editor";
 import { ModelViewer } from "@/components/global_ui/ModelViewer";
-import { isVideoUrl } from "@/lib/media";
+import { isVideoUrl, detectPlatform } from "@/lib/media";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { FormCard } from "@/components/global_ui/form-card";
+import { FormTabs } from "@/components/global_ui/form-tabs";
+import { SeoFields } from "@/components/global_ui/seo-fields";
+import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationPrevious,
-  PaginationNext,
-} from "@/components/ui/pagination";
-import { MediaPickerDialog } from "@/components/global_ui/MediahanlderPicker";
-import type { MediaItem } from "@/components/global_ui/MediahanlderPicker";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
+import {  Pagination,  PaginationContent,  PaginationItem,  PaginationLink,  PaginationPrevious,  PaginationNext} from "@/components/ui/pagination";
+import { MediaPickerDialog } from "@/components/global_ui/media-handler-picker";
+import type { PickerMediaItem } from "@/components/global_ui/media-handler-picker";
 import type { Category } from "@/api/types/category.types";
 import type { StaffMember } from "@/api/types/staff.types";
 import type { MaterialItem } from "@/api/types/material-list.types";
 import type { DocumentItem } from "@/api/types/document.types";
 import type { Client, ProjectMilestone as Milestone, SpendingRecord, ProjectMilestoneImage, ProjectMilestoneEmbed } from "@/api/types/project.types";
+import { ImagePreviewDialog } from "@/components/global_ui/image-preview-dialog";
 
 interface ProjectFormData {
   title: string;
@@ -79,7 +70,8 @@ interface Props {
 const EMPTY_MILESTONE: Milestone = { id: "", date_started: "", estimated_end: "", completed_date: null, images: [], model_3d_url: "", video_url: "", video_embed_urls: [] };
 const EMPTY_SPENDING: SpendingRecord = { id: "", spending_type: "team", staff_member_id: null, material_id: null, time_spent: "", amount: 0 };
 
-function genId() { return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`; }
+let _pid = 0;
+function genId() { return crypto.randomUUID?.() ?? `pid-${++_pid}`; }
 
 const EMPTY_FORM: ProjectFormData = {
   title: "",
@@ -113,6 +105,7 @@ export function ProjectForm({
   staffMembers, materials, documents,
   onChange, onSave, onBack,
 }: Props) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [milestonePickerOpen, setMilestonePickerOpen] = useState(false);
   const [milestonePickerMode, setMilestonePickerMode] = useState<"image" | "model" | "video">("image");
@@ -137,7 +130,7 @@ export function ProjectForm({
     onChange(key, url);
   };
 
-  const addMilestoneImage = (msId: string, item: MediaItem) => {
+  const addMilestoneImage = (msId: string, item: PickerMediaItem) => {
     const newImage: ProjectMilestoneImage = {
       id: item.id,
       url: item.url,
@@ -158,17 +151,6 @@ export function ProjectForm({
         : ms
     ));
   };
-
-  function detectPlatform(url: string): { name: string; color: string; icon: string } {
-    const u = url.toLowerCase();
-    if (u.includes("youtube.com") || u.includes("youtu.be")) return { name: "YouTube", color: "bg-red-100 text-red-700", icon: "▶️" };
-    if (u.includes("vimeo.com")) return { name: "Vimeo", color: "bg-blue-100 text-blue-700", icon: "🎬" };
-    if (u.includes("dailymotion.com") || u.includes("dai.ly")) return { name: "Dailymotion", color: "bg-gray-100 text-gray-700", icon: "▶️" };
-    if (u.includes("facebook.com") || u.includes("fb.watch")) return { name: "Facebook", color: "bg-blue-100 text-blue-700", icon: "📱" };
-    if (u.includes("instagram.com")) return { name: "Instagram", color: "bg-pink-100 text-pink-700", icon: "📸" };
-    if (u.includes("tiktok.com")) return { name: "TikTok", color: "bg-gray-100 text-gray-700", icon: "🎵" };
-    return { name: "Video", color: "bg-gray-100 text-gray-600", icon: "▶️" };
-  }
 
   const addMilestoneEmbed = (msId: string) => {
     const url = (milestoneEmbedInputs[msId] || "").trim();
@@ -193,39 +175,31 @@ export function ProjectForm({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={onBack}><ArrowLeft className="size-4" /></Button>
-          <div>
-            <p className="text-xs text-gray-500 mb-0.5">Projects</p>
-            <h1 className="text-2xl font-bold text-gray-900 leading-none">
-              {editingSlug ? "Edit Project" : "New Project"}
-            </h1>
-          </div>
-        </div>
-        <Button onClick={onSave} disabled={!form.title.trim() || saving}
-          className="bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white">
-          {saving && <Loader2 className="size-4 animate-spin" />}
-          {saving ? "Saving\u2026" : editingSlug ? "Update" : "Create"}
-        </Button>
-      </div>
+      <FormHeader
+        breadcrumb="Projects"
+        title={editingSlug ? "Edit Project" : "New Project"}
+        onBack={onBack}
+        onSave={onSave}
+        saving={saving}
+        saveDisabled={!form.title.trim() || saving}
+        saveLabel={editingSlug ? "Update" : "Create"}
+      />
 
       <Tabs defaultValue="overview" className="w-full flex flex-col">
         <div>
-          <TabsList className="bg-gray-100 rounded-lg p-0.5 gap-0 w-auto h-auto">
-            <TabsTrigger value="overview" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium [&_svg]:size-3.5">Overview</TabsTrigger>
-            <TabsTrigger value="client" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium [&_svg]:size-3.5">Client</TabsTrigger>
-            <TabsTrigger value="milestones" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium [&_svg]:size-3.5">Milestones</TabsTrigger>
-            <TabsTrigger value="seo" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium [&_svg]:size-3.5">SEO</TabsTrigger>
-            <TabsTrigger value="settings" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium [&_svg]:size-3.5">Settings</TabsTrigger>
-            <TabsTrigger value="spending" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium [&_svg]:size-3.5">Spending</TabsTrigger>
-          </TabsList>
+          <FormTabs tabs={[
+            { value: "overview", label: "Overview" },
+            { value: "client", label: "Client" },
+            { value: "milestones", label: "Milestones" },
+            { value: "seo", label: "SEO" },
+            { value: "settings", label: "Settings" },
+            { value: "spending", label: "Spending" },
+          ]} />
         </div>
 
         <div>
           <TabsContent value="overview" className="space-y-5 mt-4">
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5 space-y-4">
+            <FormCard>
                 <p className="text-sm font-semibold text-gray-900">Project Overview</p>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -264,12 +238,10 @@ export function ProjectForm({
                     minHeight={380}
                   />
                 </div>
-              </CardContent>
-            </Card>
+              </FormCard>
 
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5">
-                <p className="text-sm font-semibold text-gray-900 mb-4">Main Thumbnail / Banner</p>
+            <FormCard>
+                <p className="text-sm font-semibold text-gray-900">Main Thumbnail / Banner</p>
                 {thumbnail ? (
                   <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="size-14 rounded-md overflow-hidden bg-gray-100 border border-gray-200 shrink-0 relative">
@@ -277,7 +249,7 @@ export function ProjectForm({
                     </div>
                     <span className="text-sm text-gray-700 truncate flex-1">{thumbnail.split("/").pop()}</span>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <Button type="button" variant="outline" size="sm" className="text-gray-500 border-gray-200 hover:bg-gray-100" onClick={() => window.open(thumbnail, "_blank")}>
+                      <Button type="button" variant="outline" size="sm" className="text-gray-500 border-gray-200 hover:bg-gray-100" onClick={() => setPreviewUrl(thumbnail)}>
                         <Eye className="size-3.5" />
                       </Button>
                       <Button type="button" variant="outline" size="sm" className="text-red-500 border-red-200 hover:bg-red-50" onClick={() => onThumbnailChange("")}>
@@ -295,13 +267,11 @@ export function ProjectForm({
                     </Button>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </FormCard>
           </TabsContent>
 
           <TabsContent value="client" className="mt-4">
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5 space-y-5">
+            <FormCard>
                 <p className="text-sm font-semibold text-gray-900">Client Information</p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -336,13 +306,11 @@ export function ProjectForm({
                     </SelectContent>
                   </Select>
                 </div>
-              </CardContent>
-            </Card>
+              </FormCard>
           </TabsContent>
 
           <TabsContent value="milestones" className="mt-4">
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5 space-y-4">
+            <FormCard>
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-gray-900">Project Milestones</p>
                   <Button type="button" variant="outline" size="sm" onClick={() => onMilestonesChange([...milestones, { ...EMPTY_MILESTONE, id: genId() }])}>
@@ -424,7 +392,7 @@ export function ProjectForm({
                                         </TableCell>
                                         <TableCell>
                                           <div className="flex items-center justify-end gap-2">
-                                            <Button type="button" variant="outline" size="sm" className="text-gray-500 border-gray-200 hover:bg-gray-100" onClick={() => window.open(img.url, "_blank")}>
+                                            <Button type="button" variant="outline" size="sm" className="text-gray-500 border-gray-200 hover:bg-gray-100" onClick={() => setPreviewUrl(img.url)}>
                                               <Eye className="size-3.5" />
                                             </Button>
                                             <Button type="button" variant="outline" size="sm" className="text-red-500 border-red-200 hover:bg-red-50" onClick={() => removeMilestoneImage(ms.id, img.id)}>
@@ -505,20 +473,14 @@ export function ProjectForm({
                           <div className="border-t border-gray-200 pt-3">
                             <div className="flex items-center justify-between mb-2">
                               <p className="text-xs font-medium text-gray-500">Video</p>
-                              <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-                                <button type="button" onClick={() => setMilestoneVideoModes(prev => ({ ...prev, [ms.id]: "library" }))}
-                                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition ${
-                                    (milestoneVideoModes[ms.id] || "library") === "library"
-                                      ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                                      : "text-gray-500 hover:text-gray-900"
-                                  }`}>Library</button>
-                                <button type="button" onClick={() => setMilestoneVideoModes(prev => ({ ...prev, [ms.id]: "embed" }))}
-                                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition ${
-                                    milestoneVideoModes[ms.id] === "embed"
-                                      ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                                      : "text-gray-500 hover:text-gray-900"
-                                  }`}>Embed</button>
-                              </div>
+                              <SegmentedToggle<"library" | "embed">
+                                value={milestoneVideoModes[ms.id] || "library"}
+                                onChange={(v) => setMilestoneVideoModes(prev => ({ ...prev, [ms.id]: v }))}
+                                options={[
+                                  { value: "library", label: "Library" },
+                                  { value: "embed", label: "Embed" },
+                                ]}
+                              />
                             </div>
                             {(milestoneVideoModes[ms.id] || "library") === "library" ? (
                               ms.video_url ? (
@@ -596,61 +558,35 @@ export function ProjectForm({
                     })}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </FormCard>
           </TabsContent>
 
           <TabsContent value="seo" className="mt-4">
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5 space-y-4">
-                <p className="text-sm font-semibold text-gray-900">SEO</p>
-
-                <div className="space-y-1.5">
-                  <Label>Meta Title</Label>
-                  <Input value={form.meta_title} onChange={(e) => onChange("meta_title", e.target.value)} placeholder="Defaults to project title" />
-                  <p className="text-right text-[11px] text-gray-400">{form.meta_title.length} / 60</p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>Meta Description</Label>
-                  <RichEditor
-                    value={form.meta_description}
-                    onChange={(html) => onChange("meta_description", html)}
-                    minHeight={120}
-                  />
-                  <p className="text-right text-[11px] text-gray-400">{form.meta_description.length} / 160</p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>Meta Keywords</Label>
-                  <Input value={form.meta_keywords} onChange={(e) => onChange("meta_keywords", e.target.value)} placeholder="keyword1, keyword2, keyword3" />
-                  <p className="text-xs text-gray-400">Comma-separated keywords for search engines.</p>
-                </div>
-              </CardContent>
-            </Card>
+            <SeoFields
+              metaTitle={form.meta_title}
+              metaDescription={form.meta_description}
+              metaKeywords={form.meta_keywords}
+              onMetaTitleChange={(v) => onChange("meta_title", v)}
+              onMetaDescriptionChange={(v) => onChange("meta_description", v)}
+              onMetaKeywordsChange={(v) => onChange("meta_keywords", v)}
+            />
           </TabsContent>
 
           <TabsContent value="settings" className="mt-4 space-y-5">
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5 space-y-4">
+            <FormCard>
                 <p className="text-sm font-semibold text-gray-900">Status</p>
                 <div className="flex items-end gap-6 flex-wrap">
                   <div className="space-y-1.5">
                     <Label className="text-xs text-gray-500">Project Status</Label>
-                    <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-                      <button type="button" onClick={() => onChange("status", "ongoing")}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                          form.status === "ongoing" ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
-                        }`}>Ongoing</button>
-                      <button type="button" onClick={() => onChange("status", "completed")}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                          form.status === "completed" ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
-                        }`}>Completed</button>
-                      <button type="button" onClick={() => onChange("status", "paused")}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                          form.status === "paused" ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
-                        }`}>Paused</button>
-                    </div>
+                    <SegmentedToggle<string>
+                      value={form.status}
+                      onChange={(v) => onChange("status", v)}
+                      options={[
+                        { value: "ongoing", label: "Ongoing" },
+                        { value: "completed", label: "Completed" },
+                        { value: "paused", label: "Paused" },
+                      ]}
+                    />
                   </div>
                 </div>
 
@@ -663,46 +599,42 @@ export function ProjectForm({
 
                 <div className="space-y-1.5">
                   <Label className="text-xs text-gray-500">Priority</Label>
-                  <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-                    {(["low", "medium", "high", "top"] as const).map((p) => (
-                      <button key={p} type="button" onClick={() => onChange("priority", p)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                          form.priority === p ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
-                        }`}>{p.charAt(0).toUpperCase() + p.slice(1)}</button>
-                    ))}
-                  </div>
+                  <SegmentedToggle<string>
+                    value={form.priority}
+                    onChange={(v) => onChange("priority", v)}
+                    options={[
+                      { value: "low", label: "Low" },
+                      { value: "medium", label: "Medium" },
+                      { value: "high", label: "High" },
+                      { value: "top", label: "Top" },
+                    ]}
+                  />
                 </div>
 
                 <div className="space-y-1.5">
                   <Label className="text-xs text-gray-500">Publish Status</Label>
-                  <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-                    <button type="button" onClick={() => onChange("is_published", true)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                        form.is_published ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
-                      }`}>Published</button>
-                    <button type="button" onClick={() => onChange("is_published", false)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                        !form.is_published ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
-                      }`}>Draft</button>
-                  </div>
+                  <SegmentedToggle<boolean>
+                    value={form.is_published}
+                    onChange={(v) => onChange("is_published", v)}
+                    options={[
+                      { value: true, label: "Published" },
+                      { value: false, label: "Draft" },
+                    ]}
+                  />
                 </div>
-              </CardContent>
-            </Card>
+              </FormCard>
 
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5">
-                <p className="text-sm font-semibold text-gray-900 mb-4">Author</p>
+            <FormCard>
+                <p className="text-sm font-semibold text-gray-900">Author</p>
 
-                <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-1 w-fit mb-4">
-                  <button type="button" onClick={() => onChange("authorMode", "manual")}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                      form.authorMode === "manual" ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
-                    }`}>Manual</button>
-                  <button type="button" onClick={() => onChange("authorMode", "team")}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                      form.authorMode === "team" ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
-                    }`}>From Team</button>
-                </div>
+                <SegmentedToggle<string>
+                  value={form.authorMode}
+                  onChange={(v) => onChange("authorMode", v)}
+                  options={[
+                    { value: "manual", label: "Manual" },
+                    { value: "team", label: "From Team" },
+                  ]}
+                />
 
                 {form.authorMode === "manual" ? (
                   <div className="flex items-end gap-6">
@@ -752,13 +684,11 @@ export function ProjectForm({
                     </Select>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </FormCard>
           </TabsContent>
 
           <TabsContent value="spending" className="mt-4">
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5 space-y-4">
+            <FormCard>
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-gray-900">Spending Records</p>
                   <Button type="button" variant="outline" size="sm" onClick={() => onSpendingRecordsChange([...spendingRecords, { ...EMPTY_SPENDING, id: genId() }])}>
@@ -782,16 +712,14 @@ export function ProjectForm({
                         </div>
                         <div className="space-y-1">
                           <Label className="text-[11px] text-gray-500">Type</Label>
-                          <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-                            <button type="button" onClick={() => onSpendingRecordsChange(spendingRecords.map((r) => r.id === s.id ? { ...r, spending_type: "team", staff_member_id: null, material_id: null } : r))}
-                              className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                                s.spending_type === "team" ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
-                              }`}>Team</button>
-                            <button type="button" onClick={() => onSpendingRecordsChange(spendingRecords.map((r) => r.id === s.id ? { ...r, spending_type: "material", staff_member_id: null, material_id: null } : r))}
-                              className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                                s.spending_type === "material" ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
-                              }`}>Material</button>
-                          </div>
+                          <SegmentedToggle<string>
+                            value={s.spending_type}
+                            onChange={(v) => onSpendingRecordsChange(spendingRecords.map((r) => r.id === s.id ? { ...r, spending_type: v as "team" | "material", staff_member_id: null, material_id: null } : r))}
+                            options={[
+                              { value: "team", label: "Team" },
+                              { value: "material", label: "Material" },
+                            ]}
+                          />
                         </div>
                         {s.spending_type === "team" ? (
                           <div className="space-y-1">
@@ -836,8 +764,7 @@ export function ProjectForm({
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </FormCard>
           </TabsContent>
         </div>
       </Tabs>
@@ -901,6 +828,8 @@ export function ProjectForm({
           </div>
         </div>
       )}
+
+      <ImagePreviewDialog url={previewUrl} onClose={() => setPreviewUrl(null)} />
     </div>
   );
 }

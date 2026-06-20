@@ -3,20 +3,20 @@ import type { PermissionGroup, RoleItem, RoleDetail } from '../types/permission.
 
 export const PermissionAdmin = {
   listPermissions: () =>
-    apiPrivate.get<PermissionGroup[]>('/admin/permissions').then(r => r.data),
+    apiPrivate.get<PermissionGroup[]>('/admin/permissions'),
 
   search: () =>
-    apiPrivate.get<RoleItem[]>('/admin/roles').then(r => r.data),
+    apiPrivate.get<RoleItem[]>('/admin/roles'),
 
   get: (id: number) =>
-    apiPrivate.get<RoleDetail>(`/admin/roles/${id}`).then(r => r.data),
+    apiPrivate.get<RoleDetail>(`/admin/roles/${id}`),
 
   create: (data: { name: string; permission_ids: number[] }) =>
-    apiPrivate.post<RoleDetail>('/admin/roles', data).then(r => r.data),
+    apiPrivate.post<RoleDetail>('/admin/roles', data),
 
   update: (id: number, data: { name: string; permission_ids: number[] }) =>
-    apiPrivate.patch<RoleDetail>(`/admin/roles/${id}`, data).then(r => r.data),
+    apiPrivate.patch<RoleDetail>(`/admin/roles/${id}`, data),
 
   delete: (id: number) =>
-    apiPrivate.delete<{ ok: boolean }>(`/admin/roles/${id}`).then(r => r.data),
+    apiPrivate.delete<{ ok: boolean }>(`/admin/roles/${id}`),
 };

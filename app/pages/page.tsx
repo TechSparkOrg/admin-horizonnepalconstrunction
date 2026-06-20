@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { PageAdmin } from "@/api/services/page.service";
 import { ProjectAdmin } from "@/api/services/project.service";
-import { TeamAdmin } from "@/api/services/team.service";
+import { StaffAdmin as StaffC } from "@/api/services/staff.service";
 import type { Page as ApiPage } from "@/api/types/page.types";
 import type { Project } from "@/api/types/project.types";
-import type { TeamMember } from "@/api/types/team.types";
+import type { StaffMember } from "@/api/types/staff.types";
 import { PagesTable } from "@/components/page_ui/pages-table";
 import { PagesForm } from "@/components/page_ui/pages-form";
 import { toSlug } from "@/lib/slug";
+import { PageHeader } from "@/components/global_ui/page-header";
 import {
   Pagination,
   PaginationContent,
@@ -20,7 +21,6 @@ import {
   PaginationPrevious,
   PaginationNext,
 } from "@/components/ui/pagination";
-import { Button } from "@/components/ui/button";
 import {
   InputGroup,
   InputGroupAddon,
@@ -81,7 +81,7 @@ function apiToForm(p: ApiPage): PageFormData {
 export default function AdminPagesPage() {
   const [pages, setPages] = useState<ApiPage[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [teamMembers, setStaffMembers] = useState<StaffMember[]>([]);
   const [view, setView] = useState<View>("list");
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [form, setForm] = useState<PageFormData>(EMPTY);
@@ -95,12 +95,12 @@ export default function AdminPagesPage() {
     Promise.all([
       PageAdmin.list(),
       ProjectAdmin.list(),
-      TeamAdmin.list(),
+      StaffC.search({}),
     ])
       .then(([pageRes, projectRes, teamRes]) => {
         setPages(pageRes.results ?? []);
         setProjects(projectRes.results ?? []);
-        setTeamMembers(teamRes.results ?? []);
+        setStaffMembers(teamRes.results ?? []);
       })
       .catch(() => toast.error("Failed to load data"));
   }, []);
@@ -206,19 +206,7 @@ export default function AdminPagesPage() {
   return (
     <>
       {view === "list" ? (
-        <div className="px-4">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 leading-none">Pages</h1>
-              <p className="text-xs text-gray-500 mt-1">Page list</p>
-            </div>
-            <button
-              onClick={openNew}
-              className="inline-flex items-center gap-1.5 h-10 px-4 rounded-lg bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white text-sm font-medium transition"
-            >
-              <Plus className="w-4 h-4" /> Create Page
-            </button>
-          </div>
+        <PageHeader title="Pages" subtitle="Page list" actionLabel="Create Page" onAction={openNew}>
           <div className="flex items-center gap-3 mb-4">
             <InputGroup className="flex-1 max-w-sm h-9">
               <InputGroupAddon align="inline-start">
@@ -230,7 +218,7 @@ export default function AdminPagesPage() {
                 placeholder="Search"
               />
             </InputGroup>
-            <p className="text-sm text-[lab(20_23.9_-60.14)] font-medium whitespace-nowrap">
+            <p className="text-sm text-sidebar-primary font-medium whitespace-nowrap">
               Total: {filtered.length} {filtered.length === 1 ? "item" : "items"} found.
             </p>
           </div>
@@ -274,7 +262,7 @@ export default function AdminPagesPage() {
               </Pagination>
             </div>
           )}
-        </div>
+        </PageHeader>
       ) : (
         <div className="px-4">
           <PagesForm

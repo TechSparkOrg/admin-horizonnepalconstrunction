@@ -1,13 +1,15 @@
 "use client";
 
 import { useMemo } from "react";
-import { ArrowLeft, Loader2, Plus, Trash2, Check, Users, Wifi } from "lucide-react";
+import { Plus, Trash2, Check, Users, Wifi } from "lucide-react";
+import { FormHeader } from "@/components/global_ui/form-header";
+import { FormTabs } from "@/components/global_ui/form-tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { StaffMember } from "@/api/types/staff.types";
 import type { Project } from "@/api/types/project.types";
@@ -42,7 +44,8 @@ const EMPTY_SALARY: SalaryEntry = { id: "", amount: 0, effective_date: "", statu
 const EMPTY_PROJECT_BASIS: ProjectBasisEntry = { id: "", project_id: "", budget_plan: 0, payment_condition: "", progress_rate: 0, status: "ongoing", workers_under: 0 };
 const EMPTY_ASSIGNMENT: ProjectAssignment = { id: "", project_id: "", status: "ongoing" };
 
-function genId() { return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`; }
+let _tid = 0;
+function genId() { return crypto.randomUUID?.() ?? `tid-${++_tid}`; }
 
 export type { TeamAllocationFormData };
 
@@ -115,31 +118,19 @@ export function TeamAllocationForm({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={onBack}><ArrowLeft className="size-4" /></Button>
-          <div>
-            <p className="text-xs text-gray-500 mb-0.5">Team Allocation</p>
-            <h1 className="text-2xl font-bold text-gray-900 leading-none">
-              {editingId ? "Edit Allocation" : "New Allocation"}
-            </h1>
-          </div>
-        </div>
-        <Button onClick={onSave} disabled={!form.staff_member_id || saving}
-          className="bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white">
-          {saving && <Loader2 className="size-4 animate-spin" />}
-          {saving ? "Saving\u2026" : editingId ? "Update" : "Create"}
-        </Button>
-      </div>
+      <FormHeader
+        breadcrumb="Team Allocation"
+        title={editingId ? "Edit Allocation" : "New Allocation"}
+        onBack={onBack}
+        onSave={onSave}
+        saving={saving}
+        saveDisabled={!form.staff_member_id || saving}
+        saveLabel={editingId ? "Update" : "Create"}
+      />
 
       <Tabs defaultValue="member" className="w-full flex flex-col">
         <div>
-          <TabsList className="bg-gray-100 rounded-lg p-0.5 gap-0 w-auto h-auto">
-            <TabsTrigger value="member" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">Member</TabsTrigger>
-            <TabsTrigger value="compensation" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">Compensation</TabsTrigger>
-            <TabsTrigger value="assignments" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">Assignments</TabsTrigger>
-            <TabsTrigger value="notes" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">Notes</TabsTrigger>
-          </TabsList>
+          <FormTabs tabs={[{"value":"member","label":"Member"},{"value":"compensation","label":"Compensation"},{"value":"assignments","label":"Assignments"},{"value":"notes","label":"Notes"}]} />
         </div>
 
         <div>
@@ -154,20 +145,20 @@ export function TeamAllocationForm({
                     <button type="button" onClick={() => handleUserTypeChange("core")}
                       className={`relative flex items-center gap-3 p-4 rounded-xl border-2 transition text-left ${
                         form.user_type === "core"
-                          ? "border-[lab(20_23.9_-60.14)] bg-[lab(20_23.9_-60.14)]/5"
+                          ? "border-sidebar-primary bg-sidebar-primary/5"
                           : "border-gray-200 bg-white hover:border-gray-300"
                       }`}>
                       <div className={`size-10 rounded-lg flex items-center justify-center ${
-                        form.user_type === "core" ? "bg-[lab(20_23.9_-60.14)] text-white" : "bg-gray-100 text-gray-500"
+                        form.user_type === "core" ? "bg-sidebar-primary text-white" : "bg-gray-100 text-gray-500"
                       }`}>
                         <Users className="size-5" />
                       </div>
                       <div className="flex-1">
-                        <p className={`text-sm font-semibold ${form.user_type === "core" ? "text-[lab(20_23.9_-60.14)]" : "text-gray-900"}`}>Core Team</p>
+                        <p className={`text-sm font-semibold ${form.user_type === "core" ? "text-sidebar-primary" : "text-gray-900"}`}>Core Team</p>
                         <p className="text-[11px] text-gray-500">On-site employees</p>
                       </div>
                       {form.user_type === "core" && (
-                        <div className="absolute top-2 right-2 size-5 rounded-full bg-[lab(20_23.9_-60.14)] flex items-center justify-center">
+                        <div className="absolute top-2 right-2 size-5 rounded-full bg-sidebar-primary flex items-center justify-center">
                           <Check className="size-3 text-white" />
                         </div>
                       )}
@@ -176,20 +167,20 @@ export function TeamAllocationForm({
                     <button type="button" onClick={() => handleUserTypeChange("remote")}
                       className={`relative flex items-center gap-3 p-4 rounded-xl border-2 transition text-left ${
                         form.user_type === "remote"
-                          ? "border-[lab(20_23.9_-60.14)] bg-[lab(20_23.9_-60.14)]/5"
+                          ? "border-sidebar-primary bg-sidebar-primary/5"
                           : "border-gray-200 bg-white hover:border-gray-300"
                       }`}>
                       <div className={`size-10 rounded-lg flex items-center justify-center ${
-                        form.user_type === "remote" ? "bg-[lab(20_23.9_-60.14)] text-white" : "bg-gray-100 text-gray-500"
+                        form.user_type === "remote" ? "bg-sidebar-primary text-white" : "bg-gray-100 text-gray-500"
                       }`}>
                         <Wifi className="size-5" />
                       </div>
                       <div className="flex-1">
-                        <p className={`text-sm font-semibold ${form.user_type === "remote" ? "text-[lab(20_23.9_-60.14)]" : "text-gray-900"}`}>Remote User</p>
+                        <p className={`text-sm font-semibold ${form.user_type === "remote" ? "text-sidebar-primary" : "text-gray-900"}`}>Remote User</p>
                         <p className="text-[11px] text-gray-500">Off-site workers</p>
                       </div>
                       {form.user_type === "remote" && (
-                        <div className="absolute top-2 right-2 size-5 rounded-full bg-[lab(20_23.9_-60.14)] flex items-center justify-center">
+                        <div className="absolute top-2 right-2 size-5 rounded-full bg-sidebar-primary flex items-center justify-center">
                           <Check className="size-3 text-white" />
                         </div>
                       )}

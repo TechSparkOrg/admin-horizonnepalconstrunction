@@ -9,7 +9,7 @@ import { VastuTable } from "@/components/page_ui/vastu-table";
 import { VastuForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/vastu-form";
 import type { VastuFormData } from "@/components/page_ui/vastu-form";
 import { toSlug } from "@/lib/slug";
-import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/global_ui/page-header";
 import {
   Select,
   SelectContent,
@@ -61,7 +61,6 @@ export default function AdminVastuPage() {
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<VastuFormData>(EMPTY_FORM);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<VastuItemType | "all">("all");
@@ -107,7 +106,6 @@ export default function AdminVastuPage() {
 
   const back = () => {
     setForm(EMPTY_FORM);
-    setDeleteId(null);
     setView("list");
   };
 
@@ -181,7 +179,6 @@ export default function AdminVastuPage() {
     } catch {
       toast.error("Failed to delete");
     }
-    setDeleteId(null);
   };
 
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
@@ -199,39 +196,32 @@ export default function AdminVastuPage() {
   return (
     <>
       {view === "list" ? (
-        <div className="px-4">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 leading-none">Vastu Shastra</h1>
-              <p className="text-xs text-gray-500 mt-1">Sections, rooms, and directions</p>
-            </div>
+        <PageHeader
+          title="Vastu Shastra"
+          subtitle="Sections, rooms, and directions"
+          actions={
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
+              <button
                 onClick={() => openNew("section")}
-                className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20"
+                className="inline-flex items-center gap-1.5 h-10 px-4 rounded-lg border border-sidebar-primary/20 text-sidebar-primary text-sm font-medium transition hover:bg-sidebar-primary/5"
               >
                 <Plus className="w-4 h-4" /> Section
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
+              </button>
+              <button
                 onClick={() => openNew("room")}
-                className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20"
+                className="inline-flex items-center gap-1.5 h-10 px-4 rounded-lg border border-sidebar-primary/20 text-sidebar-primary text-sm font-medium transition hover:bg-sidebar-primary/5"
               >
                 <Plus className="w-4 h-4" /> Room
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
+              </button>
+              <button
                 onClick={() => openNew("direction")}
-                className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20"
+                className="inline-flex items-center gap-1.5 h-10 px-4 rounded-lg border border-sidebar-primary/20 text-sidebar-primary text-sm font-medium transition hover:bg-sidebar-primary/5"
               >
                 <Plus className="w-4 h-4" /> Direction
-              </Button>
+              </button>
             </div>
-          </div>
+          }
+        >
           <div className="flex items-center gap-3 mb-4">
             <InputGroup className="flex-1 max-w-sm h-9">
               <InputGroupAddon align="inline-start">
@@ -257,7 +247,7 @@ export default function AdminVastuPage() {
                 <SelectItem value="direction">Direction</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-sm text-[lab(20_23.9_-60.14)] font-medium whitespace-nowrap">
+            <p className="text-sm text-sidebar-primary font-medium whitespace-nowrap">
               Total: {total} {total === 1 ? "item" : "items"} found.
             </p>
           </div>
@@ -266,13 +256,11 @@ export default function AdminVastuPage() {
             items={items}
             onEdit={openEdit}
             onDelete={confirmDelete}
-            deleteId={deleteId}
-            setDeleteId={setDeleteId}
             page={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
           />
-        </div>
+        </PageHeader>
       ) : (
         <div className="px-4">
           <VastuForm

@@ -1,17 +1,15 @@
 "use client";
 
-import { ArrowLeft, Loader2, ImagePlus, X, User, Eye, Pencil, Trash2 } from "lucide-react";
+import { ImagePlus, X, User, Eye, Pencil, Trash2 } from "lucide-react";
+import { FormHeader } from "@/components/global_ui/form-header";
+import { FormTabs } from "@/components/global_ui/form-tabs";
 import { useRef, useState, useEffect } from "react";
 import { RichEditor } from "@/components/page_ui/rich-editor";
+import { SeoFields } from "@/components/global_ui/seo-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -35,12 +33,13 @@ import {
   PaginationPrevious,
   PaginationNext,
 } from "@/components/ui/pagination";
-import { MediaPickerDialog } from "@/components/global_ui/MediahanlderPicker";
-import type { MediaItem } from "@/components/global_ui/MediahanlderPicker";
+import { MediaPickerDialog } from "@/components/global_ui/media-handler-picker";
+import type { PickerMediaItem } from "@/components/global_ui/media-handler-picker";
 import { MediaService } from "@/api/services/media.service";
 import { toast } from "sonner";
+import { ImagePreviewDialog } from "@/components/global_ui/image-preview-dialog";
 
-interface TeamMember {
+interface StaffMember {
   id: string;
   name: string;
   image?: string;
@@ -75,7 +74,7 @@ interface Props {
   editingSlug: string | null;
   saving: boolean;
   projects?: Project[];
-  teamMembers?: TeamMember[];
+  teamMembers?: StaffMember[];
   bannerImages: { id: string; url: string; name: string }[];
   onBannerImagesChange: (images: { id: string; url: string; name: string }[]) => void;
   onChange: (key: string, value: string | boolean) => void;
@@ -95,6 +94,7 @@ export function PagesForm({
   onSave,
   onBack,
 }: Props) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [featuredPreview, setFeaturedPreview] = useState<string | null>(form.featuredImage || null);
   const [authorPreview, setAuthorPreview] = useState<string | null>(form.authorImage || null);
   const featuredInputRef = useRef<HTMLInputElement>(null);
@@ -110,8 +110,8 @@ export function PagesForm({
     bannerPage * BANNER_PER_PAGE
   );
 
-  const handleBannerSelect = async (item: MediaItem, altText: string, file?: File) => {
-    let newItem: MediaItem;
+  const handleBannerSelect = async (item: PickerMediaItem, altText: string, file?: File) => {
+    let newItem: PickerMediaItem;
     if (file) {
       try {
         const uploaded = await MediaService.uploadImage(file, { alt: altText });
@@ -166,40 +166,19 @@ export function PagesForm({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={onBack}>
-            <ArrowLeft className="size-4" />
-          </Button>
-          <div>
-            <p className="text-xs text-gray-500 mb-0.5">Pages</p>
-            <h1 className="text-2xl font-bold text-gray-900 leading-none">
-              {editingSlug ? form.title || "Edit Page" : "New Page"}
-            </h1>
-          </div>
-        </div>
-        <Button onClick={onSave} disabled={!form.title.trim() || saving} className="bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white">
-          {saving && <Loader2 className="size-4 animate-spin" />}
-          {saving ? "Saving\u2026" : editingSlug ? "Update" : "Publish"}
-        </Button>
-      </div>
+      <FormHeader
+        breadcrumb="Pages"
+        title={editingSlug ? form.title || "Edit Page" : "New Page"}
+        onBack={onBack}
+        onSave={onSave}
+        saving={saving}
+        saveDisabled={!form.title.trim() || saving}
+        saveLabel={editingSlug ? "Update" : "Publish"}
+      />
 
       <Tabs defaultValue="content" className="w-full flex flex-col">
         <div>
-          <TabsList className="bg-gray-100 rounded-lg p-0.5 gap-0 w-auto h-auto">
-            <TabsTrigger value="content" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium [&_svg]:size-3.5">
-              Content
-            </TabsTrigger>
-            <TabsTrigger value="media" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium [&_svg]:size-3.5">
-              Media
-            </TabsTrigger>
-            <TabsTrigger value="seo" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium [&_svg]:size-3.5">
-              SEO
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium [&_svg]:size-3.5">
-              Settings
-            </TabsTrigger>
-          </TabsList>
+          <FormTabs tabs={[{"value":"content","label":"Content"},{"value":"media","label":"Media"},{"value":"seo","label":"SEO"},{"value":"settings","label":"Settings"}]} />
         </div>
 
         <div>
@@ -288,14 +267,14 @@ export function PagesForm({
                                 variant="outline"
                                 size="sm"
                                 className="text-gray-500 border-gray-200 hover:bg-gray-100"
-                                onClick={() => window.open(img.url, "_blank")}
+                                onClick={() => setPreviewUrl(img.url)}
                               >
                                 <Eye className="w-3.5 h-3.5" />
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20 hover:bg-[lab(20_23.9_-60.14)]/5"
+                                className="text-sidebar-primary border-sidebar-primary/20 hover:bg-sidebar-primary/5"
                                 onClick={() => {
                                   setEditingBannerId(img.id);
                                   setMediaPickerOpen(true);
@@ -368,36 +347,14 @@ export function PagesForm({
           </TabsContent>
 
           <TabsContent value="seo" className="mt-4">
-            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 w-full">
-              <div className="space-y-1.5">
-                <Label>Meta Title</Label>
-                <Input
-                  value={form.metaTitle}
-                  onChange={(e) => onChange("metaTitle", e.target.value)}
-                  placeholder="Defaults to page title"
-                />
-                <p className="text-right text-[11px] text-gray-400">{form.metaTitle.length} / 60</p>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Meta Description</Label>
-                <RichEditor
-                  value={form.metaDescription}
-                  onChange={(html) => onChange("metaDescription", html)}
-                  minHeight={120}
-                />
-                <p className="text-right text-[11px] text-gray-400">{form.metaDescription.length} / 160</p>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Meta Keywords</Label>
-                <Input
-                  value={form.metaKeywords}
-                  onChange={(e) => onChange("metaKeywords", e.target.value)}
-                  placeholder="keyword1, keyword2, keyword3"
-                />
-                <p className="text-xs text-gray-400">Comma-separated keywords for search engines.</p>
-              </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-5 w-full">
+              <SeoFields
+                metaTitle={form.metaTitle}
+                metaDescription={form.metaDescription}
+                metaKeywords={form.metaKeywords}
+                onChange={onChange}
+                titlePlaceholder="Defaults to page title"
+              />
             </div>
           </TabsContent>
 
@@ -563,6 +520,8 @@ export function PagesForm({
           </TabsContent>
         </div>
       </Tabs>
+
+      <ImagePreviewDialog url={previewUrl} onClose={() => setPreviewUrl(null)} />
     </div>
   );
 }

@@ -1,20 +1,17 @@
 "use client";
-
-import { FileText, Pencil, Trash2 } from "lucide-react";
-import type { AttributeItem, UsedIn } from "@/api/types/attribute.types";
-import { USED_IN_OPTIONS } from "@/api/types/attribute.types";
+import { useState } from "react";
+import { FileText } from "lucide-react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableRow,
 } from "@/components/ui/table";
+import { TableHeaderRow } from "@/components/global_ui/table-header-row";
+import { ActionButtons } from "@/components/global_ui/action-buttons";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { DeleteDialog } from "@/components/global_ui/delete_dailog";
+import { DeleteDialog } from "@/components/global_ui/delete-dialog";
+import { StatusBadge } from "@/components/global_ui/status-badge";
+import { PaginationBar } from "@/components/global_ui/pagination-bar";
+import type { AttributeItem, UsedIn } from "@/api/types/attribute.types";
 
 const USED_IN_LABELS: Record<UsedIn, string> = {
   all: "All",
@@ -22,27 +19,19 @@ const USED_IN_LABELS: Record<UsedIn, string> = {
   blog: "Blog",
   project: "Project",
 };
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationPrevious,
-  PaginationNext,
-} from "@/components/ui/pagination";
 
 interface Props {
   items: AttributeItem[];
   onEdit: (item: AttributeItem) => void;
   onDelete: (id: string) => void;
-  deleteId: string | null;
-  setDeleteId: (id: string | null) => void;
   page: number;
   totalPages: number;
   onPageChange: (page: number) => void;
 }
 
-export function AttributeTable({ items, onEdit, onDelete, deleteId, setDeleteId, page, totalPages, onPageChange }: Props) {
+export function AttributeTable({ items, onEdit, onDelete, page, totalPages, onPageChange }: Props) {
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
   if (items.length === 0) {
     return (
       <Card className="bg-white border border-gray-200 rounded-xl">
@@ -61,16 +50,14 @@ export function AttributeTable({ items, onEdit, onDelete, deleteId, setDeleteId,
     <>
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <Table>
-          <TableHeader>
-            <TableRow className="border-gray-200 hover:bg-transparent">
-              <TableHead className="text-gray-900 font-semibold">Title</TableHead>
-              <TableHead className="text-gray-900 font-semibold">Slug</TableHead>
-              <TableHead className="text-gray-900 font-semibold">Used In</TableHead>
-              <TableHead className="text-gray-900 font-semibold">Fields</TableHead>
-              <TableHead className="text-gray-900 font-semibold">Status</TableHead>
-              <TableHead className="text-gray-900 font-semibold text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
+          <TableHeaderRow columns={[
+            { label: "Title" },
+            { label: "Slug" },
+            { label: "Used In" },
+            { label: "Fields" },
+            { label: "Status" },
+            { label: "Actions", className: "text-right" },
+          ]} />
           <TableBody>
             {items.map((item) => (
               <TableRow
@@ -100,39 +87,10 @@ export function AttributeTable({ items, onEdit, onDelete, deleteId, setDeleteId,
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant="outline"
-                    className={`font-normal gap-1.5 ${
-                      item.is_active
-                        ? "border-green-200 bg-green-50 text-green-600"
-                        : "border-gray-200 bg-gray-50 text-gray-500"
-                    }`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${item.is_active ? "bg-green-500" : "bg-gray-400"}`} />
-                    {item.is_active ? "Active" : "Inactive"}
-                  </Badge>
+                  <StatusBadge active={item.is_active} />
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20 hover:bg-[lab(20_23.9_-60.14)]/5"
-                      onClick={(e) => { e.stopPropagation(); onEdit(item); }}
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      Details
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-red-500 border-red-200 hover:bg-red-50"
-                      onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Delete
-                    </Button>
-                  </div>
+                  <ActionButtons onEdit={() => onEdit(item)} onDelete={() => setDeleteId(item.id)} />
                 </TableCell>
               </TableRow>
             ))}
@@ -140,37 +98,7 @@ export function AttributeTable({ items, onEdit, onDelete, deleteId, setDeleteId,
         </Table>
       </div>
 
-      {totalPages > 1 && (
-        <div className="mt-6">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => onPageChange(Math.max(1, page - 1))}
-                  className={page === 1 ? "pointer-events-none opacity-40" : "cursor-pointer"}
-                />
-              </PaginationItem>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <PaginationItem key={p}>
-                  <PaginationLink
-                    isActive={p === page}
-                    onClick={() => onPageChange(p)}
-                    className="cursor-pointer"
-                  >
-                    {p}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-                  className={page === totalPages ? "pointer-events-none opacity-40" : "cursor-pointer"}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      )}
+      <PaginationBar page={page} totalPages={totalPages} onPageChange={onPageChange} />
 
       <DeleteDialog
         open={!!deleteId}

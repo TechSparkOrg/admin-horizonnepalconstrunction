@@ -1,63 +1,51 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { MediaService } from "@/api/services/media.service";
+import { useMediaList, useMediaMutations } from "@/api/hooks/use-media-query";
+import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
 import type { MediaItem } from "@/api/types/media.types";
 import { MediaTable } from "@/components/page_ui/media-table";
 import { MediaForm, type MediaFormData } from "@/components/page_ui/media-form";
+import { PageHeader } from "@/components/global_ui/page-header";
+import { DeleteDialog } from "@/components/global_ui/delete-dialog";
 import { toMediaPayload } from "@/lib/media";
-import { DeleteDialog } from "@/components/global_ui/delete_dailog";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 export default function BannersPage() {
-  const [items, setItems] = useState<MediaItem[]>([]);
-  const [page, setPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const { data } = useMediaList({ page: currentPage, page_size: PAGE_SIZE, group_title: "Banners", banner: true });
+  const { deleteMutation, updateMutation, uploadMutation } = useMediaMutations();
+
   const [editing, setEditing] = useState<MediaItem | null>(null);
   const [view, setView] = useState<"list" | "form">("list");
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const fetchAll = async (pageNum = 1) => {
-    try {
-      const res = await MediaService.listBanners({ page: pageNum });
-      setPage(pageNum);
-      setTotalCount(res.count);
-      setItems(res.results ?? []);
-    } catch {
-      toast.error("Failed to load banners");
-    }
-  };
+  const items = data?.items ?? [];
+  const totalCount = data?.totalCount ?? 0;
 
-  useEffect(() => { fetchAll(1); }, []);
-
-  const handleSave = async (data: MediaFormData, files?: File[]) => {
+  const handleSave = async (formData: MediaFormData, files?: File[]) => {
     setSaving(true);
     try {
-      const payload = toMediaPayload(data, { banner: true });
+      const payload = toMediaPayload(formData, { banner: true });
       if (editing) {
-        await MediaService.update(editing.id, payload);
+        await updateMutation.mutateAsync({ id: editing.id, data: payload });
         toast.success("Banner updated");
       } else {
         const list = files && files.length > 0 ? files : [];
         for (const f of list) {
-          await MediaService.uploadImage(f, { ...payload, group_title: 'Banners' });
+          const result = await uploadMutation.mutateAsync({ file: f, metadata: { ...payload, group_title: "Banners" } });
+          if (!result) throw new Error("Upload failed");
         }
         toast.success(list.length > 1 ? `${list.length} banners uploaded` : "Banner uploaded");
       }
-      await fetchAll(1);
       setView("list");
       setEditing(null);
     } catch (err) {
-      const apiErr = err as { response?: { data?: Record<string, string[]> } };
-      const msg = apiErr.response?.data
-        ? Object.values(apiErr.response.data).flat().filter(Boolean).join(', ')
-        : "Something went wrong";
-      toast.error(msg);
+      const parsed = ErrorHandler.parse(err);
+      ErrorHandler.toast(parsed.message);
     } finally {
       setSaving(false);
     }
@@ -65,28 +53,9 @@ export default function BannersPage() {
 
   const confirmDelete = async () => {
     if (!deleteId) return;
-    try {
-      await MediaService.delete(deleteId);
-      const prevCount = items.length;
-      const wasLastOnPage = prevCount <= 1 && page > 1;
-      const nextPage = wasLastOnPage ? page - 1 : page;
-      await fetchAll(nextPage);
-      toast.success("Banner deleted");
-    } catch {
-      toast.error("Failed to delete");
-    } finally {
-      setDeleteId(null);
-    }
-  };
-
-  const openCreate = () => {
-    setEditing(null);
-    setView("form");
-  };
-
-  const openEdit = (item: MediaItem) => {
-    setEditing(item);
-    setView("form");
+    await deleteMutation.mutateAsync(deleteId);
+    if (items.length <= 1 && currentPage > 1) setCurrentPage((p) => p - 1);
+    setDeleteId(null);
   };
 
   if (view === "form") {
@@ -104,23 +73,14 @@ export default function BannersPage() {
   }
 
   return (
-    <>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 leading-none">Banners</h1>
-          <p className="text-xs text-gray-500 mt-1">Media / Banners</p>
-        </div>
-        <Button onClick={openCreate} className="bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white">
-          <Plus className="w-4 h-4 mr-2" /> Add Banner
-        </Button>
-      </div>
+    <PageHeader title="Banners" subtitle="Media / Banners" actionLabel="Add Banner" onAction={() => { setEditing(null); setView("form"); }}>
       <MediaTable
         items={items}
-        page={page}
+        page={currentPage}
         totalPages={Math.ceil(totalCount / PAGE_SIZE)}
         totalCount={totalCount}
-        onPageChange={fetchAll}
-        onEdit={openEdit}
+        onPageChange={setCurrentPage}
+        onEdit={(item) => { setEditing(item); setView("form"); }}
         onDelete={setDeleteId}
         groupLabel="Banners"
       />
@@ -131,6 +91,6 @@ export default function BannersPage() {
         title="Delete Banner"
         description="Are you sure you want to delete this banner? This action cannot be undone."
       />
-    </>
+    </PageHeader>
   );
 }

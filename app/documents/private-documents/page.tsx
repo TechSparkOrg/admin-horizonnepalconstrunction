@@ -50,7 +50,6 @@ export default function PrivateDocumentsPage() {
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<PrivateDocumentFormData>(EMPTY_FORM);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -71,7 +70,7 @@ export default function PrivateDocumentsPage() {
   }, [searchParams]);
 
   useEffect(() => {
-    ProjectAdmin.list({ page_size: 100 })
+    ProjectAdmin.list({ page_size: 10 })
       .then((res) => setProjects(res.results ?? []))
       .catch(() => {});
   }, []);
@@ -99,7 +98,6 @@ export default function PrivateDocumentsPage() {
 
   const back = () => {
     setForm(EMPTY_FORM);
-    setDeleteId(null);
     setView("list");
   };
 
@@ -154,7 +152,6 @@ export default function PrivateDocumentsPage() {
     } catch {
       toast.error("Failed to delete");
     }
-    setDeleteId(null);
   };
 
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
@@ -177,7 +174,7 @@ export default function PrivateDocumentsPage() {
               variant="outline"
               size="sm"
               onClick={openNew}
-              className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20"
+              className="text-sidebar-primary border-sidebar-primary/20"
             >
               <Plus className="w-4 h-4" /> Add Document
             </Button>
@@ -194,7 +191,7 @@ export default function PrivateDocumentsPage() {
                 placeholder="Search documents..."
               />
             </InputGroup>
-            <p className="text-sm text-[lab(20_23.9_-60.14)] font-medium whitespace-nowrap">
+            <p className="text-sm text-sidebar-primary font-medium whitespace-nowrap">
               Total: {total} {total === 1 ? "item" : "items"} found.
             </p>
           </div>
@@ -203,8 +200,6 @@ export default function PrivateDocumentsPage() {
             items={items}
             onEdit={openEdit}
             onDelete={confirmDelete}
-            deleteId={deleteId}
-            setDeleteId={setDeleteId}
             page={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}

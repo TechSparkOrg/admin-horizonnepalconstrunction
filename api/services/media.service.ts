@@ -4,46 +4,46 @@ import type { PaginatedResponse } from '../types/consultation.types';
 
 export const MediaService = {
   list: (params?: Record<string, unknown>) =>
-    apiPrivate.get<PaginatedResponse<MediaItem>>('/admin/media', { params }).then(r => r.data),
+    apiPrivate.get<PaginatedResponse<MediaItem>>('/admin/media', { params }),
 
   listImages: (params?: Record<string, unknown>) =>
-    apiPrivate.get<PaginatedResponse<MediaItem>>('/admin/media', { params: { group_title: 'Images', ...params } }).then(r => r.data),
+    apiPrivate.get<PaginatedResponse<MediaItem>>('/admin/media', { params: { group_title: 'Images', ...params } }),
 
   listVideos: (params?: Record<string, unknown>) =>
-    apiPrivate.get<PaginatedResponse<MediaItem>>('/admin/media', { params: { group_title: 'Videos', ...params } }).then(r => r.data),
+    apiPrivate.get<PaginatedResponse<MediaItem>>('/admin/media', { params: { group_title: 'Videos', ...params } }),
 
   listModels: (params?: Record<string, unknown>) =>
-    apiPrivate.get<PaginatedResponse<MediaItem>>('/admin/media', { params: { group_title: '3D Models', ...params } }).then(r => r.data),
+    apiPrivate.get<PaginatedResponse<MediaItem>>('/admin/media', { params: { group_title: '3D Models', ...params } }),
 
   listBanners: (params?: Record<string, unknown>) =>
-    apiPrivate.get<PaginatedResponse<MediaItem>>('/admin/media', { params: { banner: true, ...params } }).then(r => r.data),
+    apiPrivate.get<PaginatedResponse<MediaItem>>('/admin/media', { params: { banner: true, ...params } }),
 
   create: (data: MediaItemCreate) =>
-    apiPrivate.post<MediaItem>('/admin/media', data).then(r => r.data),
+    apiPrivate.post<MediaItem>('/admin/media', data),
 
   createImage: (data: MediaItemCreate) =>
-    apiPrivate.post<MediaItem>('/admin/media', { ...data, group_title: 'Images' }).then(r => r.data),
+    apiPrivate.post<MediaItem>('/admin/media', { ...data, group_title: 'Images' }),
 
   createVideo: (data: MediaItemCreate) =>
-    apiPrivate.post<MediaItem>('/admin/media', { ...data, group_title: 'Videos' }).then(r => r.data),
+    apiPrivate.post<MediaItem>('/admin/media', { ...data, group_title: 'Videos' }),
 
   createModel: (data: MediaItemCreate) =>
-    apiPrivate.post<MediaItem>('/admin/media', { ...data, group_title: '3D Models' }).then(r => r.data),
+    apiPrivate.post<MediaItem>('/admin/media', { ...data, group_title: '3D Models' }),
 
   createBanner: (data: MediaItemCreate) =>
-    apiPrivate.post<MediaItem>('/admin/media', { ...data, banner: true }).then(r => r.data),
+    apiPrivate.post<MediaItem>('/admin/media', { ...data, banner: true }),
 
   update: (id: string, data: MediaItemUpdate) =>
-    apiPrivate.patch<MediaItem>(`/admin/media/update/${id}`, data).then(r => r.data),
+    apiPrivate.patch<MediaItem>(`/admin/media/update/${id}`, data),
 
   delete: (id: string) =>
-    apiPrivate.delete(`/admin/media/delete/${id}`).then(r => r.data),
+    apiPrivate.delete(`/admin/media/delete/${id}`),
 
   uploadImage: async (file: File, metadata?: Partial<MediaItemCreate>) => {
     const { upload_url, media } = await apiPrivate.post<{ upload_url: string; media: MediaItem }>(
       '/admin/media/request-upload',
       { filename: file.name, ...metadata }
-    ).then(r => r.data);
+    );
 
     await fetch(upload_url, {
       method: 'PUT',

@@ -1,6 +1,8 @@
 "use client";
 
-import { ArrowLeft, Loader2, Plus, Trash2, Upload, X } from "lucide-react";
+import { Plus, Trash2, Upload, X } from "lucide-react";
+import { FormHeader } from "@/components/global_ui/form-header";
+import { FormTabs } from "@/components/global_ui/form-tabs";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { RichEditor } from "@/components/page_ui/rich-editor";
+import { SeoFields } from "@/components/global_ui/seo-fields";
 import {
   Select,
   SelectContent,
@@ -15,16 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import Image from "next/image";
 import type { VastuItemType, BilingualPair } from "@/api/types/vastu.types";
 
-interface TeamMember {
+interface StaffMember {
   id: string;
   name: string;
   image?: string;
@@ -57,7 +55,7 @@ interface Props {
   form: VastuFormData;
   editingId: string | null;
   saving: boolean;
-  teamMembers?: TeamMember[];
+  teamMembers?: StaffMember[];
   onChange: (key: string, value: string | boolean | number | BilingualPair | BilingualPair[]) => void;
   onListChange: (listKey: string, items: BilingualPair[]) => void;
   onSave: () => void;
@@ -213,46 +211,19 @@ export function VastuForm({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={onBack}>
-            <ArrowLeft className="size-4" />
-          </Button>
-          <div>
-            <p className="text-xs text-gray-500 mb-0.5">Vastu</p>
-            <h1 className="text-2xl font-bold text-gray-900 leading-none">
-              {editingId ? form.title || `Edit ${typeLabel}` : `New ${typeLabel}`}
-            </h1>
-          </div>
-        </div>
-        <Button onClick={onSave} disabled={!form.title.trim() || saving} className="bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white">
-          {saving && <Loader2 className="size-4 animate-spin" />}
-          {saving ? "Saving\u2026" : editingId ? "Update" : "Create"}
-        </Button>
-      </div>
+      <FormHeader
+        breadcrumb="Vastu"
+        title={editingId ? form.title || `Edit ${typeLabel}` : `New ${typeLabel}`}
+        onBack={onBack}
+        onSave={onSave}
+        saving={saving}
+        saveDisabled={!form.title.trim() || saving}
+        saveLabel={editingId ? "Update" : "Create"}
+      />
 
       <Tabs defaultValue="overview" className="w-full flex flex-col">
         <div>
-          <TabsList className="bg-gray-100 rounded-lg p-0.5 gap-0 w-auto h-auto">
-            <TabsTrigger value="overview" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="content" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">
-              Content
-            </TabsTrigger>
-            <TabsTrigger value="benefits" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">
-              Benefits
-            </TabsTrigger>
-            <TabsTrigger value="avoids" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">
-              What to Avoid
-            </TabsTrigger>
-            <TabsTrigger value="seo" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">
-              SEO
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">
-              Settings
-            </TabsTrigger>
-          </TabsList>
+          <FormTabs tabs={[{"value":"overview","label":"Overview"},{"value":"content","label":"Content"},{"value":"benefits","label":"Benefits"},{"value":"avoids","label":"What to Avoid"},{"value":"seo","label":"SEO"},{"value":"settings","label":"Settings"}]} />
         </div>
 
         <div>
@@ -384,34 +355,13 @@ export function VastuForm({
 
           <TabsContent value="seo" className="mt-4">
             <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5 space-y-4">
-                <div className="space-y-1.5">
-                  <Label>Meta Title</Label>
-                  <Input
-                    value={form.metaTitle}
-                    onChange={(e) => onChange("metaTitle", e.target.value)}
-                    placeholder="Defaults to title"
-                  />
-                  <p className="text-right text-[11px] text-gray-400">{form.metaTitle.length} / 60</p>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Meta Description</Label>
-                  <RichEditor
-                    value={form.metaDescription}
-                    onChange={(html) => onChange("metaDescription", html)}
-                    minHeight={120}
-                  />
-                  <p className="text-right text-[11px] text-gray-400">{form.metaDescription.length} / 160</p>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Meta Keywords</Label>
-                  <Input
-                    value={form.metaKeywords}
-                    onChange={(e) => onChange("metaKeywords", e.target.value)}
-                    placeholder="keyword1, keyword2, keyword3"
-                  />
-                  <p className="text-xs text-gray-400">Comma-separated keywords for search engines.</p>
-                </div>
+              <CardContent className="p-5">
+                <SeoFields
+                  metaTitle={form.metaTitle}
+                  metaDescription={form.metaDescription}
+                  metaKeywords={form.metaKeywords}
+                  onChange={onChange}
+                />
               </CardContent>
             </Card>
           </TabsContent>

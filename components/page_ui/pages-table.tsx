@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DeleteDialog } from "@/components/global_ui/delete_dailog";
+import { DeleteDialog } from "@/components/global_ui/delete-dialog";
 
 interface Props {
   pages: ApiPage[];
@@ -88,7 +88,7 @@ export function PagesTable({ pages, onEdit, onDelete, deleteSlug, setDeleteSlug 
                     <Button
                       variant="outline"
                       size="sm"
-                      className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20 hover:bg-[lab(20_23.9_-60.14)]/5"
+                      className="text-sidebar-primary border-sidebar-primary/20 hover:bg-sidebar-primary/5"
                       onClick={(e) => { e.stopPropagation(); onEdit(item); }}
                     >
                       <Pencil className="w-3.5 h-3.5" />

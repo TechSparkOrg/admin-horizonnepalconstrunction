@@ -23,8 +23,8 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { MediaPickerDialog } from "@/components/global_ui/MediahanlderPicker";
-import type { MediaItem } from "@/components/global_ui/MediahanlderPicker";
+import { MediaPickerDialog } from "@/components/global_ui/media-handler-picker";
+import type { PickerMediaItem } from "@/components/global_ui/media-handler-picker";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -45,11 +45,10 @@ export default function AdminBanksPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<BankFormData>(EMPTY);
   const [saving, setSaving] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const fetchBanks = () =>
-    EmiBankAdmin.search({ page_size: 100 })
+    EmiBankAdmin.search({ page_size: 10 })
       .then((res) => setBanks(res.results ?? []))
       .catch(() => toast.error("Failed to load banks"));
 
@@ -80,7 +79,7 @@ export default function AdminBanksPage() {
       ...(key === "name" && !editingId ? { slug: toSlug(value) } : {}),
     }));
 
-  const handleMediaSelect = (item: MediaItem) => {
+  const handleMediaSelect = (item: PickerMediaItem) => {
     setForm((prev) => ({ ...prev, logo: item.url }));
     setPickerOpen(false);
   };
@@ -119,7 +118,6 @@ export default function AdminBanksPage() {
     } catch {
       toast.error("Failed to delete");
     }
-    setDeleteId(null);
   };
 
   const filtered = banks.filter(
@@ -143,7 +141,7 @@ export default function AdminBanksPage() {
         </div>
         <button
           onClick={openNew}
-          className="inline-flex items-center gap-1.5 h-10 px-4 rounded-lg bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white text-sm font-medium transition"
+          className="inline-flex items-center gap-1.5 h-10 px-4 rounded-lg bg-sidebar-primary hover:bg-sidebar-primary/90 text-white text-sm font-medium transition"
         >
           <Plus className="w-4 h-4" /> Add Bank
         </button>
@@ -160,7 +158,7 @@ export default function AdminBanksPage() {
             placeholder="Search"
           />
         </InputGroup>
-        <p className="text-sm text-[lab(20_23.9_-60.14)] font-medium whitespace-nowrap">
+        <p className="text-sm text-sidebar-primary font-medium whitespace-nowrap">
           Total: {filtered.length} {filtered.length === 1 ? "item" : "items"} found.
         </p>
       </div>
@@ -169,8 +167,6 @@ export default function AdminBanksPage() {
         banks={paginatedBanks}
         onEdit={openEdit}
         onDelete={confirmDelete}
-        deleteId={deleteId}
-        setDeleteId={setDeleteId}
         page={currentPage}
         totalPages={totalPages}
         onPageChange={setCurrentPage}
@@ -237,7 +233,7 @@ export default function AdminBanksPage() {
             <Button
               onClick={save}
               disabled={!form.name.trim() || !form.code.trim() || saving}
-              className="bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white"
+              className="bg-sidebar-primary hover:bg-sidebar-primary/90 text-white"
             >
               {saving && <Loader2 className="size-4 animate-spin" />}
               {saving ? "Saving\u2026" : editingId ? "Update" : "Create"}

@@ -3,16 +3,15 @@
 import { useState, useEffect, useMemo } from "react";
 import { Plus, Search } from "lucide-react";
 import { toast } from "sonner";
+import { useAttributeOptions } from "@/api/hooks/use-attribute-query";
 import { TemplateAdmin } from "@/api/services/template.service";
-import { AttributeAdmin } from "@/api/services/attribute.service";
 import type { TemplateItem } from "@/api/types/template.types";
-import type { AttributeItem } from "@/api/types/attribute.types";
 import { TemplateTable } from "@/components/page_ui/template-table";
 import { TemplateForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/template-form";
 import type { TemplateFormData } from "@/components/page_ui/template-form";
 import { toSlug } from "@/lib/slug";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 
 const ITEMS_PER_PAGE = 10;
@@ -55,13 +54,18 @@ export default function TemplatesPage() {
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<TemplateFormData>(EMPTY_FORM);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [attributes, setAttributes] = useState<AttributeItem[]>([]);
+  const { data: attributes = [] } = useAttributeOptions();
   const [selectedAttributeId, setSelectedAttributeId] = useState<string>("");
+
+  useEffect(() => {
+    if (attributes.length > 0 && !selectedAttributeId) {
+      setSelectedAttributeId(attributes[0].id);
+    }
+  }, [attributes]);
 
   const selectedAttribute = attributes.find((a) => a.id === selectedAttributeId);
 
@@ -69,18 +73,6 @@ export default function TemplatesPage() {
     () => selectedAttribute?.values.map((g) => ({ label: g.label, values: g.values })) ?? [],
     [selectedAttribute]
   );
-
-  useEffect(() => {
-    AttributeAdmin.search({ page_size: 100 })
-      .then((res) => {
-        setAttributes(res.results ?? []);
-        const first = res.results?.[0];
-        if (first && !selectedAttributeId) {
-          setSelectedAttributeId(first.id);
-        }
-      })
-      .catch(() => toast.error("Failed to load attributes"));
-  }, []);
 
   const searchParams = useMemo(() => ({
     attribute_id: selectedAttributeId || undefined,
@@ -123,7 +115,6 @@ export default function TemplatesPage() {
 
   const back = () => {
     setForm(EMPTY_FORM);
-    setDeleteId(null);
     setView("list");
   };
 
@@ -164,7 +155,6 @@ export default function TemplatesPage() {
     } catch {
       toast.error("Failed to delete");
     }
-    setDeleteId(null);
   };
 
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
@@ -188,7 +178,7 @@ export default function TemplatesPage() {
               size="sm"
               onClick={openNew}
               disabled={!selectedAttributeId}
-              className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20"
+              className="text-sidebar-primary border-sidebar-primary/20"
             >
               <Plus className="w-4 h-4" /> Add Template
             </Button>
@@ -196,21 +186,14 @@ export default function TemplatesPage() {
 
           <div className="flex items-center gap-3 mb-4 flex-wrap">
             <div className="w-48">
-              <Select
+              <SearchableSelect
+                options={attributes.map((a) => ({ value: a.id, label: a.title }))}
                 value={selectedAttributeId}
-                onValueChange={(v) => { setSelectedAttributeId(v); setCurrentPage(1); }}
-              >
-                <SelectTrigger className="w-full h-9 text-sm">
-                  <SelectValue placeholder="Select attribute..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {attributes.map((attr) => (
-                    <SelectItem key={attr.id} value={attr.id}>
-                      {attr.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(v) => { setSelectedAttributeId(v); setCurrentPage(1); }}
+                placeholder="Select attribute..."
+                searchPlaceholder="Search attributes..."
+
+              />
             </div>
             <InputGroup className="flex-1 max-w-sm h-9">
               <InputGroupAddon align="inline-start">
@@ -222,7 +205,7 @@ export default function TemplatesPage() {
                 placeholder="Search templates..."
               />
             </InputGroup>
-            <p className="text-sm text-[lab(20_23.9_-60.14)] font-medium whitespace-nowrap">
+            <p className="text-sm text-sidebar-primary font-medium whitespace-nowrap">
               Total: {total} {total === 1 ? "item" : "items"} found.
             </p>
           </div>
@@ -236,8 +219,6 @@ export default function TemplatesPage() {
               items={items}
               onEdit={openEdit}
               onDelete={confirmDelete}
-              deleteId={deleteId}
-              setDeleteId={setDeleteId}
               page={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}

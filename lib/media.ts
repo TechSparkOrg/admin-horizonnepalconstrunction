@@ -13,6 +13,29 @@ export function isModelUrl(url: string): boolean {
   return ext ? MODEL_EXTS.includes(`.${ext}`) : false;
 }
 
+export function detectPlatform(url: string): { name: string; color: string; icon: string } {
+  const u = url.toLowerCase();
+  if (u.includes("youtube.com") || u.includes("youtu.be")) {
+    return { name: "YouTube", color: "bg-red-100 text-red-700", icon: "▶️" };
+  }
+  if (u.includes("vimeo.com")) {
+    return { name: "Vimeo", color: "bg-blue-100 text-blue-700", icon: "🎬" };
+  }
+  if (u.includes("dailymotion.com") || u.includes("dai.ly")) {
+    return { name: "Dailymotion", color: "bg-gray-100 text-gray-700", icon: "▶️" };
+  }
+  if (u.includes("facebook.com") || u.includes("fb.watch")) {
+    return { name: "Facebook", color: "bg-blue-100 text-blue-700", icon: "📱" };
+  }
+  if (u.includes("instagram.com")) {
+    return { name: "Instagram", color: "bg-pink-100 text-pink-700", icon: "📸" };
+  }
+  if (u.includes("tiktok.com")) {
+    return { name: "TikTok", color: "bg-gray-100 text-gray-700", icon: "🎵" };
+  }
+  return { name: "Video", color: "bg-gray-100 text-gray-600", icon: "▶️" };
+}
+
 export function toMediaPayload(data: MediaFormData, extra?: Record<string, unknown>): Record<string, unknown> {
   const base: Record<string, unknown> = {
     alt: data.alt,

@@ -4,17 +4,17 @@ import type { PaginatedResponse } from '../types/consultation.types';
 
 export const TeamAllocationAdmin = {
   list: (params?: { search?: string; page?: number; page_size?: number }) =>
-    apiPrivate.get<PaginatedResponse<TeamAllocation>>('/admin/team-allocations', { params }).then(r => r.data),
+    apiPrivate.get<PaginatedResponse<TeamAllocation>>('/admin/team-allocations', { params }),
 
   adminGet: (id: string) =>
-    apiPrivate.get<TeamAllocation>(`/admin/team-allocations/${id}`).then(r => r.data),
+    apiPrivate.get<TeamAllocation>(`/admin/team-allocations/${id}`),
 
   create: (data: Partial<TeamAllocation>) =>
-    apiPrivate.post<TeamAllocation>('/admin/team-allocations', data).then(r => r.data),
+    apiPrivate.post<TeamAllocation>('/admin/team-allocations', data),
 
   update: (id: string, data: Partial<TeamAllocation>) =>
-    apiPrivate.put<TeamAllocation>(`/admin/team-allocations/${id}`, data).then(r => r.data),
+    apiPrivate.put<TeamAllocation>(`/admin/team-allocations/${id}`, data),
 
   delete: (id: string) =>
-    apiPrivate.delete<{ ok: boolean }>(`/admin/team-allocations/${id}`).then(r => r.data),
+    apiPrivate.delete<{ ok: boolean }>(`/admin/team-allocations/${id}`),
 };

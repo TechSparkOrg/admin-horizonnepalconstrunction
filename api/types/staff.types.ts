@@ -47,6 +47,6 @@ export interface StaffMember {
   updated_at: string;
 }
 
-export type CreateStaffMember = Omit<StaffMember, "id" | "created_at" | "updated_at">;
 
-export type UpdateStaffMember = Partial<CreateStaffMember>;
+
+

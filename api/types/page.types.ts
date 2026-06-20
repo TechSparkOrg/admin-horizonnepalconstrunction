@@ -42,5 +42,5 @@ export interface Page {
 
 export type PageCreate = Omit<Page, 'id' | 'sections' | 'created_at' | 'updated_at'>;
 export type PageUpdate = Partial<PageCreate>;
-export type PageSectionCreate = Omit<PageSection, 'id' | 'created_at' | 'updated_at'>;
-export type PageSectionUpdate = Partial<PageSectionCreate>;
+
+

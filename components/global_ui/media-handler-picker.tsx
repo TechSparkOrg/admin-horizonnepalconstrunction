@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 import {
   Image as ImageIcon,
   UploadCloud,
@@ -8,20 +9,25 @@ import {
   Box,
   Check,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { MediaService } from "@/api/services/media.service";
+import { useMediaList, useMediaMutations } from "@/api/hooks/use-media-query";
+import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
+import { EmptyState } from "@/components/global_ui/empty-state";
+import { FormTabs } from "@/components/global_ui/form-tabs";
 
-export type MediaItem = {
+export type PickerMediaItem = {
   id: string;
   name: string;
   url: string;
@@ -30,7 +36,7 @@ export type MediaItem = {
   type?: string;
 };
 
-export type MediaPickerMode = "image" | "model";
+ type MediaPickerMode = "image" | "model";
 
 interface MediaPickerDialogProps {
   open: boolean;
@@ -38,16 +44,8 @@ interface MediaPickerDialogProps {
   mode?: MediaPickerMode;
   title?: string;
   defaultCategory?: string;
-  onSelect: (item: MediaItem, altText: string, file?: File) => void;
+  onSelect: (item: PickerMediaItem, altText: string, file?: File) => void;
 }
-
-const CATEGORY_MAP: Record<string, string> = {
-  all: "",
-  Images: "Images",
-  Banners: "Banners",
-  Videos: "Videos",
-  "3D Models": "3D Models",
-};
 
 export function MediaPickerDialog({
   open,
@@ -60,47 +58,37 @@ export function MediaPickerDialog({
   const isModel = mode === "model";
   const acceptTypes = isModel ? ".glb,.gltf,.obj" : "image/*";
 
+  const [listParams, setListParams] = useState<Record<string, unknown>>({ page_size: 10 });
+  const { data, isLoading } = useMediaList(listParams);
+  const { updateMutation, uploadMutation } = useMediaMutations();
+
   const [tab, setTab] = useState<"existing" | "upload">("existing");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>(defaultCategory || "all");
-  const [selected, setSelected] = useState<MediaItem | null>(null);
+  const [selected, setSelected] = useState<PickerMediaItem | null>(null);
   const [altText, setAltText] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
-  const [serverItems, setServerItems] = useState<MediaItem[]>([]);
-  const [loading, setLoading] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  const fetchItems = useCallback(async (s: string, cat: string) => {
-    setLoading(true);
-    try {
-      const catValue = CATEGORY_MAP[cat];
-      const params: Record<string, unknown> = { page_size: 100 };
-      if (s) params.search = s;
-      if (catValue) params.group_title = catValue;
-      const res = await MediaService.list(params);
-      setServerItems(
-        (res.results ?? []).map((apiItem) => ({
-          id: apiItem.id,
-          name: apiItem.alt || apiItem.title || "",
-          url: apiItem.url,
-          thumbnail: apiItem.url,
-          category: apiItem.group_title || "General",
-          type: undefined,
-        }))
-      );
-    } catch {
-      setServerItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const items = data?.items ?? [];
+  const pickerItems = items.map((apiItem) => ({
+    id: apiItem.id,
+    name: apiItem.alt || apiItem.title || "",
+    url: apiItem.url,
+    thumbnail: apiItem.url,
+    category: apiItem.group_title || "General",
+    type: undefined as string | undefined,
+  }));
 
   useEffect(() => {
     if (open && tab === "existing") {
+      const initial = defaultCategory && defaultCategory !== "all"
+        ? { group_title: defaultCategory, page_size: 10 }
+        : { page_size: 10 };
       setCategoryFilter(defaultCategory || "all");
-      fetchItems(search, categoryFilter);
+      setListParams(initial);
     }
   }, [open, tab]);
 
@@ -108,16 +96,18 @@ export function MediaPickerDialog({
     setSearch(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      fetchItems(value, categoryFilter);
+      const group = categoryFilter === "all" ? "" : categoryFilter;
+      setListParams({ search: value || undefined, group_title: group || undefined, page_size: 10 });
     }, 300);
   };
 
   const handleCategoryChange = (cat: string) => {
     setCategoryFilter(cat);
-    fetchItems(search, cat);
+    setSelected(null);
+    setListParams({ group_title: cat === "all" ? undefined : cat, page: 1, page_size: 10 });
   };
 
-  const handleSelectExisting = (item: MediaItem) => {
+  const handleSelectExisting = (item: PickerMediaItem) => {
     setSelected(item);
     setAltText(item.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " "));
   };
@@ -148,38 +138,24 @@ export function MediaPickerDialog({
   const handleConfirm = async () => {
     if (tab === "existing" && selected) {
       if (altText !== selected.name) {
-        try {
-          await MediaService.update(selected.id, { alt: altText });
-        } catch {
-          // alt update failed — still proceed
-        }
+        await updateMutation.mutateAsync({ id: selected.id, data: { alt: altText } });
       }
       onSelect(selected, altText);
     } else if (tab === "upload" && uploadFile) {
-      try {
-        const apiMedia = await MediaService.uploadImage(uploadFile, {
-          alt: altText,
-        });
-        const persisted: MediaItem = {
-          id: apiMedia.id,
-          name: apiMedia.alt || apiMedia.title || uploadFile.name,
-          url: apiMedia.url,
-          thumbnail: apiMedia.url,
-          category: apiMedia.group_title || "General",
-          type: isModel ? uploadFile.name.split(".").pop() : undefined,
-        };
-        onSelect(persisted, altText);
-      } catch {
-        const newItem: MediaItem = {
-          id: `upload-${Date.now()}`,
-          name: uploadFile.name,
-          url: uploadPreview ?? URL.createObjectURL(uploadFile),
-          thumbnail: uploadPreview ?? undefined,
-          category: "General",
-          type: isModel ? uploadFile.name.split(".").pop() : undefined,
-        };
-        onSelect(newItem, altText, uploadFile);
+      const media = await uploadMutation.mutateAsync({ file: uploadFile, metadata: { alt: altText } });
+      if (!media) {
+        toast.error("Failed to upload media");
+        return;
       }
+      const persisted: PickerMediaItem = {
+        id: media.id,
+        name: media.alt || media.title || uploadFile.name,
+        url: media.url,
+        thumbnail: media.url,
+        category: media.group_title || "General",
+        type: isModel ? uploadFile.name.split(".").pop() : undefined,
+      };
+      onSelect(persisted, altText);
     }
     reset();
     onOpenChange(false);
@@ -204,22 +180,7 @@ export function MediaPickerDialog({
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as "existing" | "upload")} className="w-full flex flex-col">
           <div className="px-4">
-            <TabsList className="bg-gray-100 rounded-lg p-0.5 gap-0 w-auto h-auto">
-              <TabsTrigger
-                value="existing"
-                className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-gray-900 text-gray-500 px-3 py-1.5 gap-1.5 text-xs"
-              >
-                {isModel ? <Box className="size-3.5" /> : <ImageIcon className="size-3.5" />}
-                Library
-              </TabsTrigger>
-              <TabsTrigger
-                value="upload"
-                className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-gray-900 text-gray-500 px-3 py-1.5 gap-1.5 text-xs"
-              >
-                <UploadCloud className="size-3.5" />
-                Upload
-              </TabsTrigger>
-            </TabsList>
+            <FormTabs tabs={[{ value: "existing", label: "Library" }, { value: "upload", label: "Upload" }]} />
           </div>
 
           <TabsContent value="existing" className="m-0">
@@ -235,58 +196,57 @@ export function MediaPickerDialog({
                       className="pl-8 h-8 text-xs"
                     />
                   </div>
-                  <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-                    {["all", "Images", "Banners", "Videos", "3D Models"].map((cat) => (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => handleCategoryChange(cat)}
-                        className={cn(
-                          "px-2.5 py-1 text-[11px] font-medium rounded-md transition whitespace-nowrap",
-                          categoryFilter === cat
-                            ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                            : "text-gray-500 hover:text-gray-900"
-                        )}
-                      >
-                        {cat === "all" ? "All" : cat === "Images" ? "Single Image" : cat}
-                      </button>
-                    ))}
-                  </div>
+                  <SegmentedToggle
+                    value={categoryFilter}
+                    onChange={handleCategoryChange}
+                    options={[
+                      { value: "all", label: "All" },
+                      { value: "Images", label: "Single Image" },
+                      { value: "Banners", label: "Banners" },
+                      { value: "Videos", label: "Videos" },
+                      { value: "3D Models", label: "3D Models" },
+                    ]}
+                  />
                 </div>
 
-                {loading ? (
+                {isLoading ? (
                   <div className="py-10 text-center text-xs text-gray-400">Loading\u2026</div>
-                ) : serverItems.length === 0 ? (
-                  <div className="py-10 text-center text-xs text-gray-400">
-                    No {isModel ? "models" : "images"} found.
-                  </div>
+                ) : pickerItems.length === 0 ? (
+                  <EmptyState
+                    icon={isModel ? Box : ImageIcon}
+                    title="No media found"
+                    description={`No ${isModel ? "models" : "images"} match your search.`}
+                  />
                 ) : (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {serverItems.map((item) => {
+                    {pickerItems.map((item) => {
                       const thumb = item.thumbnail ?? item.url;
                       const active = selected?.id === item.id;
                       return (
-                        <div
+                        <Card
                           key={item.id}
+                          size="sm"
                           className={cn(
-                            "rounded-md border overflow-hidden transition",
-                            active ? "border-[lab(20_23.9_-60.14)] ring-1 ring-[lab(20_23.9_-60.14)]/20" : "border-gray-200"
+                            "gap-0 p-0 overflow-hidden transition",
+                            active
+                              ? "border-sidebar-primary ring-1 ring-sidebar-primary/20"
+                              : "border-gray-200"
                           )}
                         >
                           <div className="aspect-[4/3] bg-gray-100 relative group">
-                            <img src={thumb} alt={item.name} className="w-full h-full object-cover" />
-                            <button
-                              type="button"
+                            <Image src={thumb} alt={item.name} fill className="object-cover" />
+                            <Button
+                              variant="ghost"
                               onClick={() => handleSelectExisting(item)}
                               className={cn(
-                                "absolute inset-0 flex items-center justify-center transition",
+                                "absolute inset-0 flex items-center justify-center transition rounded-none",
                                 active
-                                  ? "bg-[lab(20_23.9_-60.14)]/10"
+                                  ? "bg-sidebar-primary/10"
                                   : "bg-black/0 group-hover:bg-black/30"
                               )}
                             >
                               {active ? (
-                                <span className="size-6 rounded-full bg-[lab(20_23.9_-60.14)] flex items-center justify-center">
+                                <span className="size-6 rounded-full bg-sidebar-primary flex items-center justify-center">
                                   <Check className="size-3.5 text-white" />
                                 </span>
                               ) : (
@@ -294,7 +254,7 @@ export function MediaPickerDialog({
                                   Select
                                 </span>
                               )}
-                            </button>
+                            </Button>
                             {isModel && (
                               <span className="absolute top-1 right-1 bg-black/60 text-white text-[9px] px-1 rounded font-medium uppercase">
                                 {item.type}
@@ -302,7 +262,7 @@ export function MediaPickerDialog({
                             )}
                           </div>
                           <p className="px-1.5 py-1 text-[10px] text-gray-700 truncate">{item.name}</p>
-                        </div>
+                        </Card>
                       );
                     })}
                   </div>
@@ -310,12 +270,13 @@ export function MediaPickerDialog({
               </div>
 
               <div className="p-3 flex flex-col">
-                <div className="aspect-[4/3] w-full rounded-md border border-gray-200 bg-gray-50 flex items-center justify-center mb-3 overflow-hidden">
+                <div className="aspect-[4/3] w-full rounded-md border border-gray-200 bg-gray-50 flex items-center justify-center mb-3 overflow-hidden relative">
                   {selected ? (
-                    <img
+                    <Image
                       src={selected.thumbnail ?? selected.url}
                       alt={selected.name}
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
                     />
                   ) : (
                     <div className="text-center text-gray-400 px-3">
@@ -344,12 +305,12 @@ export function MediaPickerDialog({
           <TabsContent value="upload" className="m-0">
             <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] divide-x divide-gray-200">
               <div className="p-3">
-                <label
+                <Label
                   htmlFor="media-upload-input"
                   className="flex flex-col items-center justify-center gap-1.5 h-48 rounded-md border border-dashed border-gray-300 text-gray-400 hover:bg-gray-50 transition cursor-pointer"
                 >
                   {uploadPreview ? (
-                    <img src={uploadPreview} alt="Preview" className="max-h-full max-w-full object-contain" />
+                    <Image src={uploadPreview} alt="Preview" width={400} height={300} className="max-h-full max-w-full object-contain" />
                   ) : (
                     <>
                       <UploadCloud className="size-6" />
@@ -359,7 +320,7 @@ export function MediaPickerDialog({
                       </span>
                     </>
                   )}
-                </label>
+                </Label>
                 <input
                   id="media-upload-input"
                   type="file"
@@ -386,10 +347,10 @@ export function MediaPickerDialog({
         <div className="flex items-center justify-between px-4 py-2.5 border-t border-gray-200">
           <p className="text-[11px] text-gray-400">
             {tab === "existing"
-              ? `${serverItems.length} ${isModel ? "models" : "images"}`
+              ? `${pickerItems.length} ${isModel ? "models" : "images"}`
               : "Uploads are saved on confirm"}
           </p>
-          <Button onClick={handleConfirm} disabled={!canConfirm} size="sm" className="h-7 text-xs px-3 bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] disabled:opacity-50">
+          <Button onClick={handleConfirm} disabled={!canConfirm} size="sm" className="h-7 text-xs px-3 bg-sidebar-primary hover:bg-sidebar-primary/90 disabled:opacity-50">
             {tab === "existing" ? "Select" : "Upload"}
           </Button>
         </div>

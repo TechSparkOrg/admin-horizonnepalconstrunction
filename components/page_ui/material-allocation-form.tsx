@@ -1,12 +1,14 @@
 "use client";
 
-import { ArrowLeft, Loader2, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { FormHeader } from "@/components/global_ui/form-header";
+import { FormTabs } from "@/components/global_ui/form-tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { StaffMember } from "@/api/types/staff.types";
 import type { MaterialItem } from "@/api/types/material-list.types";
@@ -39,9 +41,10 @@ interface Props {
   onBack: () => void;
 }
 
-const EMPTY_SCOPE: ProjectScopeEntry = { id: "", projectId: "", budget: 0, costPer: "day", costAmount: 0, returnDate: "", status: "ongoing" };
+const EMPTY_SCOPE: ProjectScopeEntry = { id: "", project_id: "", budget: 0, cost_per: "day", cost_amount: 0, return_date: "", status: "ongoing" };
 
-function genId() { return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`; }
+let _mid = 0;
+function genId() { return crypto.randomUUID?.() ?? `mid-${++_mid}`; }
 
 export type { MaterialAllocationFormData };
 
@@ -79,31 +82,19 @@ export function MaterialAllocationForm({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={onBack}><ArrowLeft className="size-4" /></Button>
-          <div>
-            <p className="text-xs text-gray-500 mb-0.5">Material Allocation</p>
-            <h1 className="text-2xl font-bold text-gray-900 leading-none">
-              {editingId ? "Edit Allocation" : "New Allocation"}
-            </h1>
-          </div>
-        </div>
-        <Button onClick={onSave} disabled={!form.materialId || saving}
-          className="bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white">
-          {saving && <Loader2 className="size-4 animate-spin" />}
-          {saving ? "Saving\u2026" : editingId ? "Update" : "Create"}
-        </Button>
-      </div>
+      <FormHeader
+        breadcrumb="Material Allocation"
+        title={editingId ? "Edit Allocation" : "New Allocation"}
+        onBack={onBack}
+        onSave={onSave}
+        saving={saving}
+        saveDisabled={!form.materialId || saving}
+        saveLabel={editingId ? "Update" : "Create"}
+      />
 
       <Tabs defaultValue="resource" className="w-full flex flex-col">
         <div>
-          <TabsList className="bg-gray-100 rounded-lg p-0.5 gap-0 w-auto h-auto">
-            <TabsTrigger value="resource" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">Resource</TabsTrigger>
-            <TabsTrigger value="timeline" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">Timeline</TabsTrigger>
-            <TabsTrigger value="scope" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">Project Scope</TabsTrigger>
-            <TabsTrigger value="notes" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">Notes</TabsTrigger>
-          </TabsList>
+          <FormTabs tabs={[{"value":"resource","label":"Resource"},{"value":"timeline","label":"Timeline"},{"value":"scope","label":"Project Scope"},{"value":"notes","label":"Notes"}]} />
         </div>
 
         <div>
@@ -230,7 +221,7 @@ export function MaterialAllocationForm({
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                           <div className="space-y-1">
                             <Label className="text-[11px] text-gray-500">Project</Label>
-                            <Select value={entry.projectId} onValueChange={(v) => updateScope(entry.id, "projectId", v)}>
+                            <Select value={entry.project_id} onValueChange={(v) => updateScope(entry.id, "project_id", v)}>
                               <SelectTrigger className="w-full h-7 text-xs">
                                 <SelectValue placeholder="Select project" />
                               </SelectTrigger>
@@ -247,7 +238,7 @@ export function MaterialAllocationForm({
                           </div>
                           <div className="space-y-1">
                             <Label className="text-[11px] text-gray-500">Cost Per</Label>
-                            <Select value={entry.costPer} onValueChange={(v) => updateScope(entry.id, "costPer", v)}>
+                            <Select value={entry.cost_per} onValueChange={(v) => updateScope(entry.id, "cost_per", v)}>
                               <SelectTrigger className="w-full h-7 text-xs">
                                 <SelectValue />
                               </SelectTrigger>
@@ -260,11 +251,11 @@ export function MaterialAllocationForm({
                           </div>
                           <div className="space-y-1">
                             <Label className="text-[11px] text-gray-500">Cost Amount</Label>
-                            <Input type="number" value={entry.costAmount || ""} onChange={(e) => updateScope(entry.id, "costAmount", Number(e.target.value))} placeholder="0" className="h-7 text-xs" />
+                            <Input type="number" value={entry.cost_amount || ""} onChange={(e) => updateScope(entry.id, "cost_amount", Number(e.target.value))} placeholder="0" className="h-7 text-xs" />
                           </div>
                           <div className="space-y-1">
                             <Label className="text-[11px] text-gray-500">Return / Next Use Date</Label>
-                            <Input type="date" value={entry.returnDate} onChange={(e) => updateScope(entry.id, "returnDate", e.target.value)} className="h-7 text-xs" />
+                            <Input type="date" value={entry.return_date} onChange={(e) => updateScope(entry.id, "return_date", e.target.value)} className="h-7 text-xs" />
                           </div>
                           <div className="space-y-1">
                             <Label className="text-[11px] text-gray-500">Status</Label>

@@ -4,13 +4,13 @@ import type { PaginatedResponse } from '../types/consultation.types';
 
 export const FaqAdmin = {
   list: (params?: Record<string, unknown>) =>
-    apiPrivate.get<PaginatedResponse<FaqGroup>>('/admin/faq/', { params }).then(r => r.data),
+    apiPrivate.get<PaginatedResponse<FaqGroup>>('/admin/faq/', { params }),
   adminGet: (id: string) =>
-    apiPrivate.get<FaqGroup>(`/admin/faq/${id}/`).then(r => r.data),
+    apiPrivate.get<FaqGroup>(`/admin/faq/${id}/`),
   create: (data: FaqGroupCreate) =>
-    apiPrivate.post<FaqGroup>('/admin/faq/', data).then(r => r.data),
+    apiPrivate.post<FaqGroup>('/admin/faq/', data),
   update: (id: string, data: FaqGroupUpdate) =>
-    apiPrivate.put<FaqGroup>(`/admin/faq/${id}/`, data).then(r => r.data),
+    apiPrivate.put<FaqGroup>(`/admin/faq/${id}/`, data),
   delete: (id: string) =>
-    apiPrivate.delete<{ ok: boolean }>(`/admin/faq/${id}/`).then(r => r.data),
+    apiPrivate.delete<{ ok: boolean }>(`/admin/faq/${id}/`),
 };

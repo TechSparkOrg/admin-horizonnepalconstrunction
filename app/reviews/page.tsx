@@ -8,7 +8,7 @@ import type { ReviewGroup, ReviewItemData } from "@/api/types/review.types";
 import { ReviewTable } from "@/components/page_ui/review-table";
 import { ReviewForm } from "@/components/page_ui/review-form";
 import { toSlug } from "@/lib/slug";
-import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/global_ui/page-header";
 import {
   InputGroup,
   InputGroupAddon,
@@ -40,7 +40,6 @@ export default function AdminReviewsPage() {
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ReviewFormData>(EMPTY);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -76,7 +75,6 @@ export default function AdminReviewsPage() {
 
   const back = () => {
     setForm(EMPTY);
-    setDeleteId(null);
     setView("list");
   };
 
@@ -133,7 +131,6 @@ export default function AdminReviewsPage() {
     } catch {
       toast.error("Failed to delete");
     }
-    setDeleteId(null);
   };
 
   const filtered = groups.filter((g) =>
@@ -154,19 +151,7 @@ export default function AdminReviewsPage() {
   return (
     <>
       {view === "list" ? (
-        <div className="px-4">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 leading-none">Reviews</h1>
-              <p className="text-xs text-gray-500 mt-1">Review groups list</p>
-            </div>
-            <button
-              onClick={openNew}
-              className="inline-flex items-center gap-1.5 h-10 px-4 rounded-lg bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white text-sm font-medium transition"
-            >
-              <Plus className="w-4 h-4" /> Create Review
-            </button>
-          </div>
+        <PageHeader title="Reviews" subtitle="Review groups list" actionLabel="Create Review" onAction={openNew}>
           <div className="flex items-center gap-3 mb-4">
             <InputGroup className="flex-1 max-w-sm h-9">
               <InputGroupAddon align="inline-start">
@@ -178,7 +163,7 @@ export default function AdminReviewsPage() {
                 placeholder="Search"
               />
             </InputGroup>
-            <p className="text-sm text-[lab(20_23.9_-60.14)] font-medium whitespace-nowrap">
+            <p className="text-sm text-sidebar-primary font-medium whitespace-nowrap">
               Total: {filtered.length} {filtered.length === 1 ? "item" : "items"} found.
             </p>
           </div>
@@ -187,13 +172,11 @@ export default function AdminReviewsPage() {
             groups={paginatedGroups}
             onEdit={openEdit}
             onDelete={confirmDelete}
-            deleteId={deleteId}
-            setDeleteId={setDeleteId}
             page={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
           />
-        </div>
+        </PageHeader>
       ) : (
         <div className="px-4">
           <ReviewForm

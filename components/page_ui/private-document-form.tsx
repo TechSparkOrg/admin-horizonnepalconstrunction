@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { ArrowLeft, Loader2, Plus, X, Eye, ImagePlus, FileText, Check, Upload, Trash2 } from "lucide-react";
+import { Plus, X, Eye, ImagePlus, FileText, Check, Upload, Trash2 } from "lucide-react";
+import { FormHeader } from "@/components/global_ui/form-header";
+import { FormTabs } from "@/components/global_ui/form-tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,23 +26,18 @@ import {
   PaginationPrevious,
   PaginationNext,
 } from "@/components/ui/pagination";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MediaPickerDialog } from "@/components/global_ui/MediahanlderPicker";
-import type { MediaItem } from "@/components/global_ui/MediahanlderPicker";
+import { MediaPickerDialog } from "@/components/global_ui/media-handler-picker";
+import type { PickerMediaItem } from "@/components/global_ui/media-handler-picker";
 import { AgreementAdmin } from "@/api/services/agreement.service";
+import { ProjectAdmin } from "@/api/services/project.service";
 import type { Project } from "@/api/types/project.types";
 import type { AgreementItem } from "@/api/types/agreement.types";
 import type {
@@ -107,12 +104,35 @@ export function PrivateDocumentForm({
   const [docPage, setDocPage] = useState(1);
   const [propPage, setPropPage] = useState(1);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [agreementSearch, setAgreementSearch] = useState("");
+  const [projectSearch, setProjectSearch] = useState("");
+  const [projectOptions, setProjectOptions] = useState<Project[]>(projects);
 
   useEffect(() => {
-    AgreementAdmin.search({ page_size: 100 })
-      .then((res) => setAgreements(res.results ?? []))
-      .catch(() => {});
-  }, []);
+    setProjectOptions(projects);
+  }, [projects]);
+
+  const debounceAgreements = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => {
+    clearTimeout(debounceAgreements.current);
+    debounceAgreements.current = setTimeout(() => {
+      AgreementAdmin.search({ search: agreementSearch || undefined, page_size: 10 })
+        .then((res) => setAgreements(res.results ?? []))
+        .catch(() => {});
+    }, 300);
+    return () => clearTimeout(debounceAgreements.current);
+  }, [agreementSearch]);
+
+  const debounceProjects = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => {
+    clearTimeout(debounceProjects.current);
+    debounceProjects.current = setTimeout(() => {
+      ProjectAdmin.list({ search: projectSearch || undefined, page_size: 10 })
+        .then((res) => setProjectOptions(res.results ?? []))
+        .catch(() => {});
+    }, 300);
+    return () => clearTimeout(debounceProjects.current);
+  }, [projectSearch]);
 
   const totalDocPages = Math.ceil(form.documents.length / ITEMS_PER_PAGE);
   const paginatedDocs = form.documents.slice(
@@ -168,7 +188,7 @@ export function PrivateDocumentForm({
     ));
   };
 
-  const handleMediaSelect = (item: MediaItem) => {
+  const handleMediaSelect = (item: PickerMediaItem) => {
     if (mediaPickerTarget?.tab === "documents") {
       const idx = mediaPickerTarget.index;
       onDocumentsChange(form.documents.map((d, i) =>
@@ -196,29 +216,19 @@ export function PrivateDocumentForm({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={onBack}><ArrowLeft className="size-4" /></Button>
-          <div>
-            <p className="text-xs text-gray-500 mb-0.5">Private Documents</p>
-            <h1 className="text-2xl font-bold text-gray-900 leading-none">{editingId ? form.title || "Edit Document" : "New Document"}</h1>
-          </div>
-        </div>
-        <Button onClick={onSave} disabled={!form.title.trim() || saving}
-          className="bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white">
-          {saving && <Loader2 className="size-4 animate-spin" />}
-          {saving ? "Saving\u2026" : editingId ? "Update" : "Create"}
-        </Button>
-      </div>
+      <FormHeader
+        breadcrumb="Private Documents"
+        title={editingId ? form.title || "Edit Document" : "New Document"}
+        onBack={onBack}
+        onSave={onSave}
+        saving={saving}
+        saveDisabled={!form.title.trim() || saving}
+        saveLabel={editingId ? "Update" : "Create"}
+      />
 
       <Tabs defaultValue="overview" className="w-full flex flex-col">
         <div>
-          <TabsList className="bg-gray-100 rounded-lg p-0.5 gap-0 w-auto h-auto">
-            <TabsTrigger value="overview" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">Overview</TabsTrigger>
-            <TabsTrigger value="documents" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">Documents</TabsTrigger>
-            <TabsTrigger value="proposals" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">Proposals</TabsTrigger>
-            <TabsTrigger value="settings" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">Settings</TabsTrigger>
-          </TabsList>
+          <FormTabs tabs={[{"value":"overview","label":"Overview"},{"value":"documents","label":"Documents"},{"value":"proposals","label":"Proposals"},{"value":"settings","label":"Settings"}]} />
         </div>
 
         <div>
@@ -237,20 +247,17 @@ export function PrivateDocumentForm({
                 </div>
                 <div className="space-y-1.5 max-w-md">
                   <Label>Project</Label>
-                  <Select
-                    value={form.project_id || "none"}
-                    onValueChange={(v) => onChange("project_id", v === "none" ? "" : v)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a project..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {projects.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={[
+                      { value: "", label: "None" },
+                      ...projectOptions.map((p) => ({ value: p.slug, label: p.title })),
+                    ]}
+                    value={form.project_id}
+                    onChange={(v) => onChange("project_id", v)}
+                    placeholder="Select a project..."
+                    searchPlaceholder="Search projects..."
+                    onSearchChange={setProjectSearch}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -456,22 +463,17 @@ export function PrivateDocumentForm({
                                       </button>
                                     </div>
                                   ) : (
-                                    <Select
-                                      value={prop.agreement_id || "none"}
-                                      onValueChange={(v) => handleAgreementSelect(i, v === "none" ? "" : v)}
-                                    >
-                                      <SelectTrigger className="h-8 text-xs w-[180px]">
-                                        <SelectValue placeholder="Agreement..." />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="none">None</SelectItem>
-                                        {agreements.map((a) => (
-                                          <SelectItem key={a.id} value={a.id} className="text-xs">
-                                            {a.name} — {a.client_name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
+                                    <SearchableSelect
+                                      options={[
+                                        { value: "", label: "None" },
+                                        ...agreements.map((a) => ({ value: a.id, label: `${a.name} — ${a.client_name}` })),
+                                      ]}
+                                      value={prop.agreement_id || ""}
+                                      onChange={(v) => handleAgreementSelect(i, v)}
+                                      placeholder="Agreement..."
+                                      searchPlaceholder="Search agreements..."
+                                      triggerClassName="h-8 text-xs w-[180px]"
+                                    />
                                   )
                                 ) : prop.document_url ? (
                                   <div className="flex items-center gap-1.5">

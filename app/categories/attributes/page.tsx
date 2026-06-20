@@ -1,15 +1,14 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { Plus, Search } from "lucide-react";
+import { useState } from "react";
+import { Search } from "lucide-react";
 import { toast } from "sonner";
-import { AttributeAdmin } from "@/api/services/attribute.service";
+import { useAttributeList, useAttributeMutations } from "@/api/hooks/use-attribute-query";
 import type { AttributeItem, AttributeValue } from "@/api/types/attribute.types";
 import { AttributeTable } from "@/components/page_ui/attribute-table";
 import { AttributeForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/attribute-form";
 import type { AttributeFormData } from "@/components/page_ui/attribute-form";
-import { toSlug } from "@/lib/slug";
-import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/global_ui/page-header";
 import {
   InputGroup,
   InputGroupAddon,
@@ -41,38 +40,23 @@ function formToPayload(form: AttributeFormData) {
 }
 
 export default function AdminAttributesPage() {
-  const [items, setItems] = useState<AttributeItem[]>([]);
-  const [total, setTotal] = useState(0);
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<AttributeFormData>(EMPTY_FORM);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const searchParams = useMemo(() => ({
+  const { data, refetch } = useAttributeList({
     search: search || undefined,
     page: currentPage,
     page_size: ITEMS_PER_PAGE,
-  }), [search, currentPage]);
+  });
 
-  useEffect(() => {
-    AttributeAdmin.search(searchParams)
-      .then((res) => {
-        setItems(res.results ?? []);
-        setTotal(res.count ?? 0);
-      })
-      .catch(() => toast.error("Failed to load data"));
-  }, [searchParams]);
+  const { createMutation, updateMutation, deleteMutation } = useAttributeMutations();
 
-  const refetch = () =>
-    AttributeAdmin.search(searchParams)
-      .then((res) => {
-        setItems(res.results ?? []);
-        setTotal(res.count ?? 0);
-      })
-      .catch(() => toast.error("Failed to load attributes"));
+  const items = data?.items ?? [];
+  const total = data?.totalCount ?? 0;
 
   const openNew = () => {
     setForm(EMPTY_FORM);
@@ -88,7 +72,6 @@ export default function AdminAttributesPage() {
 
   const back = () => {
     setForm(EMPTY_FORM);
-    setDeleteId(null);
     setView("list");
   };
 
@@ -96,9 +79,6 @@ export default function AdminAttributesPage() {
     setForm((prev) => ({
       ...prev,
       [key]: value,
-      ...(key === "title" && !editingId && typeof value === "string"
-        ? { slug: toSlug(value) }
-        : {}),
     }));
   };
 
@@ -108,13 +88,12 @@ export default function AdminAttributesPage() {
     try {
       const payload = formToPayload(form);
       if (editingId) {
-        await AttributeAdmin.update(editingId, payload);
+        await updateMutation.mutateAsync({ id: editingId, data: payload });
         toast.success("Attribute updated");
       } else {
-        await AttributeAdmin.create(payload);
+        await createMutation.mutateAsync(payload);
         toast.success("Attribute created");
       }
-      await refetch();
       back();
     } catch {
       toast.error("Something went wrong");
@@ -124,14 +103,7 @@ export default function AdminAttributesPage() {
   };
 
   const confirmDelete = async (id: string) => {
-    try {
-      await AttributeAdmin.delete(id);
-      setItems((prev) => prev.filter((g) => g.id !== id));
-      toast.success("Attribute deleted");
-    } catch {
-      toast.error("Failed to delete");
-    }
-    setDeleteId(null);
+    await deleteMutation.mutateAsync(id);
   };
 
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
@@ -144,22 +116,13 @@ export default function AdminAttributesPage() {
   return (
     <>
       {view === "list" ? (
-        <div className="px-4">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 leading-none">Attributes</h1>
-              <p className="text-xs text-gray-500 mt-1">Global attribute types for custom fields</p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={openNew}
-              className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20"
-            >
-              <Plus className="w-4 h-4" /> Add Attribute
-            </Button>
-          </div>
-
+        <PageHeader
+          title="Attributes"
+          subtitle="Global attribute types for custom fields"
+          actionLabel="Add Attribute"
+          actionOutlined
+          onAction={openNew}
+        >
           <div className="flex items-center gap-3 mb-4">
             <InputGroup className="flex-1 max-w-sm h-9">
               <InputGroupAddon align="inline-start">
@@ -171,7 +134,7 @@ export default function AdminAttributesPage() {
                 placeholder="Search"
               />
             </InputGroup>
-            <p className="text-sm text-[lab(20_23.9_-60.14)] font-medium whitespace-nowrap">
+            <p className="text-sm text-sidebar-primary font-medium whitespace-nowrap">
               Total: {total} {total === 1 ? "item" : "items"} found.
             </p>
           </div>
@@ -180,13 +143,11 @@ export default function AdminAttributesPage() {
             items={items}
             onEdit={openEdit}
             onDelete={confirmDelete}
-            deleteId={deleteId}
-            setDeleteId={setDeleteId}
             page={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
           />
-        </div>
+        </PageHeader>
       ) : (
         <div className="px-4">
           <AttributeForm

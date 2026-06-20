@@ -53,7 +53,6 @@ export default function AdminUnitConverterPage() {
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<UnitConverterFormData>(EMPTY_FORM);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -95,7 +94,6 @@ export default function AdminUnitConverterPage() {
 
   const back = () => {
     setForm(EMPTY_FORM);
-    setDeleteId(null);
     setView("list");
   };
 
@@ -135,7 +133,6 @@ export default function AdminUnitConverterPage() {
     } catch {
       toast.error("Failed to delete");
     }
-    setDeleteId(null);
   };
 
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
@@ -163,7 +160,7 @@ export default function AdminUnitConverterPage() {
               variant="outline"
               size="sm"
               onClick={openNew}
-              className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20"
+              className="text-sidebar-primary border-sidebar-primary/20"
             >
               <Plus className="w-4 h-4" /> Add Conversion
             </Button>
@@ -180,7 +177,7 @@ export default function AdminUnitConverterPage() {
                 placeholder="Search"
               />
             </InputGroup>
-            <p className="text-sm text-[lab(20_23.9_-60.14)] font-medium whitespace-nowrap">
+            <p className="text-sm text-sidebar-primary font-medium whitespace-nowrap">
               Total: {total} {total === 1 ? "item" : "items"} found.
             </p>
           </div>
@@ -189,8 +186,6 @@ export default function AdminUnitConverterPage() {
             items={items}
             onEdit={openEdit}
             onDelete={confirmDelete}
-            deleteId={deleteId}
-            setDeleteId={setDeleteId}
             page={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}

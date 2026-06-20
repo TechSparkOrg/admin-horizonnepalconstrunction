@@ -9,7 +9,7 @@ import { STAFF_TYPE_OPTIONS } from "@/api/types/staff.types";
 import { StaffTable } from "@/components/page_ui/staff-table";
 import { StaffForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/staff-form";
 import type { StaffFormData } from "@/components/page_ui/staff-form";
-import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/global_ui/page-header";
 import {
   Select,
   SelectContent,
@@ -77,7 +77,6 @@ export default function AdminStaffPage() {
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<StaffFormData>(EMPTY_FORM);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -118,7 +117,6 @@ export default function AdminStaffPage() {
 
   const back = () => {
     setForm(EMPTY_FORM);
-    setDeleteId(null);
     setView("list");
   };
 
@@ -158,7 +156,6 @@ export default function AdminStaffPage() {
     } catch {
       toast.error("Failed to delete");
     }
-    setDeleteId(null);
   };
 
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
@@ -176,22 +173,7 @@ export default function AdminStaffPage() {
   return (
     <>
       {view === "list" ? (
-        <div className="px-4">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 leading-none">Staff</h1>
-              <p className="text-xs text-gray-500 mt-1">Manage your team members</p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={openNew}
-              className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20"
-            >
-              <Plus className="w-4 h-4" /> Add Member
-            </Button>
-          </div>
-
+        <PageHeader title="Staff" subtitle="Manage your team members" actionLabel="Add Member" onAction={openNew} actionOutlined>
           <div className="flex items-center gap-3 mb-4">
             <InputGroup className="flex-1 max-w-sm h-9">
               <InputGroupAddon align="inline-start">
@@ -217,7 +199,7 @@ export default function AdminStaffPage() {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-sm text-[lab(20_23.9_-60.14)] font-medium whitespace-nowrap">
+            <p className="text-sm text-sidebar-primary font-medium whitespace-nowrap">
               Total: {total} {total === 1 ? "item" : "items"} found.
             </p>
           </div>
@@ -226,13 +208,11 @@ export default function AdminStaffPage() {
             items={items}
             onEdit={openEdit}
             onDelete={confirmDelete}
-            deleteId={deleteId}
-            setDeleteId={setDeleteId}
             page={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
           />
-        </div>
+        </PageHeader>
       ) : (
         <div className="px-4">
           <StaffForm

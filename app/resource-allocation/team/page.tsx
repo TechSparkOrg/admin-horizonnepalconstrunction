@@ -160,7 +160,7 @@ export default function TeamAllocationPage() {
               <h1 className="text-2xl font-bold text-gray-900 leading-none">Team Allocation</h1>
               <p className="text-xs text-gray-500 mt-1">Manage team member allocations</p>
             </div>
-            <Button onClick={openNew} className="bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white">
+            <Button onClick={openNew} className="bg-sidebar-primary hover:bg-sidebar-primary/90 text-white">
               <Plus className="w-4 h-4 mr-2" /> Add Allocation
             </Button>
           </div>
@@ -172,7 +172,7 @@ export default function TeamAllocationPage() {
               </InputGroupAddon>
               <InputGroupInput value={search} onChange={(e) => handleSearchChange(e.target.value)} placeholder="Search by member name" />
             </InputGroup>
-            <p className="text-sm text-[lab(20_23.9_-60.14)] font-medium whitespace-nowrap">
+            <p className="text-sm text-sidebar-primary font-medium whitespace-nowrap">
               Total: {total} {total === 1 ? "item" : "items"}
             </p>
           </div>
@@ -218,7 +218,7 @@ export default function TeamAllocationPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="outline" size="sm" className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20" onClick={() => openEdit(record)}>
+                          <Button variant="outline" size="sm" className="text-sidebar-primary border-sidebar-primary/20" onClick={() => openEdit(record)}>
                             <Pencil className="w-3.5 h-3.5" /> Edit
                           </Button>
                           <Button variant="outline" size="sm" className="text-red-500 border-red-200 hover:bg-red-50" onClick={() => confirmDelete(record.id)}>
@@ -236,7 +236,7 @@ export default function TeamAllocationPage() {
                   <div className="flex items-center gap-1">
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                       <button key={p} onClick={() => setCurrentPage(p)}
-                        className={`w-7 h-7 text-xs rounded-md ${p === currentPage ? "bg-[lab(20_23.9_-60.14)] text-white" : "text-gray-600 hover:bg-gray-100"}`}>{p}</button>
+                        className={`w-7 h-7 text-xs rounded-md ${p === currentPage ? "bg-sidebar-primary text-white" : "text-gray-600 hover:bg-gray-100"}`}>{p}</button>
                     ))}
                   </div>
                 </div>

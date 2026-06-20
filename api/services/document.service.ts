@@ -4,5 +4,5 @@ import type { PaginatedResponse } from '../types/consultation.types';
 
 export const DocumentAdmin = {
   search: (params: { search?: string; page?: number; page_size?: number }) =>
-    apiPrivate.get<PaginatedResponse<DocumentItem>>('/admin/documents', { params }).then(r => r.data),
+    apiPrivate.get<PaginatedResponse<DocumentItem>>('/admin/documents', { params }),
 };

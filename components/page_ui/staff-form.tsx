@@ -1,7 +1,10 @@
 "use client";
 
-import { ArrowLeft, Loader2, ImagePlus, X, Plus, Trash2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { ImagePlus, X, Plus, Trash2 } from "lucide-react";
+import { FormHeader } from "@/components/global_ui/form-header";
+import { FormTabs } from "@/components/global_ui/form-tabs";
+import { SearchableSelect } from "@/components/global_ui/searchable-select";
+import { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,18 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { MediaPickerDialog } from "@/components/global_ui/MediahanlderPicker";
-import type { MediaItem } from "@/components/global_ui/MediahanlderPicker";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { MediaPickerDialog } from "@/components/global_ui/media-handler-picker";
+import type { PickerMediaItem } from "@/components/global_ui/media-handler-picker";
 import type { StaffType, StaffSocialLink } from "@/api/types/staff.types";
 import { STAFF_TYPE_OPTIONS, SOCIAL_PLATFORMS } from "@/api/types/staff.types";
-import { AttributeAdmin } from "@/api/services/attribute.service";
-import type { AttributeItem } from "@/api/types/attribute.types";
+import { useAttributeOptions } from "@/api/hooks/use-attribute-query";
 
 interface StaffFormData {
   name: string;
@@ -88,13 +85,7 @@ export function StaffForm({
   onBack,
 }: Props) {
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
-  const [attributes, setAttributes] = useState<AttributeItem[]>([]);
-
-  useEffect(() => {
-    AttributeAdmin.search({ used_in: "all", page_size: 100 })
-      .then((res) => setAttributes(res.results ?? []))
-      .catch(() => {});
-  }, []);
+  const { data: attributes = [] } = useAttributeOptions();
 
   const selectedAttribute = attributes.find((a) => a.id === form.attributeId);
   const fieldLabels = selectedAttribute ? selectedAttribute.values.map((v) => v.label) : [];
@@ -114,7 +105,7 @@ export function StaffForm({
     onChange("departmentValue", "");
   };
 
-  const handleMediaSelect = (item: MediaItem) => {
+  const handleMediaSelect = (item: PickerMediaItem) => {
     onChange("photo", item.url);
     setMediaPickerOpen(false);
   };
@@ -136,40 +127,19 @@ export function StaffForm({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={onBack}>
-            <ArrowLeft className="size-4" />
-          </Button>
-          <div>
-            <p className="text-xs text-gray-500 mb-0.5">Staff</p>
-            <h1 className="text-2xl font-bold text-gray-900 leading-none">
-              {editingId ? form.name || "Edit Member" : "New Member"}
-            </h1>
-          </div>
-        </div>
-        <Button onClick={onSave} disabled={!form.name.trim() || saving} className="bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white">
-          {saving && <Loader2 className="size-4 animate-spin" />}
-          {saving ? "Saving\u2026" : editingId ? "Update" : "Create"}
-        </Button>
-      </div>
+      <FormHeader
+        breadcrumb="Staff"
+        title={editingId ? form.name || "Edit Member" : "New Member"}
+        onBack={onBack}
+        onSave={onSave}
+        saving={saving}
+        saveDisabled={!form.name.trim() || saving}
+        saveLabel={editingId ? "Update" : "Create"}
+      />
 
       <Tabs defaultValue="overview" className="w-full flex flex-col">
         <div>
-          <TabsList className="bg-gray-100 rounded-lg p-0.5 gap-0 w-auto h-auto">
-            <TabsTrigger value="overview" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="details" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">
-              Details
-            </TabsTrigger>
-            <TabsTrigger value="contact" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">
-              Contact
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">
-              Settings
-            </TabsTrigger>
-          </TabsList>
+          <FormTabs tabs={[{"value":"overview","label":"Overview"},{"value":"details","label":"Details"},{"value":"contact","label":"Contact"},{"value":"settings","label":"Settings"}]} />
         </div>
 
         <div>
@@ -223,20 +193,17 @@ export function StaffForm({
               <CardContent className="p-5 space-y-4">
                 <div className="space-y-1.5">
                   <Label>Attribute Type</Label>
-                  <Select
-                    value={form.attributeId ?? "none"}
-                    onValueChange={handleAttributeChange}
-                  >
-                    <SelectTrigger className="w-full h-9 text-sm max-w-xs">
-                      <SelectValue placeholder="Select an attribute" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {attributes.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={[
+                      { value: "", label: "None" },
+                      ...attributes.map((a) => ({ value: a.id, label: a.title })),
+                    ]}
+                    value={form.attributeId ?? ""}
+                    onChange={(v) => handleAttributeChange(v || "none")}
+                    placeholder="Select an attribute"
+                    searchPlaceholder="Search attributes..."
+
+                  />
                 </div>
 
                 {selectedAttribute && (

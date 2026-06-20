@@ -1,12 +1,17 @@
 "use client";
 
-import { ArrowLeft, Loader2, FileText, Printer, FileDown, TriangleAlert } from "lucide-react";
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { FileText, Printer, FileDown, TriangleAlert } from "lucide-react";
+import { FormHeader } from "@/components/global_ui/form-header";
+import { FormTabs } from "@/components/global_ui/form-tabs";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import {
   Select,
   SelectContent,
@@ -20,8 +25,6 @@ import { TemplateAdmin } from "@/api/services/template.service";
 import { ProjectAdmin } from "@/api/services/project.service";
 import type { TemplateItem } from "@/api/types/template.types";
 import type { Project } from "@/api/types/project.types";
-import { toast } from "sonner";
-
 interface AgreementFormData {
   name: string;
   clientName: string;
@@ -58,15 +61,31 @@ export function AgreementForm({ form, editingId, saving, onChange, onVariablesCh
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateItem | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [exportFormat, setExportFormat] = useState("docx");
+  const [templateSearch, setTemplateSearch] = useState("");
+  const [projectSearch, setProjectSearch] = useState("");
+
+  const fetchTemplates = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const fetchProjects = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
-    TemplateAdmin.search({ page_size: 100 })
-      .then((res) => setTemplates(res.results ?? []))
-      .catch(() => {});
-    ProjectAdmin.list({ page_size: 100 })
-      .then((res) => setProjects(res.results ?? []))
-      .catch(() => {});
-  }, []);
+    clearTimeout(fetchTemplates.current);
+    fetchTemplates.current = setTimeout(() => {
+      TemplateAdmin.search({ search: templateSearch || undefined, page_size: 10 })
+        .then((res) => setTemplates(res.results ?? []))
+        .catch(() => {});
+    }, 300);
+    return () => clearTimeout(fetchTemplates.current);
+  }, [templateSearch]);
+
+  useEffect(() => {
+    clearTimeout(fetchProjects.current);
+    fetchProjects.current = setTimeout(() => {
+      ProjectAdmin.list({ search: projectSearch || undefined, page_size: 10 })
+        .then((res) => setProjects(res.results ?? []))
+        .catch(() => {});
+    }, 300);
+    return () => clearTimeout(fetchProjects.current);
+  }, [projectSearch]);
 
   useEffect(() => {
     if (!form.templateId) {
@@ -114,10 +133,9 @@ export function AgreementForm({ form, editingId, saving, onChange, onVariablesCh
       return;
     }
     try {
-      const res = await apiPrivate.get(`/admin/agreements/${editingId}?download=${format}`, {
+      const blob = await apiPrivate.get<Blob>(`/admin/agreements/${editingId}?download=${format}`, {
         responseType: "blob",
       });
-      const blob = res.data;
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -137,10 +155,9 @@ export function AgreementForm({ form, editingId, saving, onChange, onVariablesCh
       return;
     }
     try {
-      const res = await apiPrivate.get(`/admin/agreements/${editingId}?download=html`, {
+      const html = await apiPrivate.get<string>(`/admin/agreements/${editingId}?download=html`, {
         responseType: "text",
       });
-      const html = res.data;
       const iframe = document.createElement("iframe");
       iframe.style.position = "fixed";
       iframe.style.right = "-9999px";
@@ -171,10 +188,9 @@ export function AgreementForm({ form, editingId, saving, onChange, onVariablesCh
       return;
     }
     try {
-      const res = await apiPrivate.get(`/admin/agreements/${editingId}?download=pdf`, {
+      const blob = await apiPrivate.get<Blob>(`/admin/agreements/${editingId}?download=pdf`, {
         responseType: "blob",
       });
-      const blob = res.data;
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -190,28 +206,19 @@ export function AgreementForm({ form, editingId, saving, onChange, onVariablesCh
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={onBack}><ArrowLeft className="size-4" /></Button>
-          <div>
-            <p className="text-xs text-gray-500 mb-0.5">Project Agreements</p>
-            <h1 className="text-2xl font-bold text-gray-900 leading-none">{editingId ? form.name || "Edit Agreement" : "New Agreement"}</h1>
-          </div>
-        </div>
-        <Button onClick={onSave} disabled={!form.name.trim() || saving}
-          className="bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white">
-          {saving && <Loader2 className="size-4 animate-spin" />}
-          {saving ? "Saving\u2026" : editingId ? "Update" : "Create"}
-        </Button>
-      </div>
+      <FormHeader
+        breadcrumb="Project Agreements"
+        title={editingId ? form.name || "Edit Agreement" : "New Agreement"}
+        onBack={onBack}
+        onSave={onSave}
+        saving={saving}
+        saveDisabled={!form.name.trim() || saving}
+        saveLabel={editingId ? "Update" : "Create"}
+      />
 
       <Tabs defaultValue="overview" className="w-full flex flex-col">
         <div>
-          <TabsList className="bg-gray-100 rounded-lg p-0.5 gap-0 w-auto h-auto">
-            <TabsTrigger value="overview" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">Overview</TabsTrigger>
-            <TabsTrigger value="variables" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">Variables</TabsTrigger>
-            <TabsTrigger value="settings" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">Settings</TabsTrigger>
-          </TabsList>
+          <FormTabs tabs={[{"value":"overview","label":"Overview"},{"value":"variables","label":"Variables"},{"value":"settings","label":"Settings"}]} />
         </div>
 
         <div>
@@ -233,18 +240,14 @@ export function AgreementForm({ form, editingId, saving, onChange, onVariablesCh
                   <p className="text-sm font-semibold text-gray-900 mb-3">Template</p>
                   <div className="space-y-1.5 max-w-md">
                     <Label>Select Template</Label>
-                    <Select value={form.templateId} onValueChange={handleTemplateChange}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Choose a document template..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {templates.map((t) => (
-                          <SelectItem key={t.id} value={t.id}>
-                            {t.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      options={templates.map((t) => ({ value: t.id, label: t.title }))}
+                      value={form.templateId}
+                      onChange={handleTemplateChange}
+                      placeholder="Choose a document template..."
+                      searchPlaceholder="Search templates..."
+                      onSearchChange={setTemplateSearch}
+                    />
                     {selectedTemplate && (
                       <p className="text-xs text-gray-500">Attribute: {selectedTemplate.attribute_name}</p>
                     )}
@@ -308,20 +311,17 @@ export function AgreementForm({ form, editingId, saving, onChange, onVariablesCh
                   <p className="text-sm font-semibold text-gray-900 mb-3">Link to Project</p>
                   <div className="space-y-1.5 max-w-md">
                     <Label>Project</Label>
-                    <Select
-                      value={form.projectId || "none"}
-                      onValueChange={(v) => onChange("projectId", v === "none" ? "" : v)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a project..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {projects.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      options={[
+                        { value: "", label: "None" },
+                        ...projects.map((p) => ({ value: p.slug, label: p.title })),
+                      ]}
+                      value={form.projectId}
+                      onChange={(v) => onChange("projectId", v)}
+                      placeholder="Select a project..."
+                      searchPlaceholder="Search projects..."
+                      onSearchChange={setProjectSearch}
+                    />
                   </div>
                 </div>
 

@@ -1,6 +1,8 @@
 "use client";
 
-import { ArrowLeft, Loader2, FileText, Image, ImagePlus, Stamp, Signature, Bold, Italic, List, ListOrdered, Quote, Heading1, Heading2, Heading3, Link, Table as TableIcon, Undo, Redo, Minus } from "lucide-react";
+import { FileText, Image, ImagePlus, Stamp, Signature, Bold, Italic, List, ListOrdered, Quote, Heading1, Heading2, Heading3, Link, Table as TableIcon, Undo, Redo, Minus } from "lucide-react";
+import { FormHeader } from "@/components/global_ui/form-header";
+import { FormTabs } from "@/components/global_ui/form-tabs";
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -14,9 +16,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MediaPickerDialog } from "@/components/global_ui/MediahanlderPicker";
-import type { MediaItem } from "@/components/global_ui/MediahanlderPicker";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { MediaPickerDialog } from "@/components/global_ui/media-handler-picker";
+import type { PickerMediaItem } from "@/components/global_ui/media-handler-picker";
 
 interface TemplateFormData {
   title: string;
@@ -81,7 +83,7 @@ function ToolbarButton({ active, onClick, label, children }: { active?: boolean;
   return (
     <button type="button" onMouseDown={(e) => { e.preventDefault(); onClick(); }} title={label}
       className={`size-8 grid place-items-center rounded-md text-sm transition shrink-0 ${
-        active ? "bg-[lab(20_23.9_-60.14)]/10 text-[lab(20_23.9_-60.14)]" : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+        active ? "bg-sidebar-primary/10 text-sidebar-primary" : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
       }`}>{children}</button>
   );
 }
@@ -101,10 +103,10 @@ function LinkDialog({ editor, onClose }: { editor: any; onClose: () => void }) {
   return (
     <div className="flex items-center gap-2 p-2 bg-white border border-gray-200 rounded-lg shadow-lg absolute top-full left-0 mt-1 z-50">
       <input ref={inputRef} defaultValue={existing} placeholder="https://..."
-        className="w-56 h-8 px-2 rounded border border-gray-200 text-xs text-gray-900 outline-none focus:border-[lab(20_23.9_-60.14)]"
+        className="w-56 h-8 px-2 rounded border border-gray-200 text-xs text-gray-900 outline-none focus:border-sidebar-primary"
         onKeyDown={(e) => { if (e.key === "Enter") setLink(); if (e.key === "Escape") onClose(); }} />
       <button type="button" onClick={setLink}
-        className="h-8 px-3 rounded bg-[lab(20_23.9_-60.14)] text-white text-xs font-medium hover:bg-[lab(15_23.9_-60.14)] transition">Apply</button>
+        className="h-8 px-3 rounded bg-sidebar-primary text-white text-xs font-medium hover:bg-sidebar-primary/90 transition">Apply</button>
     </div>
   );
 }
@@ -117,7 +119,7 @@ export function TemplateForm({ form, editingId, saving, attributeGroups, onChang
   const initialized = useRef(false);
 
   const openPicker = (field: typeof pickerField) => { setPickerField(field); setPickerOpen(true); };
-  const handleMediaSelect = useCallback((item: MediaItem) => { onChange(pickerField, item.url); }, [pickerField, onChange]);
+  const handleMediaSelect = useCallback((item: PickerMediaItem) => { onChange(pickerField, item.url); }, [pickerField, onChange]);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -159,28 +161,19 @@ export function TemplateForm({ form, editingId, saving, attributeGroups, onChang
     <div>
       <MediaPickerDialog open={pickerOpen} onOpenChange={setPickerOpen} mode="image" title="Choose Image" onSelect={handleMediaSelect} />
 
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={onBack}><ArrowLeft className="size-4" /></Button>
-          <div>
-            <p className="text-xs text-gray-500 mb-0.5">Templates</p>
-            <h1 className="text-2xl font-bold text-gray-900 leading-none">{editingId ? form.title || "Edit Template" : "New Template"}</h1>
-          </div>
-        </div>
-        <Button onClick={onSave} disabled={!form.title.trim() || saving}
-          className="bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white">
-          {saving && <Loader2 className="size-4 animate-spin" />}
-          {saving ? "Saving\u2026" : editingId ? "Update" : "Create"}
-        </Button>
-      </div>
+      <FormHeader
+        breadcrumb="Templates"
+        title={editingId ? form.title || "Edit Template" : "New Template"}
+        onBack={onBack}
+        onSave={onSave}
+        saving={saving}
+        saveDisabled={!form.title.trim() || saving}
+        saveLabel={editingId ? "Update" : "Create"}
+      />
 
       <Tabs defaultValue="overview" className="w-full flex flex-col">
         <div>
-          <TabsList className="bg-gray-100 rounded-lg p-0.5 gap-0 w-auto h-auto">
-            <TabsTrigger value="overview" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">Overview</TabsTrigger>
-            <TabsTrigger value="content" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">Content</TabsTrigger>
-            <TabsTrigger value="media" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">Media</TabsTrigger>
-          </TabsList>
+          <FormTabs tabs={[{"value":"overview","label":"Overview"},{"value":"content","label":"Content"},{"value":"media","label":"Media"}]} />
         </div>
 
         <div>
@@ -236,7 +229,7 @@ export function TemplateForm({ form, editingId, saving, attributeGroups, onChang
                           <div className="flex flex-wrap gap-1.5">
                             {g.values.map((v) => (
                               <button key={v} type="button" onClick={() => insertToken(v)}
-                                className="text-[11px] px-2 py-1 rounded bg-[lab(20_23.9_-60.14)]/10 text-[lab(20_23.9_-60.14)] font-medium hover:bg-[lab(20_23.9_-60.14)]/20 transition cursor-pointer whitespace-nowrap">
+                                className="text-[11px] px-2 py-1 rounded bg-sidebar-primary/10 text-sidebar-primary font-medium hover:bg-sidebar-primary/20 transition cursor-pointer whitespace-nowrap">
                                 {`{${v}}`}
                               </button>
                             ))}

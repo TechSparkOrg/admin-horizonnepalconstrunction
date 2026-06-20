@@ -23,10 +23,4 @@ export interface LoginResponse {
     user: AuthUser;
 }
 
-export type AdminSessionUser = Pick<AuthUser, "id" | "email" | "username" | "is_active">;
 
-export type AdminAuthState = Readonly<{
-    isAuthenticated: boolean;
-    user: AdminSessionUser | null;
-    hasHydrated: boolean;
-}>;

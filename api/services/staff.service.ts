@@ -4,17 +4,17 @@ import type { PaginatedResponse } from '../types/consultation.types';
 
 export const StaffAdmin = {
   search: (params: { search?: string; type?: string; page?: number; page_size?: number }) =>
-    apiPrivate.get<PaginatedResponse<StaffMember>>('/admin/staff', { params }).then(r => r.data),
+    apiPrivate.get<PaginatedResponse<StaffMember>>('/admin/staff', { params }),
 
   adminGet: (id: string) =>
-    apiPrivate.get<StaffMember>(`/admin/staff/${id}`).then(r => r.data),
+    apiPrivate.get<StaffMember>(`/admin/staff/${id}`),
 
   create: (data: Record<string, unknown>) =>
-    apiPrivate.post<StaffMember>('/admin/staff', data).then(r => r.data),
+    apiPrivate.post<StaffMember>('/admin/staff', data),
 
   update: (id: string, data: Record<string, unknown>) =>
-    apiPrivate.patch<StaffMember>(`/admin/staff/${id}`, data).then(r => r.data),
+    apiPrivate.patch<StaffMember>(`/admin/staff/${id}`, data),
 
   delete: (id: string) =>
-    apiPrivate.delete<{ ok: boolean }>(`/admin/staff/${id}`).then(r => r.data),
+    apiPrivate.delete<{ ok: boolean }>(`/admin/staff/${id}`),
 };

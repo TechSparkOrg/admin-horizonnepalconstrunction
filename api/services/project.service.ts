@@ -4,17 +4,17 @@ import type { PaginatedResponse } from '../types/consultation.types';
 
 export const ProjectAdmin = {
   list: (params?: ProjectListParams) =>
-    apiPrivate.get<PaginatedResponse<Project>>('/admin/projects', { params }).then(r => r.data),
+    apiPrivate.get<PaginatedResponse<Project>>('/admin/projects', { params }),
 
   adminGet: (slug: string) =>
-    apiPrivate.get<Project>(`/admin/projects/${slug}`).then(r => r.data),
+    apiPrivate.get<Project>(`/admin/projects/${slug}`),
 
   create: (data: ProjectCreate) =>
-    apiPrivate.post<Project>('/admin/projects', data).then(r => r.data),
+    apiPrivate.post<Project>('/admin/projects', data),
 
   update: (slug: string, data: ProjectUpdate) =>
-    apiPrivate.put<Project>(`/admin/projects/${slug}`, data).then(r => r.data),
+    apiPrivate.put<Project>(`/admin/projects/${slug}`, data),
 
   delete: (slug: string) =>
-    apiPrivate.delete<{ ok: boolean }>(`/admin/projects/${slug}`).then(r => r.data),
+    apiPrivate.delete<{ ok: boolean }>(`/admin/projects/${slug}`),
 };

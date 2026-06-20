@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const protectedRoutes = ["/dashboard" ,"/categories", "/dashboard/projects", "/dashboard/faq", "/dashboard/media", "/dashboard/blogs", "/dashboard/pages", "/dashboard/content-management", "/dashboard/reviews", "/dashboard/models", "/dashboard/calculator", "/dashboard/consultation", "/dashboard/vastu", "/dashboard/team", "/dashboard/building-permit", "/dashboard/settings"];
+const protectedRoutes = [
+  "/dashboard", "/categories", "/projects", "/faqs", "/blogs", "/pages",
+  "/reviews", "/vastu", "/team", "/building-permit", "/media",
+  "/material-list", "/documents", "/resource-allocation", "/emi",
+];
 const publicRoutes = ["/login", "/"];
 
 export function proxy(request: NextRequest) {

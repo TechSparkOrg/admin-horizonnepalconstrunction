@@ -64,7 +64,7 @@ const navLinks: NavLink[] = [
     { label: "Emi", href: "/emi/banks", icon: Landmark,
     children: [
           { label: "Banks", href: "/emi/banks" },
-        { label: "Emi Requests", href: "/emi/requests" },
+        // { label: "Emi Requests", href: "/emi/requests" },
 
       ]
     
@@ -99,10 +99,10 @@ const navLinks: NavLink[] = [
   },
   { label: "Costumer Relations", href: "/dashboard/content-management", icon: Activity ,
     children: [
-      { label: "Enquiries", href: "/dashboard/enquiries" },
+      // { label: "Enquiries", href: "/dashboard/enquiries" },
       { label: "Testimonials", href: "/dashboard/testimonials" },
         { label: "Reviews", href: "/reviews"},
-          { label: "Consultation", href: "/dashboard/consultation" }
+          // { label: "Consultation", href: "/dashboard/consultation" }
     ],
   },
 
@@ -110,7 +110,7 @@ const navLinks: NavLink[] = [
   { label: "Resources Management", href: "/material-list", icon: Calculator ,
     children: [
       { label: "Material list", href: "/material-list" },
-      { label: "Cost Estimation", href: "/dashboard/calculator/cost" },
+      // { label: "Cost Estimation", href: "/dashboard/calculator/cost" },
          { label: "Team Allocation", href: "/resource-allocation/team" },
              { label: "Material Allocation", href: "/resource-allocation/material" },
 
@@ -124,7 +124,7 @@ const navLinks: NavLink[] = [
          { label: "Templates", href: "/documents/templates" },
       { label: "Project Agreements", href: "/documents/project-agreements" },
       { label: "Project Documents", href: "/documents/private-documents" },
-        { label: "Bid Documents", href: "/documents/bid-documents"}
+        // { label: "Bid Documents", href: "/documents/bid-documents"}
       
   
     ],
@@ -159,7 +159,7 @@ function NavItem({
         <SidebarMenuButton
           onClick={() => setOpen((o) => !o)}
           isActive={active}
-          className={active ? "bg-[lab(20_23.9_-60.14)]/10 text-[lab(20_23.9_-60.14)] font-medium hover:bg-[lab(20_23.9_-60.14)]/10 hover:text-[lab(20_23.9_-60.14)]" : ""}
+          className={active ? "bg-sidebar-primary/10 text-sidebar-primary font-medium hover:bg-sidebar-primary/10 hover:text-sidebar-primary" : ""}
         >
           <Icon />
           <span>{label}</span>
@@ -174,7 +174,7 @@ function NavItem({
                   <SidebarMenuSubButton
                     asChild
                     isActive={childActive}
-                    className={childActive ? "bg-[lab(20_23.9_-60.14)]/10 text-[lab(20_23.9_-60.14)] font-medium" : ""}
+                    className={childActive ? "bg-sidebar-primary/10 text-sidebar-primary font-medium" : ""}
                   >
                     <Link href={child.href}>{child.label}</Link>
                   </SidebarMenuSubButton>
@@ -193,7 +193,7 @@ function NavItem({
       <SidebarMenuButton
         asChild
         isActive={active}
-        className={active ? "bg-[lab(20_23.9_-60.14)]/10 text-[lab(20_23.9_-60.14)] font-medium hover:bg-[lab(20_23.9_-60.14)]/10 hover:text-[lab(20_23.9_-60.14)]" : ""}
+        className={active ? "bg-sidebar-primary/10 text-sidebar-primary font-medium hover:bg-sidebar-primary/10 hover:text-sidebar-primary" : ""}
       >
         <Link href={href}>
           <Icon />

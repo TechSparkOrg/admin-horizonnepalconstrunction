@@ -44,7 +44,7 @@ export default function LoginPage() {
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-50 p-4 sm:p-6">
       <div className="w-full max-w-[400px]">
         <div className="text-center mb-8 flex flex-col items-center gap-3">
-          <div className="w-14 h-14 rounded-xl bg-[lab(20_23.9_-60.14)] flex items-center justify-center shadow-lg shadow-[lab(20_23.9_-60.14)]/20">
+          <div className="w-14 h-14 rounded-xl bg-sidebar-primary flex items-center justify-center shadow-lg shadow-sidebar-primary/20">
             <Building2 className="w-7 h-7 text-white" />
           </div>
           <div>
@@ -117,7 +117,7 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full h-10 bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white font-medium rounded-lg text-sm shadow-sm"
+                className="w-full h-10 bg-sidebar-primary hover:bg-sidebar-primary/90 text-white font-medium rounded-lg text-sm shadow-sm"
               >
                 {isSubmitting ? (
                   <>

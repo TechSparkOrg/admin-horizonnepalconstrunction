@@ -4,17 +4,17 @@ import type { PaginatedResponse } from '../types/consultation.types';
 
 export const AgreementAdmin = {
   search: (params: { search?: string; page?: number; page_size?: number }) =>
-    apiPrivate.get<PaginatedResponse<AgreementItem>>('/admin/agreements', { params }).then(r => r.data),
+    apiPrivate.get<PaginatedResponse<AgreementItem>>('/admin/agreements', { params }),
 
   get: (id: string) =>
-    apiPrivate.get<AgreementItem>(`/admin/agreements/${id}`).then(r => r.data),
+    apiPrivate.get<AgreementItem>(`/admin/agreements/${id}`),
 
   create: (data: Record<string, unknown>) =>
-    apiPrivate.post<AgreementItem>('/admin/agreements', data).then(r => r.data),
+    apiPrivate.post<AgreementItem>('/admin/agreements', data),
 
   update: (id: string, data: Record<string, unknown>) =>
-    apiPrivate.patch<AgreementItem>(`/admin/agreements/${id}`, data).then(r => r.data),
+    apiPrivate.patch<AgreementItem>(`/admin/agreements/${id}`, data),
 
   delete: (id: string) =>
-    apiPrivate.delete<{ ok: boolean }>(`/admin/agreements/${id}`).then(r => r.data),
+    apiPrivate.delete<{ ok: boolean }>(`/admin/agreements/${id}`),
 };

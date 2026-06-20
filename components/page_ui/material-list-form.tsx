@@ -1,6 +1,9 @@
 "use client";
 
-import { ArrowLeft, Loader2, ImagePlus, X } from "lucide-react";
+import { ImagePlus, X } from "lucide-react";
+import { FormHeader } from "@/components/global_ui/form-header";
+import { FormTabs } from "@/components/global_ui/form-tabs";
+import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -14,19 +17,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { MediaPickerDialog } from "@/components/global_ui/MediahanlderPicker";
-import type { MediaItem } from "@/components/global_ui/MediahanlderPicker";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { MediaPickerDialog } from "@/components/global_ui/media-handler-picker";
+import type { PickerMediaItem } from "@/components/global_ui/media-handler-picker";
 import { CategoryAdmin } from "@/api/services/category.service";
-import { AttributeAdmin } from "@/api/services/attribute.service";
+import { useAttributeOptions } from "@/api/hooks/use-attribute-query";
 import { BlogAdmin } from "@/api/services/blog.service";
 import type { Category } from "@/api/types/category.types";
-import type { AttributeItem } from "@/api/types/attribute.types";
 import type { BlogPost } from "@/api/types/blog.types";
 
 interface MaterialListFormData {
@@ -75,15 +72,12 @@ export function MaterialListForm({
 }: Props) {
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [serviceCategories, setServiceCategories] = useState<Category[]>([]);
-  const [attributes, setAttributes] = useState<AttributeItem[]>([]);
+  const { data: attributes = [] } = useAttributeOptions();
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [unitLabel, setUnitLabel] = useState("");
   const [companyLabel, setCompanyLabel] = useState("");
 
   useEffect(() => {
-    AttributeAdmin.search({ used_in: "all", page_size: 100 })
-      .then((res) => setAttributes(res.results ?? []))
-      .catch(() => {});
     CategoryAdmin.listServices()
       .then((res) => setServiceCategories(res.results ?? []))
       .catch(() => {});
@@ -111,44 +105,26 @@ export function MaterialListForm({
   const selectedUnitField = selectedAttribute?.values.find((v) => v.label === unitLabel);
   const selectedCompanyField = selectedAttribute?.values.find((v) => v.label === companyLabel);
 
-  const handleMediaSelect = (item: MediaItem) => {
+  const handleMediaSelect = (item: PickerMediaItem) => {
     onChange("photo", item.url);
     setMediaPickerOpen(false);
   };
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={onBack}>
-            <ArrowLeft className="size-4" />
-          </Button>
-          <div>
-            <p className="text-xs text-gray-500 mb-0.5">Material List</p>
-            <h1 className="text-2xl font-bold text-gray-900 leading-none">
-              {editingId ? form.name || "Edit Material" : "New Material"}
-            </h1>
-          </div>
-        </div>
-        <Button onClick={onSave} disabled={!form.name.trim() || saving} className="bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white">
-          {saving && <Loader2 className="size-4 animate-spin" />}
-          {saving ? "Saving\u2026" : editingId ? "Update" : "Create"}
-        </Button>
-      </div>
+      <FormHeader
+        breadcrumb="Material List"
+        title={editingId ? form.name || "Edit Material" : "New Material"}
+        onBack={onBack}
+        onSave={onSave}
+        saving={saving}
+        saveDisabled={!form.name.trim() || saving}
+        saveLabel={editingId ? "Update" : "Create"}
+      />
 
       <Tabs defaultValue="overview" className="w-full flex flex-col">
         <div>
-          <TabsList className="bg-gray-100 rounded-lg p-0.5 gap-0 w-auto h-auto">
-            <TabsTrigger value="overview" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="usecase" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">
-              Use Case
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium">
-              Settings
-            </TabsTrigger>
-          </TabsList>
+          <FormTabs tabs={[{"value":"overview","label":"Overview"},{"value":"usecase","label":"Use Case"},{"value":"settings","label":"Settings"}]} />
         </div>
 
         <div>
@@ -179,27 +155,24 @@ export function MaterialListForm({
 
                 <div className="space-y-1.5">
                   <Label>Attribute Type</Label>
-                  <Select
-                    value={form.attributeId ?? "none"}
-                    onValueChange={(v) => {
-                      const id = v === "none" ? null : v;
+                  <SearchableSelect
+                    options={[
+                      { value: "", label: "None" },
+                      ...attributes.map((a) => ({ value: a.id, label: a.title })),
+                    ]}
+                    value={form.attributeId ?? ""}
+                    onChange={(v) => {
+                      const id = v || null;
                       onChange("attributeId", id);
                       setUnitLabel("");
                       setCompanyLabel("");
                       onChange("unitValue", "");
                       onChange("companyValue", "");
                     }}
-                  >
-                    <SelectTrigger className="w-full h-9 text-sm max-w-xs">
-                      <SelectValue placeholder="Select an attribute" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {attributes.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Select an attribute"
+                    searchPlaceholder="Search attributes..."
+
+                  />
                 </div>
 
                 {selectedAttribute && (

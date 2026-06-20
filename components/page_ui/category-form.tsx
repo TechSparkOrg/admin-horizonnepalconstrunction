@@ -1,36 +1,25 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ArrowLeft, Loader2, ImagePlus, Eye, Pencil, Trash2 } from "lucide-react";
+import { ImagePlus, Eye } from "lucide-react";
+import { FormHeader } from "@/components/global_ui/form-header";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { categorySchema, type CategoryFormData } from "@/api/validation/category";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RichEditor } from "@/components/page_ui/rich-editor";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationPrevious,
-  PaginationNext,
-} from "@/components/ui/pagination";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import { FormTabs } from "@/components/global_ui/form-tabs";
+import { FormCard } from "@/components/global_ui/form-card";
+import { SeoFields } from "@/components/global_ui/seo-fields";
+import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
+import { TableHeaderRow } from "@/components/global_ui/table-header-row";
+import { PaginationBar } from "@/components/global_ui/pagination-bar";
+import { ActionButtons } from "@/components/global_ui/action-buttons";
+import { ImagePreviewDialog } from "@/components/global_ui/image-preview-dialog";
 import {
   Select,
   SelectContent,
@@ -38,29 +27,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MediaPickerDialog } from "@/components/global_ui/MediahanlderPicker";
-import type { MediaItem } from "@/components/global_ui/MediahanlderPicker";
-import { MediaService } from "@/api/services/media.service";
+import { MediaPickerDialog } from "@/components/global_ui/media-handler-picker";
+import type { PickerMediaItem } from "@/components/global_ui/media-handler-picker";
 import { CategoryAdmin } from "@/api/services/category.service";
 import type { Category } from "@/api/types/category.types";
-import { toast } from "sonner";
 import { toSlug } from "@/lib/slug";
-
-const categorySchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  slug: z.string().min(1, "Slug is required"),
-  type: z.enum(["public", "internal"]),
-  description: z.string().optional(),
-  metaTitle: z.string().optional(),
-  metaDescription: z.string().optional(),
-  metaKeywords: z.string().optional(),
-  isActive: z.boolean(),
-  image: z.string().optional(),
-  parent_id: z.string().nullable().optional(),
-  bannerImages: z.array(z.object({ id: z.string(), url: z.string(), name: z.string() })),
-});
-
-export type CategoryFormData = z.infer<typeof categorySchema>;
 
 interface Props {
   editing: Category | null;
@@ -73,17 +44,13 @@ interface Props {
 }
 
 export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, parentCats: propParentCats, showTypeField = true }: Props) {
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState("");
-  const [uploading, setUploading] = useState(false);
-  const [viewerOpen, setViewerOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const slugEdited = useRef(false);
 
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [editingBannerId, setEditingBannerId] = useState<string | null>(null);
   const [bannerPage, setBannerPage] = useState(1);
 
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [parentCats, setParentCats] = useState<Category[]>([]);
   const [activeTab, setActiveTab] = useState("content");
 
@@ -141,14 +108,12 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
         type: editing.type,
         image: editing.image || "",
         parent_id: editing.parent_id,
-        metaTitle: defaultValues?.metaTitle || "",
-        metaDescription: defaultValues?.metaDescription || "",
-        metaKeywords: defaultValues?.metaKeywords || "",
-        isActive: defaultValues?.isActive ?? true,
-        bannerImages: defaultValues?.bannerImages || [],
+        metaTitle: editing.meta_title || "",
+        metaDescription: editing.meta_description || "",
+        metaKeywords: editing.meta_keywords || "",
+        isActive: editing.is_active ?? true,
+        bannerImages: editing.banner_images || [],
       });
-      setPreview(editing.image || "");
-      setFile(null);
       slugEdited.current = true;
     } else {
       reset({
@@ -165,8 +130,6 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
         bannerImages: [],
         ...defaultValues,
       });
-      setPreview("");
-      setFile(null);
       slugEdited.current = false;
     }
   }, [editing, defaultValues, reset]);
@@ -177,26 +140,8 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
     }
   }, [nameValue, setValue]);
 
-  const handleBannerSelect = async (item: MediaItem, altText: string, file?: File) => {
-    let newItem: MediaItem;
-    if (file) {
-      try {
-        const uploaded = await MediaService.uploadImage(file, { alt: altText });
-        newItem = {
-          id: uploaded.id,
-          name: uploaded.alt || file.name,
-          url: uploaded.url,
-          thumbnail: uploaded.url,
-          category: uploaded.group_title || "General",
-        };
-        toast.success("Image uploaded");
-      } catch {
-        toast.error("Failed to upload image");
-        return;
-      }
-    } else {
-      newItem = item;
-    }
+  const handleBannerSelect = (item: PickerMediaItem, altText: string, file?: File) => {
+    const newItem = file ? { ...item, name: altText || item.name } : item;
 
     if (editingBannerId) {
       setValue(
@@ -223,61 +168,21 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
     );
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    setFile(f);
-    setPreview(URL.createObjectURL(f));
-  };
-
-  const handleRemoveImage = () => {
-    setFile(null);
-    setPreview("");
-    setValue("image", "");
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
   const onSubmit = async (data: CategoryFormData) => {
-    setUploading(true);
-    try {
-      let imageUrl = data.image || "";
-      if (file) {
-        const uploaded = await MediaService.uploadImage(file);
-        imageUrl = uploaded.url;
-      }
-      await onSave({
-        ...data,
-        image: imageUrl,
-      });
-    } finally {
-      setUploading(false);
-    }
+    await onSave(data);
   };
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={onBack}>
-            <ArrowLeft className="size-4" />
-          </Button>
-          <div>
-            <p className="text-xs text-gray-500 mb-0.5">Categories</p>
-            <h1 className="text-2xl font-bold text-gray-900 leading-none">
-              {editing ? "Edit Category" : "New Category"}
-            </h1>
-          </div>
-        </div>
-        <Button
-          type="submit"
-          form="category-form"
-          disabled={isSubmitting || uploading || saving}
-          className="bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white"
-        >
-          {(uploading || saving) && <Loader2 className="size-4 animate-spin" />}
-          {uploading ? "Uploading..." : saving ? "Saving..." : editing ? "Update" : "Publish"}
-        </Button>
-      </div>
+      <FormHeader
+        breadcrumb="Categories"
+        title={editing ? "Edit Category" : "New Category"}
+        onBack={onBack}
+        onSave={handleSubmit(onSubmit)}
+        saving={isSubmitting || saving}
+        saveDisabled={isSubmitting || saving}
+        saveLabel={editing ? "Update" : "Publish"}
+      />
 
       <form id="category-form" onSubmit={handleSubmit(onSubmit)}>
         <input type="hidden" {...register("parent_id")} />
@@ -285,25 +190,17 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v)} className="w-full flex flex-col">
           <div>
-            <TabsList className="bg-gray-100 rounded-lg p-0.5 gap-0 w-auto h-auto">
-              <TabsTrigger value="content" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium [&_svg]:size-3.5">
-                Content
-              </TabsTrigger>
-              <TabsTrigger value="media" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium [&_svg]:size-3.5">
-                Media
-              </TabsTrigger>
-              <TabsTrigger value="seo" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium [&_svg]:size-3.5">
-                SEO
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium [&_svg]:size-3.5">
-                Settings
-              </TabsTrigger>
-            </TabsList>
+            <FormTabs tabs={[
+              { value: "content", label: "Content" },
+              { value: "media", label: "Media" },
+              { value: "seo", label: "SEO" },
+              { value: "settings", label: "Settings" },
+            ]} />
           </div>
 
           <div>
             <TabsContent value="content" className="space-y-5 mt-4">
-              <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 w-full">
+              <FormCard>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label>Name</Label>
@@ -333,30 +230,14 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
                 {showTypeField && (
                   <div className="space-y-1.5">
                     <Label>Type</Label>
-                    <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-                      <button
-                        type="button"
-                        onClick={() => setValue("type", "public")}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                          watch("type") === "public"
-                            ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                            : "text-gray-500 hover:text-gray-900"
-                        }`}
-                      >
-                        Public
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setValue("type", "internal")}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                          watch("type") === "internal"
-                            ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                            : "text-gray-500 hover:text-gray-900"
-                        }`}
-                      >
-                        Internal
-                      </button>
-                    </div>
+                    <SegmentedToggle
+                      value={watch("type")}
+                      onChange={(v) => setValue("type", v as "public" | "internal")}
+                      options={[
+                        { value: "public" as const, label: "Public" },
+                        { value: "internal" as const, label: "Internal" },
+                      ]}
+                    />
                   </div>
                 )}
 
@@ -390,45 +271,22 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
+              </FormCard>
             </TabsContent>
 
             <TabsContent value="seo" className="mt-4">
-              <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 w-full">
-                <div className="space-y-1.5">
-                  <Label>Meta Title</Label>
-                  <Input
-                    {...register("metaTitle")}
-                    placeholder="Defaults to category name"
-                  />
-                  <p className="text-right text-[11px] text-gray-400">{(watch("metaTitle") || "").length} / 60</p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>Meta Description</Label>
-                  <RichEditor
-                    value={watch("metaDescription") || ""}
-                    onChange={(html) => setValue("metaDescription", html)}
-                    minHeight={120}
-                  />
-                  <p className="text-right text-[11px] text-gray-400">{(watch("metaDescription") || "").length} / 160</p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>Meta Keywords</Label>
-                  <Input
-                    {...register("metaKeywords")}
-                    placeholder="keyword1, keyword2, keyword3"
-                  />
-                  <p className="text-xs text-gray-400">Comma-separated keywords for search engines.</p>
-                </div>
-              </div>
+              <SeoFields
+                metaTitle={watch("metaTitle") || ""}
+                metaDescription={watch("metaDescription") || ""}
+                metaKeywords={watch("metaKeywords") || ""}
+                onMetaTitleChange={(v) => setValue("metaTitle", v)}
+                onMetaDescriptionChange={(v) => setValue("metaDescription", v)}
+                onMetaKeywordsChange={(v) => setValue("metaKeywords", v)}
+              />
             </TabsContent>
 
             <TabsContent value="media" className="mt-4 space-y-5">
-    
-
-              <div className="bg-white rounded-xl border border-gray-200 p-5 w-full">
+              <FormCard className="space-y-0">
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-sm font-semibold text-gray-900">Banner Images</p>
                   <Button
@@ -450,13 +308,11 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
                 ) : (
                   <div>
                     <Table>
-                      <TableHeader>
-                        <TableRow className="border-gray-200 hover:bg-transparent">
-                          <TableHead className="text-gray-900 font-semibold">Image</TableHead>
-                          <TableHead className="text-gray-900 font-semibold">Name</TableHead>
-                          <TableHead className="text-gray-900 font-semibold text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
+                      <TableHeaderRow columns={[
+                        { label: "Image" },
+                        { label: "Name" },
+                        { label: "Actions", className: "text-right" },
+                      ]} />
                       <TableBody>
                         {paginatedBanners.map((img) => (
                           <TableRow key={img.id} className="border-gray-200 hover:bg-gray-50">
@@ -474,31 +330,17 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
                                   variant="outline"
                                   size="sm"
                                   className="text-gray-500 border-gray-200 hover:bg-gray-100"
-                                  onClick={() => window.open(img.url, "_blank")}
+                                  onClick={() => setPreviewUrl(img.url)}
                                 >
                                   <Eye className="w-3.5 h-3.5" />
                                 </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-[lab(20_23.9_-60.14)] border-[lab(20_23.9_-60.14)]/20 hover:bg-[lab(20_23.9_-60.14)]/5"
-                                  onClick={() => {
+                                <ActionButtons
+                                  onEdit={() => {
                                     setEditingBannerId(img.id);
                                     setMediaPickerOpen(true);
                                   }}
-                                >
-                                  <Pencil className="w-3.5 h-3.5" />
-                                  Details
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-red-500 border-red-200 hover:bg-red-50"
-                                  onClick={() => removeBannerImage(img.id)}
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  Delete
-                                </Button>
+                                  onDelete={() => removeBannerImage(img.id)}
+                                />
                               </div>
                             </TableCell>
                           </TableRow>
@@ -508,72 +350,31 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
 
                     {totalBannerPages > 1 && (
                       <div className="mt-3">
-                        <Pagination>
-                          <PaginationContent>
-                            <PaginationItem>
-                              <PaginationPrevious
-                                onClick={() => setBannerPage((p) => Math.max(1, p - 1))}
-                                className={bannerPage === 1 ? "pointer-events-none opacity-40" : "cursor-pointer"}
-                              />
-                            </PaginationItem>
-                            {Array.from({ length: totalBannerPages }, (_, i) => i + 1).map((page) => (
-                              <PaginationItem key={page}>
-                                <PaginationLink
-                                  isActive={page === bannerPage}
-                                  onClick={() => setBannerPage(page)}
-                                  className="cursor-pointer"
-                                >
-                                  {page}
-                                </PaginationLink>
-                              </PaginationItem>
-                            ))}
-                            <PaginationItem>
-                              <PaginationNext
-                                onClick={() => setBannerPage((p) => Math.min(totalBannerPages, p + 1))}
-                                className={bannerPage === totalBannerPages ? "pointer-events-none opacity-40" : "cursor-pointer"}
-                              />
-                            </PaginationItem>
-                          </PaginationContent>
-                        </Pagination>
+                        <PaginationBar page={bannerPage} totalPages={totalBannerPages} onPageChange={setBannerPage} />
                       </div>
                     )}
                   </div>
                 )}
-              </div>
+              </FormCard>
             </TabsContent>
-
             <TabsContent value="settings" className="mt-4">
-              <div className="bg-white rounded-xl border border-gray-200 p-5 w-full">
+              <FormCard>
                 <p className="text-sm font-semibold text-gray-900 mb-4">Status</p>
-                <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-                  <button
-                    type="button"
-                    onClick={() => setValue("isActive", true)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                      watch("isActive")
-                        ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                        : "text-gray-500 hover:text-gray-900"
-                    }`}
-                  >
-                    Active
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setValue("isActive", false)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                      !watch("isActive")
-                        ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                        : "text-gray-500 hover:text-gray-900"
-                    }`}
-                  >
-                    Inactive
-                  </button>
-                </div>
-              </div>
+                <SegmentedToggle
+                  value={!!watch("isActive")}
+                  onChange={(v) => setValue("isActive", v)}
+                  options={[
+                    { value: true, label: "Active" },
+                    { value: false, label: "Inactive" },
+                  ]}
+                />
+              </FormCard>
             </TabsContent>
           </div>
         </Tabs>
       </form>
+
+      <ImagePreviewDialog url={previewUrl} onClose={() => setPreviewUrl(null)} />
 
       <MediaPickerDialog
         open={mediaPickerOpen}
@@ -585,12 +386,6 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
         title={editingBannerId ? "Update Banner Image" : "Select Banner Image"}
         onSelect={handleBannerSelect}
       />
-
-      {viewerOpen && preview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setViewerOpen(false)}>
-          <img src={preview} alt="Full preview" className="max-w-full max-h-full rounded-lg object-contain" />
-        </div>
-      )}
     </div>
   );
 }

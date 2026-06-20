@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import AppShell from "./app-shell";
+import { QueryProvider } from "./query-provider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -29,7 +30,9 @@ export default function RootLayout({
       className={cn("h-full", instrumentSerif.variable, inter.variable)}
     >
       <body className="min-h-full bg-background text-foreground antialiased font-sans">
-        <AppShell>{children}</AppShell>
+        <QueryProvider>
+          <AppShell>{children}</AppShell>
+        </QueryProvider>
         <Toaster richColors position="top-right" />
       </body>
     </html>

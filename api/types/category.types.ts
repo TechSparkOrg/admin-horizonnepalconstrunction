@@ -1,5 +1,11 @@
 export type SectionType = "services" | "blog" | "faq" | "project";
 
+export interface BannerImage {
+  id: string;
+  url: string;
+  name: string;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -9,6 +15,10 @@ export interface Category {
   type: "public" | "internal";
   section: SectionType;
   is_active?: boolean;
+  meta_title?: string;
+  meta_description?: string;
+  meta_keywords?: string;
+  banner_images?: BannerImage[];
   parent_id: string | null;
   children: Category[];
   created_at: string;
@@ -17,7 +27,9 @@ export interface Category {
 
 export type CategoryCreate = Pick<
   Category,
-  "name" | "slug" | "description" | "image" | "type" | "is_active" | "parent_id"
+  | "name" | "slug" | "description" | "image" | "type" | "is_active"
+  | "parent_id" | "meta_title" | "meta_description" | "meta_keywords"
+  | "banner_images"
 >;
 
 export type CategoryUpdate = Partial<CategoryCreate>;

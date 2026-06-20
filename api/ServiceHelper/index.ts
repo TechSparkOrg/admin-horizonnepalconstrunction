@@ -5,6 +5,7 @@ import axios, {
     InternalAxiosRequestConfig,
 } from 'axios';
 import { getCookie, setCookie, deleteCookie } from 'cookies-next';
+import { ErrorHandler } from './errorhandler';
 import getEnv from './envschema';
 
 const env = getEnv();
@@ -18,6 +19,14 @@ interface RetryAxiosRequestConfig extends InternalAxiosRequestConfig {
 interface TokenPair {
     access: string;
     refresh: string;
+}
+
+interface ApiClient {
+    get<T>(url: string, config?: Record<string, unknown>): Promise<T>;
+    post<T>(url: string, data?: unknown, config?: Record<string, unknown>): Promise<T>;
+    put<T>(url: string, data?: unknown, config?: Record<string, unknown>): Promise<T>;
+    patch<T>(url: string, data?: unknown, config?: Record<string, unknown>): Promise<T>;
+    delete<T>(url: string, config?: Record<string, unknown>): Promise<T>;
 }
 
 /* ─── Token Manager ─── */
@@ -106,6 +115,11 @@ const createAxiosClient = (isPrivate = false): AxiosInstance => {
         headers: { 'Content-Type': 'application/json' },
     });
 
+    // All instances: auto-unwrap .data and attach parsed errors
+    instance.interceptors.response.use(
+        (response: AxiosResponse) => response.data,
+    );
+
     if (!isPrivate) return instance;
 
     // Request interceptor: attach access token
@@ -117,14 +131,16 @@ const createAxiosClient = (isPrivate = false): AxiosInstance => {
         return config;
     });
 
-    // Response interceptor: handle 401/403
+    // Response interceptor: parse errors + 401 refresh/redirect
     instance.interceptors.response.use(
-        (response: AxiosResponse) => response,
+        undefined,
         async (error: AxiosError) => {
+            const parsed = ErrorHandler.parse(error);
+            (error as unknown as Record<string, unknown>).parsed = parsed;
+
             const originalRequest = error.config as RetryAxiosRequestConfig;
             const status = error.response?.status;
 
-            // Attempt token refresh on first 401
             if (status === 401 && !originalRequest._retry) {
                 originalRequest._retry = true;
 
@@ -135,7 +151,6 @@ const createAxiosClient = (isPrivate = false): AxiosInstance => {
                 }
             }
 
-            // Clear tokens and redirect on auth failure
             if (status === 401) {
                 await TokenManager.clearTokens();
                 if (!isServer()) {
@@ -152,5 +167,5 @@ const createAxiosClient = (isPrivate = false): AxiosInstance => {
 
 /* ─── Exports ─── */
 
-export const apiPublic = createAxiosClient(false);
-export const apiPrivate = createAxiosClient(true);
+export const apiPublic = createAxiosClient(false) as unknown as ApiClient;
+export const apiPrivate = createAxiosClient(true) as unknown as ApiClient;

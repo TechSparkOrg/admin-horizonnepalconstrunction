@@ -2,19 +2,17 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { ArrowLeft, Loader2, Upload, Eye, X, Box, Boxes, Shapes } from "lucide-react";
+import { Upload, Eye, X, Box, Boxes } from "lucide-react";
+import { FormHeader } from "@/components/global_ui/form-header";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Tabs,
   TabsContent,
-  TabsList,
-  TabsTrigger,
 } from "@/components/ui/tabs";
 import {
   Select,
@@ -27,6 +25,10 @@ import type { MediaItem } from "@/api/types/media.types";
 import { toSlug } from "@/lib/slug";
 import { isVideoUrl, isModelUrl } from "@/lib/media";
 import { ModelViewer } from "@/components/global_ui/ModelViewer";
+import { FormCard } from "@/components/global_ui/form-card";
+import { FormTabs } from "@/components/global_ui/form-tabs";
+import { SeoFields } from "@/components/global_ui/seo-fields";
+import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
 
 const mediaSchema = z.object({
   alt: z.string().min(1, "Alt text is required"),
@@ -46,7 +48,7 @@ const mediaSchema = z.object({
 
 export type MediaFormData = z.infer<typeof mediaSchema>;
 
-interface TeamMember {
+interface StaffMember {
   id: string;
   name: string;
   image?: string;
@@ -62,7 +64,7 @@ interface Props {
   allowMultiple?: boolean;
   showProjectLink?: boolean;
   showAuthor?: boolean;
-  teamMembers?: TeamMember[];
+  teamMembers?: StaffMember[];
 }
 
 export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept = "image/*,video/*", allowMultiple,   showProjectLink, showAuthor, teamMembers = [] }: Props) {
@@ -149,49 +151,25 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={onBack}>
-            <ArrowLeft className="size-4" />
-          </Button>
-          <div>
-            <p className="text-xs text-gray-500 mb-0.5">{groupTitle}</p>
-            <h1 className="text-2xl font-bold text-gray-900 leading-none">
-              {editing ? "Edit Media" : "Add Media"}
-            </h1>
-          </div>
-        </div>
-        <Button
-          type="submit"
-          form="media-form"
-          disabled={isSubmitting || saving}
-          className="bg-[lab(20_23.9_-60.14)] hover:bg-[lab(15_23.9_-60.14)] text-white"
-        >
-          {(isSubmitting || saving) && <Loader2 className="size-4 animate-spin" />}
-          {saving ? "Saving..." : editing ? "Update" : files.length > 1 ? `Upload ${files.length} files` : "Upload"}
-        </Button>
-      </div>
+      <FormHeader
+        breadcrumb={groupTitle}
+        title={editing ? "Edit Media" : "Add Media"}
+        onBack={onBack}
+        onSave={handleSubmit(onSubmit)}
+        saving={isSubmitting || saving}
+        saveDisabled={isSubmitting || saving}
+        saveLabel={editing ? "Update" : files.length > 1 ? `Upload ${files.length} files` : "Upload"}
+      />
 
       <form id="media-form" onSubmit={handleSubmit(onSubmit)}>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col">
           <div>
-            <TabsList className="bg-gray-100 rounded-lg p-0.5 gap-0 w-auto h-auto">
-              <TabsTrigger value="content" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium [&_svg]:size-3.5">
-                Content
-              </TabsTrigger>
-              <TabsTrigger value="seo" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium [&_svg]:size-3.5">
-                SEO
-              </TabsTrigger>
-              
-              <TabsTrigger value="settings" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[lab(20_23.9_-60.14)] data-[state=active]:shadow-sm text-gray-500 px-3 py-1.5 text-xs font-medium [&_svg]:size-3.5">
-                Settings
-              </TabsTrigger>
-            </TabsList>
+            <FormTabs tabs={[{ value: "content", label: "Content" }, { value: "seo", label: "SEO" }, { value: "settings", label: "Settings" }]} />
           </div>
 
           <div>
             <TabsContent value="content" className="space-y-5 mt-4">
-              <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 w-full">
+              <FormCard className="w-full">
                 <div className="space-y-1.5">
                   <Label>Title</Label>
                   <Input
@@ -287,7 +265,7 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
                   )}
 
                   <div
-                    className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center cursor-pointer hover:border-[lab(20_23.9_-60.14)]/30 transition"
+                    className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center cursor-pointer hover:border-sidebar-primary/30 transition"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Upload className="w-6 h-6 mx-auto mb-1.5 text-gray-400" />
@@ -315,69 +293,29 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
                   />
                   {errors.alt && <p className="text-xs text-red-500">{errors.alt.message}</p>}
                 </div>
-              </div>
+              </FormCard>
             </TabsContent>
 
             <TabsContent value="seo" className="mt-4">
-              <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 w-full">
-                <div className="space-y-1.5">
-                  <Label>Meta Title</Label>
-                  <Input
-                    {...register("meta_title")}
-                    placeholder="SEO title"
-                  />
-                  <p className="text-right text-[11px] text-gray-400">{(watchMetaTitle || "").length} / 60</p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>Meta Description</Label>
-                    <Textarea
-                      {...register("meta_description")}
-                      placeholder="Brief description"
-                      rows={3}
-                    />
-                    <p className="text-right text-[11px] text-gray-400">{(watchMetaDesc || "").length} / 160</p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>Meta Keywords</Label>
-                  <Input
-                    {...register("keywords")}
-                    placeholder="keyword1, keyword2, keyword3"
-                  />
-                  <p className="text-xs text-gray-400">Comma-separated keywords for search engines.</p>
-                </div>
-              </div>
+              <SeoFields
+                metaTitle={watchMetaTitle ?? ""}
+                metaDescription={watchMetaDesc ?? ""}
+                metaKeywords={watch("keywords") ?? ""}
+                onMetaTitleChange={(v) => setValue("meta_title", v)}
+                onMetaDescriptionChange={(v) => setValue("meta_description", v)}
+                onMetaKeywordsChange={(v) => setValue("keywords", v)}
+              />
             </TabsContent>
 
             <TabsContent value="settings" className="mt-4">
-              <div className="bg-white rounded-xl border border-gray-200 p-5 w-full space-y-4">
+              <FormCard className="w-full">
                 <div className="space-y-1.5">
                   <Label>Status</Label>
-                  <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-                    <button
-                      type="button"
-                      onClick={() => setValue("is_active", true)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                        watchIsActive
-                          ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                          : "text-gray-500 hover:text-gray-900"
-                      }`}
-                    >
-                      Active
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setValue("is_active", false)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                        !watchIsActive
-                          ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                          : "text-gray-500 hover:text-gray-900"
-                      }`}
-                    >
-                      Inactive
-                    </button>
-                  </div>
+                  <SegmentedToggle<boolean>
+                    value={watchIsActive}
+                    onChange={(v) => setValue("is_active", v)}
+                    options={[{ value: true, label: "Active" }, { value: false, label: "Inactive" }]}
+                  />
                 </div>
 
                 {showProjectLink && (
@@ -393,30 +331,11 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
                 {showAuthor && (
                   <div className="space-y-3">
                     <Label>Author</Label>
-                    <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-1 w-fit">
-                      <button
-                        type="button"
-                        onClick={() => setValue("authorMode", "manual")}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                          watchAuthorMode === "manual"
-                            ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                            : "text-gray-500 hover:text-gray-900"
-                        }`}
-                      >
-                        Manual
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setValue("authorMode", "team")}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                          watchAuthorMode === "team"
-                            ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                            : "text-gray-500 hover:text-gray-900"
-                        }`}
-                      >
-                        From Team
-                      </button>
-                    </div>
+                    <SegmentedToggle<"manual" | "team">
+                      value={watchAuthorMode}
+                      onChange={(v) => setValue("authorMode", v)}
+                      options={[{ value: "manual", label: "Manual" }, { value: "team", label: "From Team" }]}
+                    />
 
                     {watchAuthorMode === "manual" ? (
                       <div className="space-y-1.5">
@@ -450,7 +369,7 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
                 )}
 
 
-              </div>
+              </FormCard>
             </TabsContent>
           </div>
         </Tabs>
