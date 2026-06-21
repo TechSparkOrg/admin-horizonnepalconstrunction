@@ -2,6 +2,7 @@
 
 import { FileText, ImageIcon, Pencil, Trash2, Eye } from "lucide-react";
 import type { Page as ApiPage } from "@/api/types/page.types";
+import { formatDate } from "@/lib/dates";
 import {
   Table,
   TableBody,
@@ -78,9 +79,7 @@ export function PagesTable({ pages, onEdit, onDelete, deleteSlug, setDeleteSlug 
                   </Badge>
                 </TableCell>
                 <TableCell className="text-sm text-gray-500">
-                  {item.created_at
-                    ? new Date(item.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                    : "—"}
+                  {item.created_at ? formatDate(item.created_at) : "—"}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-2">

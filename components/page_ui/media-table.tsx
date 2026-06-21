@@ -4,6 +4,7 @@ import Image from "next/image";
 import { ImageIcon, Box, Boxes } from "lucide-react";
 import type { MediaItem } from "@/api/types/media.types";
 import { isVideoUrl, isModelUrl } from "@/lib/media";
+import { formatDate } from "@/lib/dates";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
 import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 
@@ -16,14 +17,6 @@ interface Props {
   onEdit: (item: MediaItem) => void;
   onDelete: (id: string) => void;
   groupLabel: string;
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 }
 
 function GroupBadge({ group }: { group: string }) {
