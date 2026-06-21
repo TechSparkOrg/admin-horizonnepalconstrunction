@@ -9,7 +9,7 @@ import { ActionButtons } from "@/components/global_ui/action-buttons";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { DeleteDialog } from "@/components/global_ui/delete-dialog";
-import { StatusBadge } from "@/components/global_ui/status-badge";
+import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 import { PaginationBar } from "@/components/global_ui/pagination-bar";
 import type { Category } from "@/api/types/category.types";
 
@@ -100,7 +100,7 @@ export const CategoryTable = memo(function CategoryTable({
                   </TableCell>
                 )}
                 <TableCell>
-                  <StatusBadge active={item.is_active} />
+                  <StatusBadge value={item.is_active} map={ACTIVE_STATUS} />
                 </TableCell>
                 <TableCell>
                   <span className="text-sm text-gray-500 truncate max-w-[220px] block">

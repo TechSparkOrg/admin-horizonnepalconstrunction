@@ -4,7 +4,7 @@ import { HelpCircle } from "lucide-react";
 import type { FaqGroup } from "@/api/types/faq.types";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
-import { StatusBadge } from "@/components/global_ui/status-badge";
+import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 
 interface Props {
   groups: FaqGroup[];
@@ -46,7 +46,7 @@ export function FaqTable({ groups, onEdit, onDelete, page, totalPages, onPageCha
     },
     {
       header: "Status",
-      render: (item) => <StatusBadge active={item.is_active} />,
+      render: (item) => <StatusBadge value={item.is_active} map={ACTIVE_STATUS} />,
     },
   ];
 

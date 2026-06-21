@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { Plus, Search } from "lucide-react";
-import { toast } from "sonner";
-import { StaffAdmin } from "@/api/services/staff.service";
+import { Search } from "lucide-react";
+import { useStaffList, useStaffMutations } from "@/api/hooks/use-staff-query";
+import { useStaffUiStore } from "@/api/zustand/use-staff-store";
 import type { StaffMember } from "@/api/types/staff.types";
 import { STAFF_TYPE_OPTIONS } from "@/api/types/staff.types";
 import { StaffTable } from "@/components/page_ui/staff-table";
@@ -24,8 +23,6 @@ import {
 } from "@/components/ui/input-group";
 
 const ITEMS_PER_PAGE = 10;
-
-type View = "list" | "form";
 
 function itemToForm(item: StaffMember): StaffFormData {
   return {
@@ -72,107 +69,72 @@ function formToPayload(form: StaffFormData) {
 }
 
 export default function AdminStaffPage() {
-  const [items, setItems] = useState<StaffMember[]>([]);
-  const [total, setTotal] = useState(0);
-  const [view, setView] = useState<View>("list");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<StaffFormData>(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [currentPage, setCurrentPage] = useState(1);
+  const view = useStaffUiStore((s) => s.view);
+  const editingId = useStaffUiStore((s) => s.editingId);
+  const form = useStaffUiStore((s) => s.form);
+  const saving = useStaffUiStore((s) => s.saving);
+  const search = useStaffUiStore((s) => s.search);
+  const typeFilter = useStaffUiStore((s) => s.typeFilter);
+  const currentPage = useStaffUiStore((s) => s.currentPage);
 
-  const searchParams = useMemo(() => ({
+  const openNew = useStaffUiStore((s) => s.openNew);
+  const back = useStaffUiStore((s) => s.back);
+  const setFormField = useStaffUiStore((s) => s.setFormField);
+  const setSaving = useStaffUiStore((s) => s.setSaving);
+  const setSearch = useStaffUiStore((s) => s.setSearch);
+  const setTypeFilter = useStaffUiStore((s) => s.setTypeFilter);
+  const setPage = useStaffUiStore((s) => s.setPage);
+
+  const { data, isLoading } = useStaffList({
     search: search || undefined,
     type: typeFilter !== "all" ? typeFilter : undefined,
     page: currentPage,
     page_size: ITEMS_PER_PAGE,
-  }), [search, typeFilter, currentPage]);
+  });
 
-  const loadData = () =>
-    StaffAdmin.search(searchParams)
-      .then((res) => {
-        setItems(res.results ?? []);
-        setTotal(res.count ?? 0);
-      })
-      .catch(() => toast.error("Failed to load data"));
+  const { saveMutation, deleteMutation } = useStaffMutations();
 
-  useEffect(() => {
-    loadData();
-  }, [searchParams]);
-
-  const refetch = loadData;
-
-  const openNew = () => {
-    setForm(EMPTY_FORM);
-    setEditingId(null);
-    setView("form");
-  };
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
 
   const openEdit = (item: StaffMember) => {
-    setForm(itemToForm(item));
-    setEditingId(item.id);
-    setView("form");
+    useStaffUiStore.getState().openEdit(item.id, itemToForm(item));
   };
 
-  const back = () => {
-    setForm(EMPTY_FORM);
-    setView("list");
-  };
-
-  const handleChange = (key: string, value: string | boolean | { platform: string; url: string }[] | null) => {
-    setForm((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
-  };
-
-  const save = async () => {
+  const handleSave = async () => {
     if (!form.name.trim()) return;
     setSaving(true);
     try {
       const payload = formToPayload(form);
-      if (editingId) {
-        await StaffAdmin.update(editingId, payload);
-        toast.success("Staff member updated");
-      } else {
-        await StaffAdmin.create(payload);
-        toast.success("Staff member created");
-      }
-      await refetch();
-      back();
+      await saveMutation.mutateAsync({ id: editingId, payload });
+
     } catch {
-      toast.error("Something went wrong");
+      // handled by mutation
     } finally {
       setSaving(false);
     }
   };
 
-  const confirmDelete = async (id: string) => {
-    try {
-      await StaffAdmin.delete(id);
-      setItems((prev) => prev.filter((g) => g.id !== id));
-      toast.success("Staff member deleted");
-    } catch {
-      toast.error("Failed to delete");
-    }
+  const handleDelete = async (id: string) => {
+    await deleteMutation.mutateAsync(id);
   };
 
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
-    setCurrentPage(1);
-  };
-
-  const handleTypeFilterChange = (v: string) => {
-    setTypeFilter(v);
-    setCurrentPage(1);
-  };
-
   return (
     <>
-      {view === "list" ? (
+      {view === "form" ? (
+        <div className="px-4">
+          <StaffForm
+            form={form}
+            editingId={editingId}
+            saving={saving}
+            onChange={setFormField}
+            onSave={handleSave}
+            onBack={back}
+          />
+        </div>
+      ) : (
         <PageHeader title="Staff" subtitle="Manage your team members" actionLabel="Add Member" onAction={openNew} actionOutlined>
           <div className="flex items-center gap-3 mb-4">
             <InputGroup className="flex-1 max-w-sm h-9">
@@ -181,13 +143,13 @@ export default function AdminStaffPage() {
               </InputGroupAddon>
               <InputGroupInput
                 value={search}
-                onChange={(e) => handleSearchChange(e.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search"
               />
             </InputGroup>
             <Select
               value={typeFilter}
-              onValueChange={handleTypeFilterChange}
+              onValueChange={setTypeFilter}
             >
               <SelectTrigger className="w-36 h-9 text-sm">
                 <SelectValue />
@@ -207,23 +169,12 @@ export default function AdminStaffPage() {
           <StaffTable
             items={items}
             onEdit={openEdit}
-            onDelete={confirmDelete}
+            onDelete={handleDelete}
             page={currentPage}
             totalPages={totalPages}
-            onPageChange={setCurrentPage}
+            onPageChange={setPage}
           />
         </PageHeader>
-      ) : (
-        <div className="px-4">
-          <StaffForm
-            form={form}
-            editingId={editingId}
-            saving={saving}
-            onChange={handleChange}
-            onSave={save}
-            onBack={back}
-          />
-        </div>
       )}
     </>
   );

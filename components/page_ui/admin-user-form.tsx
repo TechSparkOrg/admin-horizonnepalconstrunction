@@ -117,7 +117,8 @@ export function AdminUserForm({
               <CardContent className="p-5 space-y-4">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label>Name</Label>
+                    <Label>Name <span className="text-red-500">*</span></Label>
+                           
                     <Input
                       value={form.name}
                       onChange={(e) => onChange("name", e.target.value)}
@@ -126,7 +127,8 @@ export function AdminUserForm({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Email</Label>
+                    <Label>Email <span className="text-red-500">*</span></Label>
+                           
                     <Input
                       type="email"
                       value={form.email}
@@ -139,7 +141,8 @@ export function AdminUserForm({
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label>Role</Label>
+                    <Label>Role <span className="text-red-500">*</span></Label>
+                           
                     <Select
                       value={form.role}
                       onValueChange={(v) => onChange("role", v)}
@@ -183,7 +186,8 @@ export function AdminUserForm({
             <Card className="bg-white border border-gray-200 rounded-xl">
               <CardContent className="p-5 space-y-4">
                 <div className="space-y-1.5">
-                  <Label>{editingId ? "New Password (optional)" : "Password"}</Label>
+                  <Label>{editingId ? "New Password (optional)" : "Password"} <span className="text-red-500">*</span></Label>
+                         
                   <PasswordInput
                     value={form.password}
                     onChange={(v) => onChange("password", v)}
@@ -198,7 +202,8 @@ export function AdminUserForm({
                 </div>
                 <div className="border-t border-gray-100" />
                 <div className="space-y-1.5">
-                  <Label>Current Password</Label>
+                  <Label>Current Password <span className="text-red-500">*</span></Label>
+                  
                   <PasswordInput
                     value={form.currentPassword}
                     onChange={(v) => onChange("currentPassword", v)}

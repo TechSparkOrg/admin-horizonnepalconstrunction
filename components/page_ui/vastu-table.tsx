@@ -4,7 +4,7 @@ import { Compass } from "lucide-react";
 import type { VastuItem, VastuItemType } from "@/api/types/vastu.types";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
-import { StatusBadge } from "@/components/global_ui/status-badge";
+import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 
 const TYPE_STYLES: Record<VastuItemType, { color: string; label: string }> = {
   section: { color: "border-blue-200 bg-blue-50 text-blue-600", label: "Section" },
@@ -55,7 +55,7 @@ export function VastuTable({ items, onEdit, onDelete, page, totalPages, onPageCh
     },
     {
       header: "Status",
-      render: (item) => <StatusBadge active={item.is_active} />,
+      render: (item) => <StatusBadge value={item.is_active} map={ACTIVE_STATUS} />,
     },
   ];
 

@@ -4,7 +4,7 @@ import { FileText } from "lucide-react";
 import type { TemplateItem } from "@/api/types/template.types";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
-import { StatusBadge } from "@/components/global_ui/status-badge";
+import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 import { formatDate } from "@/lib/utils";
 
 interface Props {
@@ -39,7 +39,7 @@ export function TemplateTable({ items, onEdit, onDelete, page, totalPages, onPag
     },
     {
       header: "Status",
-      render: (item) => <StatusBadge active={item.is_active} />,
+      render: (item) => <StatusBadge value={item.is_active} map={ACTIVE_STATUS} />,
     },
     {
       header: "Created",

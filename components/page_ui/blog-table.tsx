@@ -3,7 +3,7 @@
 import { FileText } from "lucide-react";
 import type { BlogPost } from "@/api/types/blog.types";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
-import { StatusBadge } from "@/components/global_ui/status-badge";
+import { StatusBadge, PUBLISH_STATUS } from "@/components/global_ui/status-badge";
 import { formatDate } from "@/lib/utils";
 
 interface Props {
@@ -35,7 +35,7 @@ export function BlogTable({ blogs, onEdit, onDelete, page, totalPages, onPageCha
     {
       header: "Status",
       render: (item) => (
-        <StatusBadge active={item.is_published} activeLabel="Published" inactiveLabel="Draft" />
+        <StatusBadge value={item.is_published} map={PUBLISH_STATUS} />
       ),
     },
     {

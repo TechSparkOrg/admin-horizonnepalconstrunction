@@ -4,6 +4,7 @@ import { FileText } from "lucide-react";
 import type { AgreementItem } from "@/api/types/agreement.types";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
+import { StatusBadge } from "@/components/global_ui/status-badge";
 
 interface Props {
   items: AgreementItem[];
@@ -15,22 +16,10 @@ interface Props {
   onPageChange: (page: number) => void;
 }
 
-function AgreementStatusBadge({ status }: { status: string }) {
-  const isCompleted = status === "completed";
-  return (
-    <Badge
-      variant="outline"
-      className={`font-normal gap-1.5 ${
-        isCompleted
-          ? "border-green-200 bg-green-50 text-green-600"
-          : "border-amber-200 bg-amber-50 text-amber-600"
-      }`}
-    >
-      <span className={`w-1.5 h-1.5 rounded-full ${isCompleted ? "bg-green-500" : "bg-amber-500"}`} />
-      {isCompleted ? "Completed" : "Draft"}
-    </Badge>
-  );
-}
+const AGREEMENT_STATUS = {
+  completed: { label: "Completed", color: "border-green-200 bg-green-50 text-green-600", dotColor: "bg-green-500" },
+  draft: { label: "Draft", color: "border-amber-200 bg-amber-50 text-amber-600", dotColor: "bg-amber-500" },
+} as const;
 
 export function AgreementTable({ items, onEdit, onDelete, page, totalPages, onPageChange }: Props) {
   const columns: ColumnDef<AgreementItem>[] = [
@@ -63,7 +52,7 @@ export function AgreementTable({ items, onEdit, onDelete, page, totalPages, onPa
     },
     {
       header: "Status",
-      render: (item) => <AgreementStatusBadge status={item.status} />,
+      render: (item) => <StatusBadge value={item.status} map={AGREEMENT_STATUS} fallback={AGREEMENT_STATUS.draft} />,
     },
   ];
 

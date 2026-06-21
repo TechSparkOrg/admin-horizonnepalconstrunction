@@ -21,6 +21,10 @@ export const queryKeys = {
     all: ["attributes"] as const,
     list: (params?: Record<string, unknown>) => ["attributes", "list", params] as const,
   },
+  staff: {
+    all: ["staff"] as const,
+    list: (params?: Record<string, unknown>) => ["staff", "list", params] as const,
+  },
   settings: {
     all: ["settings"] as const,
   },

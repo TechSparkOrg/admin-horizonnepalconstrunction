@@ -9,7 +9,7 @@ import { ActionButtons } from "@/components/global_ui/action-buttons";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { DeleteDialog } from "@/components/global_ui/delete-dialog";
-import { StatusBadge } from "@/components/global_ui/status-badge";
+import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 import { PaginationBar } from "@/components/global_ui/pagination-bar";
 import type { AttributeItem, UsedIn } from "@/api/types/attribute.types";
 
@@ -87,7 +87,7 @@ export function AttributeTable({ items, onEdit, onDelete, page, totalPages, onPa
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <StatusBadge active={item.is_active} />
+                  <StatusBadge value={item.is_active} map={ACTIVE_STATUS} />
                 </TableCell>
                 <TableCell>
                   <ActionButtons onEdit={() => onEdit(item)} onDelete={() => setDeleteId(item.id)} />

@@ -1,10 +1,20 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Search, ChevronDown } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useState } from "react";
+import { Check, ChevronDown } from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 interface Option {
@@ -36,74 +46,70 @@ export function SearchableSelect({
   onSearchChange,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-
-  const filtered = search
-    ? options.filter((o) => o.label.toLowerCase().includes(search.toLowerCase()))
-    : options;
 
   const selectedLabel = options.find((o) => o.value === value)?.label;
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => { setOpen(true); setSearch(""); }}
-        disabled={disabled}
-        className={cn(
-          "flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors",
-          "placeholder:text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-          "disabled:cursor-not-allowed disabled:opacity-50",
-          !value && "text-muted-foreground",
-          triggerClassName
-        )}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          disabled={disabled}
+          className={cn(
+            "flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors",
+            "hover:bg-accent hover:text-accent-foreground",
+            "disabled:cursor-not-allowed disabled:opacity-50",
+            !value && "text-muted-foreground",
+            triggerClassName
+          )}
+        >
+          <span className="truncate">{selectedLabel || placeholder}</span>
+          <ChevronDown className="size-4 shrink-0 opacity-50" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="p-0"
+        style={{ width: "var(--radix-popover-trigger-width)" }}
+        align="start"
       >
-        <span className="truncate">{selectedLabel || placeholder}</span>
-        <ChevronDown className="size-4 shrink-0 opacity-50" />
-      </button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="!max-w-sm p-0 gap-0">
-          <DialogHeader className="px-3 pt-3 pb-0">
-            <DialogTitle className="sr-only">Select option</DialogTitle>
-          </DialogHeader>
-          <div className="relative px-3 pb-2">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); onSearchChange?.(e.target.value); }}
-              placeholder={searchPlaceholder}
-              className="pl-9 h-9 text-sm"
-              autoFocus
-            />
-          </div>
-          <ScrollArea className="max-h-60">
-            {filtered.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">{emptyMessage}</p>
-            ) : (
-              <div className="p-1">
-                {filtered.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => {
-                      onChange(option.value);
-                      setOpen(false);
-                    }}
+        <Command shouldFilter={!onSearchChange}>
+          <CommandInput
+            placeholder={searchPlaceholder}
+            onValueChange={onSearchChange}
+            className="h-9"
+          />
+          <CommandList className="max-h-60">
+            <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
+              {emptyMessage}
+            </CommandEmpty>
+            <CommandGroup>
+              {options.map((option) => (
+                <CommandItem
+                  key={option.value}
+                  value={option.label}
+                  onSelect={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    "rounded-md text-sm",
+                    option.value === value &&
+                      "bg-sidebar-primary/10 text-sidebar-primary font-medium"
+                  )}
+                >
+                  <Check
                     className={cn(
-                      "w-full text-left px-3 py-2 text-sm rounded-md transition",
-                      option.value === value
-                        ? "bg-sidebar-primary/10 text-sidebar-primary font-medium"
-                        : "hover:bg-accent text-foreground"
+                      "mr-2 size-4 shrink-0",
+                      option.value === value ? "opacity-100" : "opacity-0"
                     )}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-    </>
+                  />
+                  <span className="truncate">{option.label}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }

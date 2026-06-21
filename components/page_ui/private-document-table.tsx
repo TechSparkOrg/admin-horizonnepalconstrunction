@@ -5,7 +5,7 @@ import { FileText } from "lucide-react";
 import type { PrivateDocument } from "@/api/types/private-document.types";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
-import { StatusBadge } from "@/components/global_ui/status-badge";
+import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 
 interface Props {
   items: PrivateDocument[];
@@ -60,11 +60,7 @@ export function PrivateDocumentTable({ items, onEdit, onDelete, page, totalPages
     {
       header: "Status",
       render: (item) => (
-        <StatusBadge
-          active={item.status === "active"}
-          activeLabel="Active"
-          inactiveLabel="Inactive"
-        />
+        <StatusBadge value={item.status === "active"} map={ACTIVE_STATUS} />
       ),
     },
   ];

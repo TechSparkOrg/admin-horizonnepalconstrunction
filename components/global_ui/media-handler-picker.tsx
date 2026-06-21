@@ -20,7 +20,6 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useMediaList, useMediaMutations } from "@/api/hooks/use-media-query";
 import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
@@ -36,7 +35,7 @@ export type PickerMediaItem = {
   type?: string;
 };
 
- type MediaPickerMode = "image" | "model";
+type MediaPickerMode = "image" | "model";
 
 interface MediaPickerDialogProps {
   open: boolean;
@@ -172,28 +171,28 @@ export function MediaPickerDialog({
       }}
     >
       <DialogContent className="!max-w-4xl p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-4 pt-3 pb-0">
-          <DialogTitle className="text-sm font-semibold text-gray-800">
+        <DialogHeader className="px-4 py-3 border-b border-gray-200">
+          <DialogTitle className="text-sm font-semibold text-gray-900">
             {title ?? (isModel ? "Add 3D Model" : "Add Image")}
           </DialogTitle>
         </DialogHeader>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as "existing" | "upload")} className="w-full flex flex-col">
-          <div className="px-4">
+          <div className="px-4 pt-3">
             <FormTabs tabs={[{ value: "existing", label: "Library" }, { value: "upload", label: "Upload" }]} />
           </div>
 
           <TabsContent value="existing" className="m-0">
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] divide-x divide-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_260px] divide-x divide-gray-200">
               <div className="p-3 max-h-[55vh] overflow-y-auto">
-                <div className="space-y-2 mb-2">
+                <div className="space-y-2 mb-3">
                   <div className="relative">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
                     <Input
                       value={search}
                       onChange={(e) => handleSearchChange(e.target.value)}
                       placeholder={`Search ${isModel ? "models" : "images"}`}
-                      className="pl-8 h-8 text-xs"
+                      className="pl-8 h-8 text-xs rounded-lg border-gray-200"
                     />
                   </div>
                   <SegmentedToggle
@@ -210,7 +209,7 @@ export function MediaPickerDialog({
                 </div>
 
                 {isLoading ? (
-                  <div className="py-10 text-center text-xs text-gray-400">Loading\u2026</div>
+                  <div className="py-10 text-center text-xs text-gray-400">Loading…</div>
                 ) : pickerItems.length === 0 ? (
                   <EmptyState
                     icon={isModel ? Box : ImageIcon}
@@ -223,67 +222,73 @@ export function MediaPickerDialog({
                       const thumb = item.thumbnail ?? item.url;
                       const active = selected?.id === item.id;
                       return (
-                        <Card
+                        <button
                           key={item.id}
-                          size="sm"
+                          type="button"
+                          onClick={() => handleSelectExisting(item)}
                           className={cn(
-                            "gap-0 p-0 overflow-hidden transition",
+                            "group relative aspect-square w-full overflow-hidden rounded-lg border bg-gray-50 text-left transition-colors",
                             active
-                              ? "border-sidebar-primary ring-1 ring-sidebar-primary/20"
-                              : "border-gray-200"
+                              ? "border-sidebar-primary"
+                              : "border-gray-200 hover:border-gray-300"
                           )}
                         >
-                          <div className="aspect-[4/3] bg-gray-100 relative group">
-                            <Image src={thumb} alt={item.name} fill className="object-cover" />
-                            <Button
-                              variant="ghost"
-                              onClick={() => handleSelectExisting(item)}
-                              className={cn(
-                                "absolute inset-0 flex items-center justify-center transition rounded-none",
-                                active
-                                  ? "bg-sidebar-primary/10"
-                                  : "bg-black/0 group-hover:bg-black/30"
-                              )}
-                            >
-                              {active ? (
-                                <span className="size-6 rounded-full bg-sidebar-primary flex items-center justify-center">
-                                  <Check className="size-3.5 text-white" />
-                                </span>
-                              ) : (
-                                <span className="text-white text-[11px] font-medium opacity-0 group-hover:opacity-100 transition px-2 py-1 rounded bg-black/50">
-                                  Select
-                                </span>
-                              )}
-                            </Button>
-                            {isModel && (
-                              <span className="absolute top-1 right-1 bg-black/60 text-white text-[9px] px-1 rounded font-medium uppercase">
-                                {item.type}
-                              </span>
+                          <Image
+                            src={thumb}
+                            alt={item.name}
+                            fill
+                            sizes="120px"
+                            className="object-cover"
+                          />
+
+                          {/* selection overlay */}
+                          <div
+                            className={cn(
+                              "absolute inset-0 transition-colors",
+                              active ? "bg-sidebar-primary/15" : "bg-black/0 group-hover:bg-black/10"
                             )}
-                          </div>
-                          <p className="px-1.5 py-1 text-[10px] text-gray-700 truncate">{item.name}</p>
-                        </Card>
+                          />
+
+                          {active && (
+                            <span className="absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-full bg-sidebar-primary shadow-sm">
+                              <Check className="size-3 text-white" strokeWidth={3} />
+                            </span>
+                          )}
+
+                          {isModel && (
+                            <span className="absolute bottom-1.5 left-1.5 rounded bg-black/65 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-white">
+                              {item.type}
+                            </span>
+                          )}
+
+                          {item.name && (
+                            <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/70 to-transparent px-1.5 pb-1 pt-3 text-[10px] font-medium text-white">
+                              {item.name}
+                            </span>
+                          )}
+                        </button>
                       );
                     })}
                   </div>
                 )}
               </div>
 
-              <div className="p-3 flex flex-col">
-                <div className="aspect-[4/3] w-full rounded-md border border-gray-200 bg-gray-50 flex items-center justify-center mb-3 overflow-hidden relative">
+              <div className="p-3 flex flex-col bg-gray-50/60">
+                <div className="aspect-square w-full rounded-lg border border-gray-200 bg-white flex items-center justify-center mb-3 overflow-hidden relative">
                   {selected ? (
                     <Image
                       src={selected.thumbnail ?? selected.url}
                       alt={selected.name}
                       fill
+                      sizes="260px"
                       className="object-cover"
                     />
                   ) : (
                     <div className="text-center text-gray-400 px-3">
                       {isModel ? (
-                        <Box className="size-6 mx-auto mb-1" />
+                        <Box className="size-6 mx-auto mb-1.5" />
                       ) : (
-                        <ImageIcon className="size-6 mx-auto mb-1" />
+                        <ImageIcon className="size-6 mx-auto mb-1.5" />
                       )}
                       <p className="text-[11px]">Select to preview</p>
                     </div>
@@ -296,21 +301,21 @@ export function MediaPickerDialog({
                   onChange={(e) => setAltText(e.target.value)}
                   disabled={!selected}
                   placeholder="Describe this asset"
-                  className="h-7 text-xs"
+                  className="h-8 text-xs rounded-lg border-gray-200 bg-white"
                 />
               </div>
             </div>
           </TabsContent>
 
           <TabsContent value="upload" className="m-0">
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] divide-x divide-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_260px] divide-x divide-gray-200">
               <div className="p-3">
                 <Label
                   htmlFor="media-upload-input"
-                  className="flex flex-col items-center justify-center gap-1.5 h-48 rounded-md border border-dashed border-gray-300 text-gray-400 hover:bg-gray-50 transition cursor-pointer"
+                  className="flex flex-col items-center justify-center gap-1.5 h-48 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:bg-gray-50 hover:border-gray-400 transition-colors cursor-pointer"
                 >
                   {uploadPreview ? (
-                    <Image src={uploadPreview} alt="Preview" width={400} height={300} className="max-h-full max-w-full object-contain" />
+                    <Image src={uploadPreview} alt="Preview" width={400} height={300} className="max-h-full max-w-full object-contain rounded-md" />
                   ) : (
                     <>
                       <UploadCloud className="size-6" />
@@ -330,14 +335,14 @@ export function MediaPickerDialog({
                 />
               </div>
 
-              <div className="p-3">
+              <div className="p-3 bg-gray-50/60">
                 <Label className="text-[11px] mb-1 text-gray-600">Alt Text</Label>
                 <Input
                   value={altText}
                   onChange={(e) => setAltText(e.target.value)}
                   disabled={!uploadFile}
                   placeholder="Describe this asset"
-                  className="h-7 text-xs"
+                  className="h-8 text-xs rounded-lg border-gray-200 bg-white"
                 />
               </div>
             </div>
@@ -350,7 +355,12 @@ export function MediaPickerDialog({
               ? `${pickerItems.length} ${isModel ? "models" : "images"}`
               : "Uploads are saved on confirm"}
           </p>
-          <Button onClick={handleConfirm} disabled={!canConfirm} size="sm" className="h-7 text-xs px-3 bg-sidebar-primary hover:bg-sidebar-primary/90 disabled:opacity-50">
+          <Button
+            onClick={handleConfirm}
+            disabled={!canConfirm}
+            size="sm"
+            className="h-8 text-xs px-4 rounded-lg bg-sidebar-primary hover:bg-sidebar-primary/90 disabled:opacity-50"
+          >
             {tab === "existing" ? "Select" : "Upload"}
           </Button>
         </div>

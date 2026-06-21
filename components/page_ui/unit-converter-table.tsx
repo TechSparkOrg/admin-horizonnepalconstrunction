@@ -4,7 +4,7 @@ import { ArrowLeftRight } from "lucide-react";
 import type { UnitConversionItem } from "@/api/types/unit-converter.types";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
-import { StatusBadge } from "@/components/global_ui/status-badge";
+import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 
 interface Props {
   items: UnitConversionItem[];
@@ -40,7 +40,7 @@ export function UnitConverterTable({ items, onEdit, onDelete, page, totalPages, 
     },
     {
       header: "Status",
-      render: (item) => <StatusBadge active={item.is_active} />,
+      render: (item) => <StatusBadge value={item.is_active} map={ACTIVE_STATUS} />,
     },
   ];
 

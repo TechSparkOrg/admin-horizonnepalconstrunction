@@ -1,13 +1,13 @@
 "use client";
 
-import { CheckSquare, Square, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { FormHeader } from "@/components/global_ui/form-header";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 import type { PermissionGroup } from "@/api/types/permission.types";
 
 interface RoleFormData {
@@ -105,7 +105,7 @@ export function RoleForm({
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
               <Label className="text-base font-semibold">Permissions</Label>
-              <span className="text-xs text-gray-400">{(form.permission_ids ?? []).length} selected</span>
+              <span className="text-xs text-gray-400">{ids.length} selected</span>
             </div>
             <ScrollArea className="h-[500px] pr-3">
               <div className="space-y-2">
@@ -113,28 +113,27 @@ export function RoleForm({
                   const collapsedGroup = collapsed.has(group.resource);
                   const selectedPerms = group.permissions.filter((p) => ids.includes(p.id));
                   const selectedCount = selectedPerms.length;
+                  const fullySelected = groupFullySelected(group);
+                  const partiallySelected = groupPartiallySelected(group);
+
                   return (
                     <div key={group.resource} className="border border-gray-200 rounded-lg overflow-hidden">
-                      <button
-                        type="button"
-                        onClick={() => toggleCollapse(group.resource)}
-                        className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-gray-100 transition text-left"
-                      >
-                        <div className="flex items-center gap-1.5 flex-wrap">
+                      <div className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50">
+                        <div className="flex items-center gap-2.5 flex-wrap">
                           <button
                             type="button"
-                            onClick={(e) => { e.stopPropagation(); toggleGroup(group); }}
-                            className="text-gray-400 hover:text-sidebar-primary transition shrink-0"
-                          >
-                            {groupFullySelected(group) ? (
-                              <CheckSquare className="size-4 text-sidebar-primary" />
-                            ) : groupPartiallySelected(group) ? (
-                              <CheckSquare className="size-4 text-sidebar-primary/60" />
-                            ) : (
-                              <Square className="size-4" />
+                            onClick={() => toggleGroup(group)}
+                            className={cn(
+                              "text-sm font-medium transition",
+                              fullySelected
+                                ? "text-sidebar-primary"
+                                : partiallySelected
+                                ? "text-sidebar-primary/70"
+                                : "text-gray-900 hover:text-sidebar-primary"
                             )}
+                          >
+                            {group.label}
                           </button>
-                          <span className="text-sm font-medium text-gray-900">{group.label}</span>
                           <span className="text-xs text-gray-400">({selectedCount}/{group.permissions.length})</span>
                           {selectedPerms.slice(0, 3).map((p) => (
                             <span
@@ -150,24 +149,34 @@ export function RoleForm({
                             </span>
                           )}
                         </div>
-                        <ChevronDown className={`size-4 text-gray-400 transition ${collapsedGroup ? "" : "rotate-180"}`} />
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleCollapse(group.resource)}
+                          className="shrink-0 p-1 -m-1 text-gray-400 hover:text-gray-600 transition"
+                        >
+                          <ChevronDown className={cn("size-4 transition-transform", !collapsedGroup && "rotate-180")} />
+                        </button>
+                      </div>
                       {!collapsedGroup && (
-                        <div className="px-4 py-2 space-y-1">
-                          {group.permissions.map((perm) => (
-                            <label
-                              key={perm.id}
-                              className="flex items-center gap-2 py-1 cursor-pointer hover:text-gray-900 transition"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={ids.includes(perm.id)}
-                                onChange={() => togglePermission(perm.id)}
-                                className="accent-sidebar-primary w-3.5 h-3.5"
-                              />
-                              <span className="text-xs text-gray-600">{perm.name}</span>
-                            </label>
-                          ))}
+                        <div className="px-4 py-2.5 flex flex-wrap gap-1.5">
+                          {group.permissions.map((perm) => {
+                            const isSelected = ids.includes(perm.id);
+                            return (
+                              <button
+                                key={perm.id}
+                                type="button"
+                                onClick={() => togglePermission(perm.id)}
+                                className={cn(
+                                  "text-xs px-2.5 py-1 rounded-lg border transition text-left",
+                                  isSelected
+                                    ? "border-sidebar-primary/30 bg-sidebar-primary/5 text-sidebar-primary font-medium"
+                                    : "border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600"
+                                )}
+                              >
+                                {perm.name}
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
                     </div>

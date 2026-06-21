@@ -6,7 +6,7 @@ import type { StaffMember } from "@/api/types/staff.types";
 import { STAFF_TYPE_STYLES } from "@/api/types/staff.types";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
-import { StatusBadge } from "@/components/global_ui/status-badge";
+import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 
 interface Props {
   items: StaffMember[];
@@ -59,7 +59,7 @@ export function StaffTable({ items, onEdit, onDelete, page, totalPages, onPageCh
     },
     {
       header: "Status",
-      render: (item) => <StatusBadge active={item.is_active} />,
+      render: (item) => <StatusBadge value={item.is_active} map={ACTIVE_STATUS} />,
     },
   ];
 

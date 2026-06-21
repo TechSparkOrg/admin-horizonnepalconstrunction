@@ -5,7 +5,7 @@ import { ImageIcon, Box, Boxes } from "lucide-react";
 import type { MediaItem } from "@/api/types/media.types";
 import { isVideoUrl, isModelUrl } from "@/lib/media";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
-import { StatusBadge } from "@/components/global_ui/status-badge";
+import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 
 interface Props {
   items: MediaItem[];
@@ -73,7 +73,7 @@ export function MediaTable({ items, page, totalPages, totalCount, onPageChange, 
     },
     {
       header: "Status",
-      render: (item) => <StatusBadge active={item.is_active} />,
+      render: (item) => <StatusBadge value={item.is_active} map={ACTIVE_STATUS} />,
     },
     {
       header: "Created",

@@ -4,7 +4,7 @@ import { MessageSquareQuote } from "lucide-react";
 import type { ReviewGroup } from "@/api/types/review.types";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
-import { StatusBadge } from "@/components/global_ui/status-badge";
+import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 
 interface Props {
   groups: ReviewGroup[];
@@ -42,7 +42,7 @@ export function ReviewTable({ groups, onEdit, onDelete, page, totalPages, onPage
     },
     {
       header: "Status",
-      render: (item) => <StatusBadge active={item.is_active} />,
+      render: (item) => <StatusBadge value={item.is_active} map={ACTIVE_STATUS} />,
     },
   ];
 

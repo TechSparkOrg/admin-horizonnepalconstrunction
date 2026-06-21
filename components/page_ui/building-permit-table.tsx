@@ -4,7 +4,7 @@ import { FileText } from "lucide-react";
 import type { BuildingPermitItem, BuildingPermitItemType } from "@/api/types/building-permit.types";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
-import { StatusBadge } from "@/components/global_ui/status-badge";
+import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 
 const TYPE_STYLES: Record<BuildingPermitItemType, { color: string; label: string }> = {
   workflow_step: { color: "border-blue-200 bg-blue-50 text-blue-600", label: "Workflow Step" },
@@ -63,7 +63,7 @@ export function BuildingPermitTable({ items, onEdit, onDelete, page, totalPages,
     },
     {
       header: "Status",
-      render: (item) => <StatusBadge active={item.is_active} />,
+      render: (item) => <StatusBadge value={item.is_active} map={ACTIVE_STATUS} />,
     },
   ];
 

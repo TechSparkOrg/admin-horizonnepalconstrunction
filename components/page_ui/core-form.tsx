@@ -20,6 +20,11 @@ import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
 import { useSettings, useSettingsMutations } from "@/api/hooks/use-settings-query";
 import type { SiteSettingsPayload } from "@/api/types/settings.types";
 
+const SEO_STATUS = {
+  true: { label: "Has default", color: "border-green-200 bg-green-50 text-green-600", dotColor: "bg-green-500" },
+  false: { label: "No defaults", color: "border-gray-200 bg-gray-50 text-gray-500", dotColor: "bg-gray-400" },
+} as const;
+
 let _id = 0;
 function genId() { return crypto.randomUUID?.() ?? `id-${++_id}`; }
 
@@ -231,7 +236,7 @@ export function CoreForm() {
                     <p className="text-sm font-semibold text-gray-900">Global SEO</p>
                     <p className="text-xs text-gray-500">Default meta tags for pages that don&apos;t have their own.</p>
                   </div>
-                  <StatusBadge active={!!seo.title} activeLabel="Has default" inactiveLabel="No defaults" />
+                  <StatusBadge value={!!seo.title} map={SEO_STATUS} />
                 </div>
                 <SeoFields
                   metaTitle={seo.title}

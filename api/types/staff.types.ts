@@ -1,3 +1,5 @@
+import { SOCIAL_PLATFORMS } from "@/lib/social-platforms";
+
 export type StaffType = "core" | "remote";
 
 export const STAFF_TYPE_OPTIONS: { value: StaffType; label: string }[] = [
@@ -10,14 +12,6 @@ export const STAFF_TYPE_STYLES: Record<StaffType, { color: string; label: string
   remote: { color: "border-purple-200 bg-purple-50 text-purple-600", label: "Remote" },
 };
 
-export const SOCIAL_PLATFORMS = [
-  "facebook",
-  "instagram",
-  "twitter",
-  "linkedin",
-  "tiktok",
-  "youtube",
-] as const;
 
 export interface StaffSocialLink {
   platform: typeof SOCIAL_PLATFORMS[number];

@@ -4,7 +4,7 @@ import { Package } from "lucide-react";
 import Image from "next/image";
 import type { MaterialItem } from "@/api/types/material-list.types";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
-import { StatusBadge } from "@/components/global_ui/status-badge";
+import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 
 interface Props {
   items: MaterialItem[];
@@ -50,7 +50,7 @@ export function MaterialListTable({ items, onEdit, onDelete, page, totalPages, o
     },
     {
       header: "Status",
-      render: (item) => <StatusBadge active={item.is_active} />,
+      render: (item) => <StatusBadge value={item.is_active} map={ACTIVE_STATUS} />,
     },
   ];
 

@@ -1,7 +1,8 @@
+import { SOCIAL_PLATFORMS } from "@/lib/social-platforms";
 import { z } from "zod";
 
 export const socialLinkSchema = z.object({
-  platform: z.enum(["facebook", "instagram", "twitter", "linkedin", "tiktok", "youtube"]),
+  platform: z.enum(SOCIAL_PLATFORMS),
   url: z.string(),
 });
 
@@ -10,10 +11,10 @@ export const staffSchema = z.object({
   employeeId: z.string().optional(),
   type: z.enum(["core", "remote"]),
   attributeId: z.string().nullable().optional(),
-  designationLabel: z.string().optional(),
-  designationValue: z.string().optional(),
-  departmentLabel: z.string().optional(),
-  departmentValue: z.string().optional(),
+  designationLabel: z.string().min(1, "Designation label is required"),
+  designationValue: z.string().min(1, "Designation is required"),
+  departmentLabel: z.string().min(1, "Department label is required"),
+  departmentValue: z.string().min(1, "Department is required"),
   joiningDate: z.string().optional(),
   currentlyWorking: z.boolean(),
   endDate: z.string().optional(),

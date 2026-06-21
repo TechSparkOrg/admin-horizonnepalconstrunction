@@ -1,28 +1,26 @@
 "use client";
 
-import { ImagePlus, X, Plus, Trash2 } from "lucide-react";
+import { RiImageAddLine, RiCloseLine, RiAddLine, RiDeleteBinLine } from "@remixicon/react";
 import { FormHeader } from "@/components/global_ui/form-header";
 import { FormTabs } from "@/components/global_ui/form-tabs";
 import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { useState } from "react";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import {  Select,  SelectContent,  SelectItem,  SelectTrigger,  SelectValue} from "@/components/ui/select";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
+import {  ToggleGroup,  ToggleGroupItem} from "@/components/ui/toggle-group";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { MediaPickerDialog } from "@/components/global_ui/media-handler-picker";
 import type { PickerMediaItem } from "@/components/global_ui/media-handler-picker";
 import type { StaffType, StaffSocialLink } from "@/api/types/staff.types";
-import { STAFF_TYPE_OPTIONS, SOCIAL_PLATFORMS } from "@/api/types/staff.types";
+import { STAFF_TYPE_OPTIONS } from "@/api/types/staff.types";
+
 import { useAttributeOptions } from "@/api/hooks/use-attribute-query";
+import { cn } from "@/lib/utils";
+import { SOCIAL_PLATFORMS } from "@/lib/social-platforms";
 
 interface StaffFormData {
   name: string;
@@ -111,7 +109,7 @@ export function StaffForm({
   };
 
   const addSocialLink = () => {
-    onChange("socialLinks", [...form.socialLinks, { platform: "facebook", url: "" }]);
+    onChange("socialLinks", [...form.socialLinks, { platform: "Facebook", url: "" }]);
   };
 
   const updateSocialLink = (i: number, field: "platform" | "url", val: string) => {
@@ -148,7 +146,7 @@ export function StaffForm({
               <CardContent className="p-5 space-y-4">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label>Name</Label>
+                    <Label>Name <span className="text-red-500">*</span></Label>
                     <Input
                       value={form.name}
                       onChange={(e) => onChange("name", e.target.value)}
@@ -167,22 +165,19 @@ export function StaffForm({
 
                 <div className="space-y-1.5">
                   <Label>Type</Label>
-                  <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
+                  <ToggleGroup
+                    type="single"
+                    value={form.type}
+                    onValueChange={(v) => v && onChange("type", v)}
+                    variant="outline"
+                    size="sm"
+                  >
                     {STAFF_TYPE_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => onChange("type", opt.value)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                          form.type === opt.value
-                            ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                            : "text-gray-500 hover:text-gray-900"
-                        }`}
-                      >
+                      <ToggleGroupItem key={opt.value} value={opt.value} aria-label={opt.label}>
                         {opt.label}
-                      </button>
+                      </ToggleGroupItem>
                     ))}
-                  </div>
+                  </ToggleGroup>
                 </div>
               </CardContent>
             </Card>
@@ -209,7 +204,7 @@ export function StaffForm({
                 {selectedAttribute && (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label>Designation</Label>
+                      <Label>Designation <span className="text-red-500">*</span></Label>
                       <div className="flex items-center gap-2">
                         <Select
                           value={form.designationLabel}
@@ -246,7 +241,7 @@ export function StaffForm({
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label>Department</Label>
+                      <Label>Department <span className="text-red-500">*</span></Label>
                       <div className="flex items-center gap-2">
                         <Select
                           value={form.departmentLabel}
@@ -295,30 +290,16 @@ export function StaffForm({
                   </div>
                   <div className="space-y-1.5">
                     <Label>Currently Working</Label>
-                    <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-                      <button
-                        type="button"
-                        onClick={() => onChange("currentlyWorking", true)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                          form.currentlyWorking
-                            ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                            : "text-gray-500 hover:text-gray-900"
-                        }`}
-                      >
-                        Yes
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onChange("currentlyWorking", false)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                          !form.currentlyWorking
-                            ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                            : "text-gray-500 hover:text-gray-900"
-                        }`}
-                      >
-                        No
-                      </button>
-                    </div>
+                    <ToggleGroup
+                      type="single"
+                      value={form.currentlyWorking ? "yes" : "no"}
+                      onValueChange={(v) => v && onChange("currentlyWorking", v === "yes")}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <ToggleGroupItem value="yes" aria-label="Yes">Yes</ToggleGroupItem>
+                      <ToggleGroupItem value="no" aria-label="No">No</ToggleGroupItem>
+                    </ToggleGroup>
                   </div>
                 </div>
 
@@ -333,36 +314,48 @@ export function StaffForm({
                   </div>
                 )}
 
-                <div className="space-y-1.5">
-                  <Label>Photo</Label>
-                  <div className="flex items-start gap-4">
-                    {form.photo ? (
-                      <div className="relative w-24 h-24 rounded-full border border-gray-200 overflow-hidden group shrink-0">
-                        <Image src={form.photo} alt={form.name} fill className="object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => onChange("photo", "")}
-                          className="absolute top-1 right-1 w-6 h-6 grid place-items-center bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition"
-                        >
-                          <X className="size-3" />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="w-24 h-24 rounded-full border border-dashed border-gray-200 grid place-items-center text-gray-400 shrink-0">
-                        <span className="text-[11px]">No image</span>
-                      </div>
-                    )}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setMediaPickerOpen(true)}
-                    >
-                      <ImagePlus className="size-3.5" />
-                      Choose Image
-                    </Button>
-                  </div>
-                </div>
+              <div className="space-y-1.5">
+  <Label>Photo</Label>
+  <div className="flex items-center gap-4">
+    <div className="group relative shrink-0">
+      <Avatar className="size-24 rounded-lg">
+        {form.photo && <AvatarImage src={form.photo} alt={form.name} className="object-cover" />}
+        <AvatarFallback
+          className={cn(
+            "rounded-lg",
+            !form.photo && "border border-dashed border-gray-200 bg-gray-50 text-gray-400 text-[11px]"
+          )}
+        >
+          {form.photo ? form.name.charAt(0).toUpperCase() : "No image"}
+        </AvatarFallback>
+      </Avatar>
+
+      {form.photo && (
+        <button
+          type="button"
+          onClick={() => onChange("photo", "")}
+          className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full bg-gray-900 text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100"
+        >
+          <RiCloseLine className="size-3" />
+        </button>
+      )}
+    </div>
+
+    <div className="flex flex-col gap-1.5">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="rounded-lg"
+        onClick={() => setMediaPickerOpen(true)}
+      >
+        <RiImageAddLine data-icon="inline-start" />
+        {form.photo ? "Change Image" : "Choose Image"}
+      </Button>
+      <p className="text-[11px] text-gray-400">PNG, JPG up to 5MB</p>
+    </div>
+  </div>
+</div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -394,7 +387,7 @@ export function StaffForm({
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Social Links</p>
                     <Button type="button" variant="outline" size="sm" onClick={addSocialLink}>
-                      <Plus className="size-3" />
+                      <RiAddLine data-icon="inline-start" />
                       Add Platform
                     </Button>
                   </div>
@@ -430,7 +423,7 @@ export function StaffForm({
                             onClick={() => removeSocialLink(i)}
                             className="size-9 flex items-center justify-center rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 shrink-0"
                           >
-                            <Trash2 className="size-4" />
+                            <RiDeleteBinLine className="size-4" />
                           </button>
                         </div>
                       ))}
@@ -446,58 +439,30 @@ export function StaffForm({
               <CardContent className="p-5 space-y-5">
                 <div className="space-y-1.5">
                   <Label>Status</Label>
-                  <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-                    <button
-                      type="button"
-                      onClick={() => onChange("isActive", true)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                        form.isActive
-                          ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                          : "text-gray-500 hover:text-gray-900"
-                      }`}
-                    >
-                      Active
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onChange("isActive", false)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                        !form.isActive
-                          ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                          : "text-gray-500 hover:text-gray-900"
-                      }`}
-                    >
-                      Inactive
-                    </button>
-                  </div>
+                  <ToggleGroup
+                    type="single"
+                    value={form.isActive ? "active" : "inactive"}
+                    onValueChange={(v) => v && onChange("isActive", v === "active")}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <ToggleGroupItem value="active" aria-label="Active">Active</ToggleGroupItem>
+                    <ToggleGroupItem value="inactive" aria-label="Inactive">Inactive</ToggleGroupItem>
+                  </ToggleGroup>
                 </div>
 
                 <div className="space-y-1.5">
                   <Label>Show on Public Team</Label>
-                  <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-                    <button
-                      type="button"
-                      onClick={() => onChange("showOnPublic", true)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                        form.showOnPublic
-                          ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                          : "text-gray-500 hover:text-gray-900"
-                      }`}
-                    >
-                      Visible
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onChange("showOnPublic", false)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                        !form.showOnPublic
-                          ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                          : "text-gray-500 hover:text-gray-900"
-                      }`}
-                    >
-                      Hidden
-                    </button>
-                  </div>
+                  <ToggleGroup
+                    type="single"
+                    value={form.showOnPublic ? "visible" : "hidden"}
+                    onValueChange={(v) => v && onChange("showOnPublic", v === "visible")}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <ToggleGroupItem value="visible" aria-label="Visible">Visible</ToggleGroupItem>
+                    <ToggleGroupItem value="hidden" aria-label="Hidden">Hidden</ToggleGroupItem>
+                  </ToggleGroup>
                   <p className="text-xs text-gray-400">When visible, this member appears on the public website team section.</p>
                 </div>
               </CardContent>
