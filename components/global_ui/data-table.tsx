@@ -40,6 +40,7 @@ interface DataTableProps<T> {
   };
   getDepth?: (item: T) => number;
   totalCount?: number;
+  hideDeleteDialog?: boolean;
 }
 
 export function DataTable<T>({
@@ -55,6 +56,7 @@ export function DataTable<T>({
   deleteDialog,
   getDepth,
   totalCount,
+  hideDeleteDialog = false,
 }: DataTableProps<T>) {
   const [deleteIdentifier, setDeleteIdentifier] = useState<string | null>(null);
 
@@ -96,7 +98,7 @@ export function DataTable<T>({
                 <TableCell>
                   <ActionButtons
                     onEdit={() => onEdit(item)}
-                    onDelete={() => setDeleteIdentifier(getIdentifier(item))}
+                    onDelete={hideDeleteDialog ? () => onDelete(getIdentifier(item)) : () => setDeleteIdentifier(getIdentifier(item))}
                   />
                 </TableCell>
               </TableRow>
@@ -110,13 +112,15 @@ export function DataTable<T>({
         <div className="mt-6"><PaginationBar page={page} totalPages={totalPages} onPageChange={onPageChange} /></div>
       )}
 
-      <DeleteDialog
-        open={!!deleteIdentifier}
-        onOpenChange={(o) => !o && setDeleteIdentifier(null)}
-        onConfirm={() => deleteIdentifier && onDelete(deleteIdentifier)}
-        title={deleteDialog?.title ?? "Delete this item?"}
-        description={deleteDialog?.description ?? "This cannot be undone."}
-      />
+      {!hideDeleteDialog && (
+        <DeleteDialog
+          open={!!deleteIdentifier}
+          onOpenChange={(o) => !o && setDeleteIdentifier(null)}
+          onConfirm={() => deleteIdentifier && onDelete(deleteIdentifier)}
+          title={deleteDialog?.title ?? "Delete this item?"}
+          description={deleteDialog?.description ?? "This cannot be undone."}
+        />
+      )}
     </>
   );
 }

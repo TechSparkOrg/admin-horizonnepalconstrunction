@@ -45,16 +45,17 @@ export function BankTable({ banks, onEdit, onDelete, page, totalPages, onPageCha
   ];
 
   return (
-    <DataTable
-      data={banks}
-      columns={columns}
-      onEdit={onEdit}
-      onDelete={onDelete}
-      getIdentifier={(item) => item.id}
-      page={page}
-      totalPages={totalPages}
-      onPageChange={onPageChange}
-      emptyState={{ icon: Building2, title: "No banks yet", description: "Add your first bank to get started." }}
-    />
+      <DataTable
+        data={banks}
+        columns={columns}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        getIdentifier={(item) => item.id}
+        page={page}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+        emptyState={{ icon: Building2, title: "No banks yet", description: "Add your first bank to get started." }}
+        hideDeleteDialog
+      />
   );
 }

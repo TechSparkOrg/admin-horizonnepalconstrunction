@@ -64,7 +64,7 @@ const navLinks: NavLink[] = [
     { label: "Emi", href: "/emi/banks", icon: Landmark,
     children: [
           { label: "Banks", href: "/emi/banks" },
-        // { label: "Emi Requests", href: "/emi/requests" },
+        { label: "Emi Requests", href: "/emi/request" },
 
       ]
     
