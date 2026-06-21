@@ -39,18 +39,20 @@ export const MediaService = {
   delete: (id: string) =>
     apiPrivate.delete(`/admin/media/delete/${id}`),
 
-  uploadImage: async (file: File, metadata?: Partial<MediaItemCreate>) => {
-    const { upload_url, media } = await apiPrivate.post<{ upload_url: string; media: MediaItem }>(
+  requestUpload: async (filename: string, metadata?: Partial<MediaItemCreate>) => {
+    return await apiPrivate.post<{ upload_url: string; media: MediaItem }>(
       '/admin/media/request-upload',
-      { filename: file.name, ...metadata }
+      { filename, ...metadata }
     );
+  },
 
-    await fetch(upload_url, {
-      method: 'PUT',
-      body: file,
-      headers: { 'Content-Type': file.type },
-    });
+  uploadToWorker: (uploadUrl: string, file: File) =>
+    fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': 'application/octet-stream' } }),
 
+  uploadImage: async (file: File, metadata?: Partial<MediaItemCreate>) => {
+    const { upload_url, media } = await MediaService.requestUpload(file.name, metadata);
+    const res = await MediaService.uploadToWorker(upload_url, file);
+    if (!res.ok) throw new Error(`Upload to Worker failed: ${res.status}`);
     return media;
   },
 };

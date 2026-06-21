@@ -13,6 +13,7 @@ export function ActionButtons({ onEdit, onDelete, showDelete = true, editLabel =
   return (
     <div className="flex items-center justify-end gap-2">
       <Button
+        type="button"
         variant="outline"
         size="sm"
         className="text-sidebar-primary border-sidebar-primary/20 hover:bg-sidebar-primary/5"
@@ -23,6 +24,7 @@ export function ActionButtons({ onEdit, onDelete, showDelete = true, editLabel =
       </Button>
       {showDelete && (
         <Button
+          type="button"
           variant="outline"
           size="sm"
           className="text-red-500 border-red-200 hover:bg-red-50"

@@ -25,9 +25,9 @@ export const buildingPermitSchema = z.object({
   district: z.string().optional(),
   phone: z.string().optional(),
   documentExamples: z.array(documentExampleSchema),
-  metaTitle: z.string().optional(),
-  metaKeywords: z.string().optional(),
-  metaDescription: z.string().optional(),
+  metaTitle: z.string().max(60, "Max 60 characters").optional(),
+  metaKeywords: z.string().max(255, "Max 255 characters").optional(),
+  metaDescription: z.string().max(160, "Max 160 characters").optional(),
 });
 
 export type BuildingPermitFormData = z.infer<typeof buildingPermitSchema>;

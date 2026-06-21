@@ -9,6 +9,7 @@ import { AttributeTable } from "@/components/page_ui/attribute-table";
 import { AttributeForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/attribute-form";
 import type { AttributeFormData } from "@/components/page_ui/attribute-form";
 import { PageHeader } from "@/components/global_ui/page-header";
+import { DeleteDialog } from "@/components/global_ui/delete-dialog";
 import {
   InputGroup,
   InputGroupAddon,
@@ -46,6 +47,7 @@ export default function AdminAttributesPage() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteItem, setDeleteItem] = useState<AttributeItem | null>(null);
 
   const { data, refetch } = useAttributeList({
     search: search || undefined,
@@ -102,7 +104,10 @@ export default function AdminAttributesPage() {
     }
   };
 
-  const confirmDelete = async (id: string) => {
+  const confirmDelete = async () => {
+    if (!deleteItem) return;
+    const id = deleteItem.id;
+    setDeleteItem(null);
     await deleteMutation.mutateAsync(id);
   };
 
@@ -142,7 +147,7 @@ export default function AdminAttributesPage() {
           <AttributeTable
             items={items}
             onEdit={openEdit}
-            onDelete={confirmDelete}
+            onDelete={(item) => setDeleteItem(item)}
             page={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
@@ -160,6 +165,13 @@ export default function AdminAttributesPage() {
           />
         </div>
       )}
+      <DeleteDialog
+        open={!!deleteItem}
+        onOpenChange={(o) => { if (!o) setDeleteItem(null); }}
+        onConfirm={confirmDelete}
+        title={`Delete "${deleteItem?.title}"?`}
+        description={`Are you sure you want to delete "${deleteItem?.title}"? This cannot be undone.`}
+      />
     </>
   );
 }

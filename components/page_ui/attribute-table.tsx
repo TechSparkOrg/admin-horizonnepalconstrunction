@@ -8,7 +8,6 @@ import { TableHeaderRow } from "@/components/global_ui/table-header-row";
 import { ActionButtons } from "@/components/global_ui/action-buttons";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { DeleteDialog } from "@/components/global_ui/delete-dialog";
 import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 import { PaginationBar } from "@/components/global_ui/pagination-bar";
 import type { AttributeItem, UsedIn } from "@/api/types/attribute.types";
@@ -23,15 +22,13 @@ const USED_IN_LABELS: Record<UsedIn, string> = {
 interface Props {
   items: AttributeItem[];
   onEdit: (item: AttributeItem) => void;
-  onDelete: (id: string) => void;
+  onDelete: (item: AttributeItem) => void;
   page: number;
   totalPages: number;
   onPageChange: (page: number) => void;
 }
 
 export function AttributeTable({ items, onEdit, onDelete, page, totalPages, onPageChange }: Props) {
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-
   if (items.length === 0) {
     return (
       <Card className="bg-white border border-gray-200 rounded-xl">
@@ -90,7 +87,7 @@ export function AttributeTable({ items, onEdit, onDelete, page, totalPages, onPa
                   <StatusBadge value={item.is_active} map={ACTIVE_STATUS} />
                 </TableCell>
                 <TableCell>
-                  <ActionButtons onEdit={() => onEdit(item)} onDelete={() => setDeleteId(item.id)} />
+                  <ActionButtons onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
                 </TableCell>
               </TableRow>
             ))}
@@ -99,14 +96,6 @@ export function AttributeTable({ items, onEdit, onDelete, page, totalPages, onPa
       </div>
 
       <PaginationBar page={page} totalPages={totalPages} onPageChange={onPageChange} />
-
-      <DeleteDialog
-        open={!!deleteId}
-        onOpenChange={(open) => !open && setDeleteId(null)}
-        onConfirm={() => deleteId && onDelete(deleteId)}
-        title="Delete this attribute?"
-        description="This cannot be undone."
-      />
     </>
   );
 }

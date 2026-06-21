@@ -8,6 +8,7 @@ export default function ServicesCategoriesPage() {
     <CategorySectionPage
       heading="Services Categories"
       breadcrumb="Services"
+      queryType="service"
       showTypeField
       showTypeColumn
       services={{

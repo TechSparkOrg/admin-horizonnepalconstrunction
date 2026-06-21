@@ -8,6 +8,7 @@ export default function BlogCategoriesPage() {
     <CategorySectionPage
       heading="Blog Categories"
       breadcrumb="Blog"
+      queryType="blog"
       services={{
         list: (params) => CategoryAdmin.listBlog(params),
         create: (data) => CategoryAdmin.createBlog(data),

@@ -1,5 +1,5 @@
 "use client";
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo } from "react";
 import { FolderOpen, ChevronRight } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableRow,
@@ -8,7 +8,6 @@ import { TableHeaderRow } from "@/components/global_ui/table-header-row";
 import { ActionButtons } from "@/components/global_ui/action-buttons";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { DeleteDialog } from "@/components/global_ui/delete-dialog";
 import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 import { PaginationBar } from "@/components/global_ui/pagination-bar";
 import type { Category } from "@/api/types/category.types";
@@ -34,14 +33,13 @@ interface Props {
   totalCount?: number;
   onPageChange: (page: number) => void;
   onEdit: (cat: Category) => void;
-  onDelete: (id: string) => void;
+  onDelete: (cat: Category) => void;
   showTypeColumn?: boolean;
 }
 
 export const CategoryTable = memo(function CategoryTable({
   categories, page, totalPages, onPageChange, onEdit, onDelete, showTypeColumn = true,
 }: Props) {
-  const [deleteId, setDeleteId] = useState<string | null>(null);
   const flatData = useMemo(() => flattenTree(categories), [categories]);
 
   if (flatData.length === 0) {
@@ -111,7 +109,7 @@ export const CategoryTable = memo(function CategoryTable({
                   <span className="text-sm text-gray-500">{item.children?.length ?? 0}</span>
                 </TableCell>
                 <TableCell>
-                  <ActionButtons onEdit={() => onEdit(item)} onDelete={() => setDeleteId(item.id)} />
+                  <ActionButtons onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
                 </TableCell>
               </TableRow>
             ))}
@@ -120,14 +118,6 @@ export const CategoryTable = memo(function CategoryTable({
       </div>
 
       <PaginationBar page={page} totalPages={totalPages} onPageChange={onPageChange} />
-
-      <DeleteDialog
-        open={!!deleteId}
-        onOpenChange={(open) => !open && setDeleteId(null)}
-        onConfirm={() => deleteId && onDelete(deleteId)}
-        title="Delete this category?"
-        description="This cannot be undone."
-      />
     </>
   );
 });

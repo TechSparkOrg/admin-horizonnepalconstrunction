@@ -8,6 +8,7 @@ export default function ProjectCategoriesPage() {
     <CategorySectionPage
       heading="Project Categories"
       breadcrumb="Project"
+      queryType="project"
       services={{
         list: (params) => CategoryAdmin.listProject(params),
         create: (data) => CategoryAdmin.createProject(data),

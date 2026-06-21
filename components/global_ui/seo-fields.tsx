@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RichEditor } from "@/components/page_ui/rich-editor";
+import { Textarea } from "@/components/ui/textarea";
 
 interface SeoFieldsProps {
   metaTitle: string;
@@ -11,6 +11,16 @@ interface SeoFieldsProps {
   onMetaDescriptionChange?: (value: string) => void;
   onMetaKeywordsChange?: (value: string) => void;
   titlePlaceholder?: string;
+}
+
+const META_TITLE_MAX = 60;
+const META_DESC_MAX = 160;
+const META_KEYWORDS_MAX = 255;
+
+function charCount(value: string, max: number) {
+  const len = value.length;
+  const over = len > max;
+  return <span className={over ? "text-red-500 font-medium" : "text-gray-400"}>{len} / {max}</span>;
 }
 
 export function SeoFields({
@@ -35,18 +45,21 @@ export function SeoFields({
           value={metaTitle}
           onChange={(e) => handleTitle(e.target.value)}
           placeholder={titlePlaceholder}
+          maxLength={META_TITLE_MAX}
         />
-        <p className="text-right text-[11px] text-gray-400">{metaTitle.length} / 60</p>
+        <p className="text-right text-[11px]">{charCount(metaTitle, META_TITLE_MAX)}</p>
       </div>
 
       <div className="space-y-1.5">
         <Label>Meta Description</Label>
-        <RichEditor
+        <Textarea
           value={metaDescription}
-          onChange={(html) => handleDescription(html)}
-          minHeight={120}
+          onChange={(e) => handleDescription(e.target.value)}
+          placeholder="Brief description for search results"
+          rows={3}
+          maxLength={META_DESC_MAX}
         />
-        <p className="text-right text-[11px] text-gray-400">{metaDescription.length} / 160</p>
+        <p className="text-right text-[11px]">{charCount(metaDescription, META_DESC_MAX)}</p>
       </div>
 
       <div className="space-y-1.5">
@@ -55,8 +68,9 @@ export function SeoFields({
           value={metaKeywords}
           onChange={(e) => handleKeywords(e.target.value)}
           placeholder="keyword1, keyword2, keyword3"
+          maxLength={META_KEYWORDS_MAX}
         />
-        <p className="text-xs text-gray-400">Comma-separated keywords for search engines.</p>
+        <p className="text-right text-[11px]">{charCount(metaKeywords, META_KEYWORDS_MAX)}</p>
       </div>
     </div>
   );

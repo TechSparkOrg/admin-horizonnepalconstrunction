@@ -182,6 +182,7 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
         saving={isSubmitting || saving}
         saveDisabled={isSubmitting || saving}
         saveLabel={editing ? "Update" : "Publish"}
+        saveForm="category-form"
       />
 
       <form id="category-form" onSubmit={handleSubmit(onSubmit)}>
@@ -203,7 +204,7 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
               <FormCard>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label>Name</Label>
+                    <Label>Name <span className="text-red-500">*</span></Label>
                     <Input
                       {...register("name")}
                       placeholder="Category name"
@@ -229,7 +230,7 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
 
                 {showTypeField && (
                   <div className="space-y-1.5">
-                    <Label>Type</Label>
+                    <Label>Type <span className="text-red-500">*</span></Label>
                     <SegmentedToggle
                       value={watch("type")}
                       onChange={(v) => setValue("type", v as "public" | "internal")}
@@ -289,12 +290,7 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
               <FormCard className="space-y-0">
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-sm font-semibold text-gray-900">Banner Images</p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setMediaPickerOpen(true)}
-                  >
+                  <Button type="button" variant="outline" size="sm" onClick={() => setMediaPickerOpen(true)}>
                     <ImagePlus className="size-4" />
                     Add Banner
                   </Button>
@@ -327,6 +323,7 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
                             <TableCell>
                               <div className="flex items-center justify-end gap-2">
                                 <Button
+                                  type="button"
                                   variant="outline"
                                   size="sm"
                                   className="text-gray-500 border-gray-200 hover:bg-gray-100"

@@ -8,6 +8,7 @@ export default function FaqCategoriesPage() {
     <CategorySectionPage
       heading="FAQ Categories"
       breadcrumb="FAQ"
+      queryType="faq"
       services={{
         list: (params) => CategoryAdmin.listFaq(params),
         create: (data) => CategoryAdmin.createFaq(data),

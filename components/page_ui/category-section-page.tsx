@@ -25,20 +25,21 @@ interface Props {
   heading: string;
   breadcrumb: string;
   services: ServiceMethods;
+  queryType: string;
   showTypeField?: boolean;
   showTypeColumn?: boolean;
 }
 
-export function CategorySectionPage({ heading, breadcrumb, services, showTypeField = false, showTypeColumn = false }: Props) {
+export function CategorySectionPage({ heading, breadcrumb, services, queryType, showTypeField = false, showTypeColumn = false }: Props) {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<Category | null>(null);
   const [view, setView] = useState<"list" | "form">("list");
   const [saving, setSaving] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteCategory, setDeleteCategory] = useState<Category | null>(null);
 
   const { data } = useQuery({
-    queryKey: [...queryKeys.categories.all, page],
+    queryKey: [...queryKeys.categories.list(queryType), page],
     queryFn: async () => {
       const res = await services.list({ page });
       return { items: res.results ?? [], totalCount: res.count ?? 0 };
@@ -49,7 +50,7 @@ export function CategorySectionPage({ heading, breadcrumb, services, showTypeFie
   const totalCount = data?.totalCount ?? 0;
   const treeCats = useMemo(() => buildTree(flatCats), [flatCats]);
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.categories.all });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.categories.list(queryType) });
 
   const saveMutation = useMutation({
     mutationFn: async (formData: CategoryFormData) => {
@@ -109,9 +110,10 @@ export function CategorySectionPage({ heading, breadcrumb, services, showTypeFie
   };
 
   const confirmDelete = async () => {
-    if (!deleteId) return;
-    setDeleteId(null);
-    await deleteMutation.mutateAsync(deleteId);
+    if (!deleteCategory) return;
+    const id = deleteCategory.id;
+    setDeleteCategory(null);
+    await deleteMutation.mutateAsync(id);
   };
 
   const openCreate = useCallback(() => {
@@ -146,15 +148,15 @@ export function CategorySectionPage({ heading, breadcrumb, services, showTypeFie
         totalCount={totalCount}
         onPageChange={(p) => setPage(p)}
         onEdit={openEdit}
-        onDelete={setDeleteId}
+        onDelete={(cat) => setDeleteCategory(cat)}
         showTypeColumn={showTypeColumn}
       />
       <DeleteDialog
-        open={!!deleteId}
-        onOpenChange={(o) => { if (!o) setDeleteId(null); }}
+        open={!!deleteCategory}
+        onOpenChange={(o) => { if (!o) setDeleteCategory(null); }}
         onConfirm={confirmDelete}
-        title="Delete Category"
-        description="Are you sure you want to delete this category? This action cannot be undone."
+        title={`Delete "${deleteCategory?.name}"?`}
+        description={`Are you sure you want to delete "${deleteCategory?.name}"? This cannot be undone.`}
       />
     </PageHeader>
   );
