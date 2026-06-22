@@ -25,7 +25,6 @@ export default function AdminBlogsPage() {
   const form = useBlogUiStore((s) => s.form);
   const bannerImages = useBlogUiStore((s) => s.bannerImages);
   const reelBlocks = useBlogUiStore((s) => s.reelBlocks);
-  const saving = useBlogUiStore((s) => s.saving);
   const search = useBlogUiStore((s) => s.search);
   const currentPage = useBlogUiStore((s) => s.currentPage);
 
@@ -37,7 +36,6 @@ export default function AdminBlogsPage() {
   const setReelBlocks = useBlogUiStore((s) => s.setReelBlocks);
   const setSearch = useBlogUiStore((s) => s.setSearch);
   const setPage = useBlogUiStore((s) => s.setPage);
-  const setSaving = useBlogUiStore((s) => s.setSaving);
   const validateForm = useBlogUiStore((s) => s.validateForm);
 
   const pageSize = 10;
@@ -62,43 +60,37 @@ export default function AdminBlogsPage() {
 
   const handleSave = async () => {
     if (!validateForm()) return;
-    setSaving(true);
-    try {
-      const payload = {
-        title: form.title,
-        title_np: form.title,
-        excerpt: form.content?.slice(0, 200) ?? "",
-        excerpt_np: form.content?.slice(0, 200) ?? "",
-        image: "",
-        date: form.publishDate || new Date().toISOString(),
-        author_role: "",
-        author: form.authorMode === "team" ? "" : form.authorName,
-        author_image: "",
-        content: [],
-        content_np: [],
-        category_id: form.categoryId,
-        project_id: form.projectId,
-        meta_title: form.metaTitle,
-        meta_description: form.metaDescription,
-        meta_keywords: form.metaKeywords,
-        is_active: form.isActive,
-        is_published: form.isPublished,
-        publish_date: form.publishDate,
-        model_3d_block: form.model3dBlock,
-        video_block_url: form.videoBlockUrl,
-        video_embed_url: form.videoEmbedUrl,
-        youtube_embed_url: form.videoEmbedUrl,
-        banner_images: bannerImages,
-        reel_blocks: reelBlocks,
-        content_html: form.content,
-      };
-      await saveMutation.mutateAsync({ slug: editingSlug, payload });
-      back();
-    } catch {
-      // Error handled by mutation
-    } finally {
-      setSaving(false);
-    }
+    const payload = {
+      title: form.title,
+      title_np: form.title,
+      slug: form.slug,
+      excerpt: form.content?.slice(0, 200) ?? "",
+      excerpt_np: form.content?.slice(0, 200) ?? "",
+      image: "",
+      date: form.publishDate || new Date().toISOString(),
+      author_role: "",
+      author: form.authorMode === "team" ? "" : form.authorName,
+      author_image: form.authorMode === "manual" ? form.authorImage : "",
+      content: [],
+      content_np: [],
+      category_id: form.categoryId,
+      project_id: form.projectId,
+      meta_title: form.metaTitle,
+      meta_description: form.metaDescription,
+      meta_keywords: form.metaKeywords,
+      is_active: form.isActive,
+      is_published: form.isPublished,
+      publish_date: form.publishDate,
+      model_3d_block: form.model3dBlock,
+      video_block_url: form.videoBlockUrl,
+      video_embed_url: form.videoEmbedUrl,
+      youtube_embed_url: form.videoEmbedUrl,
+      banner_images: bannerImages,
+      reel_blocks: reelBlocks,
+      content_html: form.content,
+    };
+    await saveMutation.mutateAsync({ slug: editingSlug, payload });
+    back();
   };
 
   const handleDelete = async (slug: string) => {
@@ -120,7 +112,7 @@ export default function AdminBlogsPage() {
         <BlogForm
           form={form}
           editingSlug={editingSlug}
-          saving={saving}
+          saving={saveMutation.isPending}
           projects={projects}
           teamMembers={teamMembers}
           categories={categories}
@@ -160,6 +152,7 @@ export default function AdminBlogsPage() {
         onDelete={handleDelete}
         page={currentPage}
         totalPages={totalPages}
+        totalCount={filtered.length}
         onPageChange={setPage}
       />
     </PageHeader>

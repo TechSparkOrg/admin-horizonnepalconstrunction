@@ -19,6 +19,21 @@ export const blogSchema = z.object({
   model3dBlock: z.string().optional(),
   videoBlockUrl: z.string().optional(),
   videoEmbedUrl: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.authorMode === "manual" && !data.authorName?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Author name is required",
+      path: ["authorName"],
+    });
+  }
+  if (data.authorMode === "team" && !data.authorTeamId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Team member is required",
+      path: ["authorTeamId"],
+    });
+  }
 });
 
 export type BlogFormData = z.infer<typeof blogSchema>;

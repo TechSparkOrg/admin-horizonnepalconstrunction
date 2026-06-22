@@ -18,10 +18,11 @@ interface Props {
   onDelete: (id: string) => void;
   page: number;
   totalPages: number;
+  totalCount: number;
   onPageChange: (page: number) => void;
 }
 
-export function VastuTable({ items, onEdit, onDelete, page, totalPages, onPageChange }: Props) {
+export function VastuTable({ items, onEdit, onDelete, page, totalPages, totalCount, onPageChange }: Props) {
   const columns: ColumnDef<VastuItem>[] = [
     {
       header: "Title",
@@ -68,9 +69,19 @@ export function VastuTable({ items, onEdit, onDelete, page, totalPages, onPageCh
       getIdentifier={(item) => item.id}
       page={page}
       totalPages={totalPages}
+      totalCount={totalCount}
       onPageChange={onPageChange}
       emptyState={{ icon: Compass, title: "No items yet", description: "Add a section, room, or direction to get started." }}
-      deleteDialog={{ title: "Delete this item?", description: "This cannot be undone." }}
+      deleteDialog={{
+        title: (id) => {
+          const item = items.find((i) => i.id === id);
+          return `Delete "${item?.title || "this item"}"?`;
+        },
+        description: (id) => {
+          const item = items.find((i) => i.id === id);
+          return `Are you sure you want to delete "${item?.title || "this item"}"? This cannot be undone.`;
+        },
+      }}
     />
   );
 }

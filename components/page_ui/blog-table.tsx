@@ -12,10 +12,11 @@ interface Props {
   onDelete: (slug: string) => void;
   page: number;
   totalPages: number;
+  totalCount: number;
   onPageChange: (page: number) => void;
 }
 
-export function BlogTable({ blogs, onEdit, onDelete, page, totalPages, onPageChange }: Props) {
+export function BlogTable({ blogs, onEdit, onDelete, page, totalPages, totalCount, onPageChange }: Props) {
   const columns: ColumnDef<BlogPost>[] = [
     {
       header: "Title",
@@ -53,9 +54,19 @@ export function BlogTable({ blogs, onEdit, onDelete, page, totalPages, onPageCha
       getIdentifier={(item) => item.slug}
       page={page}
       totalPages={totalPages}
+      totalCount={totalCount}
       onPageChange={onPageChange}
       emptyState={{ icon: FileText, title: "No blogs yet", description: "Create your first blog to get started." }}
-      deleteDialog={{ title: "Delete blog?", description: "This cannot be undone." }}
+      deleteDialog={{
+        title: (slug) => {
+          const item = blogs.find((b) => b.slug === slug);
+          return `Delete "${item?.title || "this blog"}"?`;
+        },
+        description: (slug) => {
+          const item = blogs.find((b) => b.slug === slug);
+          return `Are you sure you want to delete "${item?.title || "this blog"}"? This cannot be undone.`;
+        },
+      }}
     />
   );
 }

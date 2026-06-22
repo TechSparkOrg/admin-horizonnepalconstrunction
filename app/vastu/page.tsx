@@ -258,6 +258,7 @@ export default function AdminVastuPage() {
             onDelete={confirmDelete}
             page={currentPage}
             totalPages={totalPages}
+            totalCount={total}
             onPageChange={setCurrentPage}
           />
         </PageHeader>

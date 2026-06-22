@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { Upload, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
+import { MediaPickerDialog } from "@/components/global_ui/media-handler-picker";
 
 interface StaffMember {
   id: string;
@@ -44,16 +45,7 @@ export function BlogSettingsTab({
   teamMembers,
   onChange,
 }: BlogSettingsTabProps) {
-  const [authorPreview, setAuthorPreview] = useState<string | null>(authorImage || null);
-  const authorInputRef = useRef<HTMLInputElement>(null);
-
-  const handleImagePick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setAuthorPreview(url);
-    onChange("authorImage", url);
-  };
+  const [authorPickerOpen, setAuthorPickerOpen] = useState(false);
 
   return (
     <div className="space-y-5">
@@ -72,7 +64,7 @@ export function BlogSettingsTab({
             />
           </div>
           <div className="space-y-1">
-            <Label>Publish Date</Label>
+            <Label>Publish Date <span className="text-red-400">*</span></Label>
             <Input type="date" value={publishDate} onChange={(e) => onChange("publishDate", e.target.value)} className="w-40" />
           </div>
         </div>
@@ -82,16 +74,13 @@ export function BlogSettingsTab({
         <p className="text-sm font-semibold text-gray-900 mb-4">Project</p>
         <div className="space-y-1.5">
           <Label>Linked Project</Label>
-          <Select value={projectId} onValueChange={(v) => onChange("projectId", v)}>
-            <SelectTrigger className="max-w-sm">
-              <SelectValue placeholder="Select a project" />
-            </SelectTrigger>
-            <SelectContent>
-              {projects.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={projects.map((p) => ({ value: p.id, label: p.title }))}
+            value={projectId}
+            onChange={(v) => onChange("projectId", v)}
+            placeholder="Select a project"
+            searchPlaceholder="Search projects..."
+          />
           <p className="text-xs text-gray-400">Link this blog to an existing project.</p>
         </div>
       </div>
@@ -113,12 +102,12 @@ export function BlogSettingsTab({
           <div className="flex items-end gap-6">
             <div className="space-y-1.5">
               <Label>Author Image</Label>
-              {authorPreview ? (
-                <div className="relative size-16 rounded-full border border-gray-200 overflow-hidden group">
-                  <Image src={authorPreview} alt="Author" fill className="object-cover" />
+              {authorImage ? (
+                <div className="relative size-16 rounded-full border border-gray-200 overflow-hidden group cursor-pointer" onClick={() => setAuthorPickerOpen(true)}>
+                  <Image src={authorImage} alt="Author" fill className="object-cover" />
                   <button
                     type="button"
-                    onClick={() => { setAuthorPreview(null); onChange("authorImage", ""); }}
+                    onClick={(e) => { e.stopPropagation(); onChange("authorImage", ""); }}
                     className="absolute inset-0 grid place-items-center bg-black/50 text-white opacity-0 group-hover:opacity-100 transition"
                   >
                     <X className="size-4" />
@@ -127,35 +116,41 @@ export function BlogSettingsTab({
               ) : (
                 <button
                   type="button"
-                  onClick={() => authorInputRef.current?.click()}
-                  className="size-16 rounded-full border border-dashed border-gray-200 grid place-items-center text-gray-500 hover:bg-gray-100 transition"
+                  onClick={() => setAuthorPickerOpen(true)}
+                  className="size-16 rounded-full border border-dashed border-gray-200 grid place-items-center text-gray-400 hover:text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition"
                 >
                   <Upload className="size-5" />
                 </button>
               )}
-              <input ref={authorInputRef} type="file" accept="image/*" className="hidden" onChange={handleImagePick} />
             </div>
             <div className="space-y-1.5 flex-1 max-w-sm">
-              <Label>Author Name</Label>
+              <Label>Author Name <span className="text-red-400">*</span></Label>
               <Input value={authorName} onChange={(e) => onChange("authorName", e.target.value)} placeholder="e.g. Jane Doe" />
             </div>
           </div>
         ) : (
           <div className="space-y-1.5">
             <Label>Select Team Member</Label>
-            <Select value={authorTeamId} onValueChange={(v) => onChange("authorTeamId", v)}>
-              <SelectTrigger className="max-w-sm">
-                <SelectValue placeholder="Select a team member" />
-              </SelectTrigger>
-              <SelectContent>
-                {teamMembers.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={teamMembers.map((m) => ({ value: m.id, label: m.name }))}
+              value={authorTeamId}
+              onChange={(v) => onChange("authorTeamId", v)}
+              placeholder="Select a team member"
+              searchPlaceholder="Search team members..."
+            />
           </div>
         )}
       </div>
+
+      <MediaPickerDialog
+        open={authorPickerOpen}
+        onOpenChange={(o) => { if (!o) setAuthorPickerOpen(false); }}
+        title="Select Author Image"
+        onSelect={(item) => {
+          onChange("authorImage", item.url);
+          setAuthorPickerOpen(false);
+        }}
+      />
     </div>
   );
 }
