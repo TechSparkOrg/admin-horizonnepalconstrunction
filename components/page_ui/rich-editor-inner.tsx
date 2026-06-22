@@ -8,23 +8,7 @@ import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
-import {
-  Bold,
-  Italic,
-  Underline,
-  List,
-  ListOrdered,
-  Quote,
-  Heading1,
-  Heading2,
-  Heading3,
-  Link,
-  Table as TableIcon,
-  Undo,
-  Redo,
-  Minus,
-  AlignLeft,
-} from "lucide-react";
+import {  Bold,  Italic,  Underline,  List,  ListOrdered,  Quote,  Heading1,  Heading2,  Heading3,  Link,  Table as TableIcon,  Undo,  Redo,  Minus} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 interface RichEditorInnerProps {
@@ -33,17 +17,7 @@ interface RichEditorInnerProps {
   minHeight?: number;
 }
 
-function ToolbarButton({
-  active,
-  onClick,
-  label,
-  children,
-}: {
-  active?: boolean;
-  onClick: () => void;
-  label: string;
-  children: React.ReactNode;
-}) {
+function ToolbarButton({  active,  onClick,  label,  children}: {  active?: boolean;  onClick: () => void;  label: string;  children: React.ReactNode;}) {
   return (
     <button
       type="button"

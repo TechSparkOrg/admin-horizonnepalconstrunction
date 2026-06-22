@@ -1,5 +1,5 @@
 import { apiPrivate } from '../ServiceHelper/index';
-import type { MediaItem, MediaItemCreate, MediaItemUpdate } from '../types/media.types';
+import type { BannerGroup, MediaItem, MediaItemCreate, MediaItemUpdate } from '../types/media.types';
 import type { PaginatedResponse } from '../types/consultation.types';
 
 export const MediaService = {
@@ -17,6 +17,9 @@ export const MediaService = {
 
   listBanners: (params?: Record<string, unknown>) =>
     apiPrivate.get<PaginatedResponse<MediaItem>>('/admin/media', { params: { banner: true, ...params } }),
+
+  listBannerGroups: (params?: Record<string, unknown>) =>
+    apiPrivate.get<PaginatedResponse<BannerGroup>>('/admin/media/banner-groups', { params }),
 
   create: (data: MediaItemCreate) =>
     apiPrivate.post<MediaItem>('/admin/media', data),

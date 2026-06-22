@@ -11,16 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
+import {
   Tabs,
   TabsContent,
 } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import type { MediaItem } from "@/api/types/media.types";
 import { toSlug } from "@/lib/slug";
 import { isVideoUrl, isModelUrl } from "@/lib/media";
@@ -29,6 +26,7 @@ import { FormCard } from "@/components/global_ui/form-card";
 import { FormTabs } from "@/components/global_ui/form-tabs";
 import { SeoFields } from "@/components/global_ui/seo-fields";
 import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
+import { cn } from "@/lib/utils";
 
 const mediaSchema = z.object({
   alt: z.string().min(1, "Alt text is required"),
@@ -40,19 +38,9 @@ const mediaSchema = z.object({
   project_link: z.string().optional(),
 
   is_active: z.boolean(),
-  author: z.string().optional(),
-  authorMode: z.enum(["manual", "team"]),
-  authorName: z.string().optional(),
-  authorTeamId: z.string().optional(),
 });
 
 export type MediaFormData = z.infer<typeof mediaSchema>;
-
-interface StaffMember {
-  id: string;
-  name: string;
-  image?: string;
-}
 
 interface Props {
   editing: MediaItem | null;
@@ -62,17 +50,15 @@ interface Props {
   groupTitle: string;
   accept?: string;
   allowMultiple?: boolean;
-  showProjectLink?: boolean;
-  showAuthor?: boolean;
-  teamMembers?: StaffMember[];
 }
 
-export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept = "image/*,video/*", allowMultiple,   showProjectLink, showAuthor, teamMembers = [] }: Props) {
+export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept = "image/*,video/*", allowMultiple }: Props) {
   const [files, setFiles] = useState<File[]>([]);
   const [preview, setPreview] = useState<string>(editing?.url || "");
   const [viewerOpen, setViewerOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("content");
+  const [activeTab, setActiveTab] = useState("overview");
   const [fileError, setFileError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isImageOrVideo = (f: File) => f.type.startsWith("image/") || f.type.startsWith("video/");
@@ -94,15 +80,16 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
       keywords: editing?.keywords || "",
       project_link: editing?.project_link || "",
       is_active: editing?.is_active ?? true,
-      author: "",
-      authorMode: "manual",
-      authorName: "",
-      authorTeamId: "",
     },
   });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = Array.from(e.target.files || []);
+  useEffect(() => {
+    return () => {
+      if (preview.startsWith("blob:")) URL.revokeObjectURL(preview);
+    };
+  }, []);
+
+  const handleFiles = (selected: File[]) => {
     if (!selected.length) return;
     setFiles(selected);
     const first = selected[0];
@@ -110,11 +97,19 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
       setPreview(URL.createObjectURL(first));
     } else if (first.name.match(/\.(glb|gltf)$/i)) {
       setPreview(URL.createObjectURL(first));
-    } else if (first.name.match(/\.(fbx|obj|stl|usdz|usd|ply|3ds|blend)$/i)) {
-      setPreview(first.name);
     } else {
       setPreview(first.name);
     }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFiles(Array.from(e.target.files || []));
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    handleFiles(Array.from(e.dataTransfer.files));
   };
 
   const handleRemoveFiles = () => {
@@ -134,8 +129,6 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
     await onSave(data, files.length > 0 ? files : undefined);
   };
 
-  const watchAuthorMode = watch("authorMode");
-  const watchAuthorTeamId = watch("authorTeamId");
   const watchMetaTitle = watch("meta_title");
   const watchMetaDesc = watch("meta_description");
   const watchIsActive = watch("is_active");
@@ -149,6 +142,24 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
     }
   }, [watchTitle, setValue]);
 
+  const renderPreviewContent = () => {
+    if (files[0]?.type.startsWith("video/") || isVideoUrl(preview)) {
+      return <video src={preview} controls autoPlay className="max-w-[90vw] max-h-[90vh] rounded-lg" onClick={(e) => e.stopPropagation()} />;
+    }
+    if (isModelUrl(preview) || (files[0]?.name || preview).match(/\.(glb|gltf)$/i)) {
+      return (
+        <div className="w-[80vw] h-[80vh] rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <ModelViewer src={preview} className="w-full h-full" ar arModes="webxr scene-viewer quick-look" />
+        </div>
+      );
+    }
+    return (
+      <div className="relative w-full h-full max-w-[90vw] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+        <Image src={preview} alt="Full preview" fill className="object-contain rounded-lg" />
+      </div>
+    );
+  };
+
   return (
     <div>
       <FormHeader
@@ -159,38 +170,58 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
         saving={isSubmitting || saving}
         saveDisabled={isSubmitting || saving}
         saveLabel={editing ? "Update" : files.length > 1 ? `Upload ${files.length} files` : "Upload"}
+        saveForm="media-form"
       />
 
       <form id="media-form" onSubmit={handleSubmit(onSubmit)}>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col">
           <div>
-            <FormTabs tabs={[{ value: "content", label: "Content" }, { value: "seo", label: "SEO" }, { value: "settings", label: "Settings" }]} />
+            <FormTabs tabs={[
+              { value: "overview", label: "Overview" },
+              { value: "content", label: "Content" },
+              { value: "seo", label: "SEO" },
+            ]} />
           </div>
 
           <div>
+            <TabsContent value="overview" className="space-y-5 mt-4">
+              <FormCard className="w-full">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label>Title <span className="text-red-500">*</span></Label>
+                    <Input
+                      {...register("title")}
+                      placeholder="Media title (used for public links)"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Slug</Label>
+                    <Input
+                      {...register("slug")}
+                      placeholder="leave blank to auto-generate from title"
+                      onChange={(e) => {
+                        register("slug").onChange(e);
+                        slugManuallyEdited.current = true;
+                      }}
+                    />
+                    <p className="text-xs text-gray-400">Auto-generated from title if left empty.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Status</Label>
+                  <SegmentedToggle<boolean>
+                    value={watchIsActive}
+                    onChange={(v) => setValue("is_active", v)}
+                    options={[{ value: true, label: "Active" }, { value: false, label: "Inactive" }]}
+                  />
+                </div>
+              </FormCard>
+            </TabsContent>
+
             <TabsContent value="content" className="space-y-5 mt-4">
               <FormCard className="w-full">
-                <div className="space-y-1.5">
-                  <Label>Title</Label>
-                  <Input
-                    {...register("title")}
-                    placeholder="Media title (used for public links)"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>Slug</Label>
-                  <Input
-                    {...register("slug")}
-                    placeholder="leave blank to auto-generate from title"
-                    onChange={(e) => {
-                      register("slug").onChange(e);
-                      slugManuallyEdited.current = true;
-                    }}
-                  />
-                  <p className="text-xs text-gray-400">Auto-generated from title if left empty. Used for public URLs.</p>
-                </div>
-
                 <div className="space-y-1.5">
                   <Label>File{!editing && " *"}</Label>
 
@@ -246,12 +277,7 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
                           )}
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          {(
-                            files.length === 1 && (
-                              isImageOrVideo(files[0]) ||
-                              files[0].name.match(/\.(glb|gltf)$/i)
-                            )
-                          ) && (
+                          {files.length === 1 && (isImageOrVideo(files[0]) || files[0].name.match(/\.(glb|gltf)$/i)) && (
                             <Button type="button" variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setViewerOpen(true); }}>
                               <Eye className="w-3.5 h-3.5" />
                             </Button>
@@ -265,14 +291,22 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
                   )}
 
                   <div
-                    className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center cursor-pointer hover:border-sidebar-primary/30 transition"
+                    className={cn(
+                      "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition",
+                      dragOver ? "border-sidebar-primary bg-sidebar-primary/5" : "border-gray-200 hover:border-sidebar-primary/30"
+                    )}
                     onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={handleDrop}
                   >
                     <Upload className="w-6 h-6 mx-auto mb-1.5 text-gray-400" />
                     <p className="text-sm font-medium text-gray-600">
-                      {files.length > 0 ? (allowMultiple ? "Add more files" : "Change file") : editing ? "Replace file" : "Click to upload"}
+                      {files.length > 0 ? (allowMultiple ? "Add more files" : "Change file") : editing ? "Replace file" : "Drag & drop files here"}
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">Drag & drop or click to browse</p>
+                    <Button type="button" variant="outline" size="sm" className="mt-2">
+                      Browse Files
+                    </Button>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -286,7 +320,7 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label>Alt Text *</Label>
+                  <Label>Alt Text <span className="text-red-500">*</span></Label>
                   <Input
                     {...register("alt")}
                     placeholder="Describe this media"
@@ -306,90 +340,15 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
                 onMetaKeywordsChange={(v) => setValue("keywords", v)}
               />
             </TabsContent>
-
-            <TabsContent value="settings" className="mt-4">
-              <FormCard className="w-full">
-                <div className="space-y-1.5">
-                  <Label>Status</Label>
-                  <SegmentedToggle<boolean>
-                    value={watchIsActive}
-                    onChange={(v) => setValue("is_active", v)}
-                    options={[{ value: true, label: "Active" }, { value: false, label: "Inactive" }]}
-                  />
-                </div>
-
-                {showProjectLink && (
-                  <div className="space-y-1.5">
-                    <Label>Project Link</Label>
-                    <Input
-                      {...register("project_link")}
-                      placeholder="e.g. residential-project"
-                    />
-                  </div>
-                )}
-
-                {showAuthor && (
-                  <div className="space-y-3">
-                    <Label>Author</Label>
-                    <SegmentedToggle<"manual" | "team">
-                      value={watchAuthorMode}
-                      onChange={(v) => setValue("authorMode", v)}
-                      options={[{ value: "manual", label: "Manual" }, { value: "team", label: "From Team" }]}
-                    />
-
-                    {watchAuthorMode === "manual" ? (
-                      <div className="space-y-1.5">
-                        <Label>Author Name</Label>
-                        <Input
-                          {...register("authorName")}
-                          placeholder="e.g. Jane Doe"
-                        />
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5">
-                        <Label>Select Team Member</Label>
-                        <Select
-                          value={watchAuthorTeamId}
-                          onValueChange={(v) => setValue("authorTeamId", v)}
-                        >
-                          <SelectTrigger className="max-w-sm">
-                            <SelectValue placeholder="Select a team member" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {teamMembers.map((m) => (
-                              <SelectItem key={m.id} value={m.id}>
-                                {m.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-
-              </FormCard>
-            </TabsContent>
           </div>
         </Tabs>
       </form>
 
-      {viewerOpen && preview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setViewerOpen(false)}>
-          {files[0]?.type.startsWith("video/") || isVideoUrl(preview) ? (
-            <video src={preview} controls autoPlay className="max-w-[90vw] max-h-[90vh] rounded-lg" onClick={(e) => e.stopPropagation()} />
-          ) : isModelUrl(preview) || (files[0]?.name || preview).match(/\.(glb|gltf)$/i) ? (
-            <div className="w-[80vw] h-[80vh] rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
-              <ModelViewer src={preview} className="w-full h-full" ar arModes="webxr scene-viewer quick-look" />
-            </div>
-          ) : (
-            <div className="relative w-full h-full max-w-[90vw] max-h-[90vh]">
-              <Image src={preview} alt="Full preview" fill className="object-contain rounded-lg" />
-            </div>
-          )}
-        </div>
-      )}
+      <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
+        <DialogContent className="!max-w-[90vw] !max-h-[90vh] p-0 overflow-hidden bg-black/90 border-0">
+          {renderPreviewContent()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

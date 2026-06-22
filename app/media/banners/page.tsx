@@ -6,40 +6,45 @@ import { useMediaList, useMediaMutations } from "@/api/hooks/use-media-query";
 import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
 import type { MediaItem } from "@/api/types/media.types";
 import { MediaTable } from "@/components/page_ui/media-table";
-import { MediaForm, type MediaFormData } from "@/components/page_ui/media-form";
+import { BannerForm, type BannerFormData } from "@/components/page_ui/banner-form";
 import { PageHeader } from "@/components/global_ui/page-header";
 import { DeleteDialog } from "@/components/global_ui/delete-dialog";
 import { toMediaPayload } from "@/lib/media";
+import { toSlug } from "@/lib/slug";
 
 const PAGE_SIZE = 10;
 
 export default function BannersPage() {
   const [currentPage, setCurrentPage] = useState(1);
-  const { data } = useMediaList({ page: currentPage, page_size: PAGE_SIZE, group_title: "Banners", banner: true });
+  const { data } = useMediaList({ page: currentPage, page_size: PAGE_SIZE, group_title: "Banners" });
   const { deleteMutation, updateMutation, uploadMutation } = useMediaMutations();
 
   const [editing, setEditing] = useState<MediaItem | null>(null);
   const [view, setView] = useState<"list" | "form">("list");
   const [saving, setSaving] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteItem, setDeleteItem] = useState<MediaItem | null>(null);
 
   const items = data?.items ?? [];
   const totalCount = data?.totalCount ?? 0;
 
-  const handleSave = async (formData: MediaFormData, files?: File[]) => {
+  const handleSave = async (formData: BannerFormData, files: File[]) => {
     setSaving(true);
     try {
-      const payload = toMediaPayload(formData, { banner: true });
+      const slug = formData.slug || toSlug(formData.title);
+      const payload = toMediaPayload({
+        ...formData,
+        slug,
+      });
+
       if (editing) {
         await updateMutation.mutateAsync({ id: editing.id, data: payload });
         toast.success("Banner updated");
       } else {
-        const list = files && files.length > 0 ? files : [];
-        for (const f of list) {
+        for (const f of files) {
           const result = await uploadMutation.mutateAsync({ file: f, metadata: { ...payload, group_title: "Banners" } });
           if (!result) throw new Error("Upload failed");
         }
-        toast.success(list.length > 1 ? `${list.length} banners uploaded` : "Banner uploaded");
+        toast.success(files.length > 1 ? `${files.length} banners uploaded` : "Banner uploaded");
       }
       setView("list");
       setEditing(null);
@@ -52,22 +57,19 @@ export default function BannersPage() {
   };
 
   const confirmDelete = async () => {
-    if (!deleteId) return;
-    await deleteMutation.mutateAsync(deleteId);
+    if (!deleteItem) return;
+    await deleteMutation.mutateAsync(deleteItem.id);
     if (items.length <= 1 && currentPage > 1) setCurrentPage((p) => p - 1);
-    setDeleteId(null);
+    setDeleteItem(null);
   };
 
   if (view === "form") {
     return (
-      <MediaForm
+      <BannerForm
         editing={editing}
         saving={saving}
         onSave={handleSave}
         onBack={() => { setView("list"); setEditing(null); }}
-        groupTitle="Banners"
-        accept="image/*"
-        allowMultiple
       />
     );
   }
@@ -81,15 +83,15 @@ export default function BannersPage() {
         totalCount={totalCount}
         onPageChange={setCurrentPage}
         onEdit={(item) => { setEditing(item); setView("form"); }}
-        onDelete={setDeleteId}
+        onDelete={(id) => { const item = items.find(i => i.id === id); if (item) setDeleteItem(item); }}
         groupLabel="Banners"
       />
       <DeleteDialog
-        open={!!deleteId}
-        onOpenChange={(o) => { if (!o) setDeleteId(null); }}
+        open={!!deleteItem}
+        onOpenChange={(o) => { if (!o) setDeleteItem(null); }}
         onConfirm={confirmDelete}
-        title="Delete Banner"
-        description="Are you sure you want to delete this banner? This action cannot be undone."
+        title={`Delete "${deleteItem?.title || deleteItem?.alt || "this item"}"?`}
+        description={`Are you sure you want to delete "${deleteItem?.title || deleteItem?.alt || "this item"}"? This cannot be undone.`}
       />
     </PageHeader>
   );

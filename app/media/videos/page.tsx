@@ -21,7 +21,7 @@ export default function VideosPage() {
   const [editing, setEditing] = useState<MediaItem | null>(null);
   const [view, setView] = useState<"list" | "form">("list");
   const [saving, setSaving] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteItem, setDeleteItem] = useState<MediaItem | null>(null);
 
   const items = data?.items ?? [];
   const totalCount = data?.totalCount ?? 0;
@@ -52,10 +52,10 @@ export default function VideosPage() {
   };
 
   const confirmDelete = async () => {
-    if (!deleteId) return;
-    await deleteMutation.mutateAsync(deleteId);
+    if (!deleteItem) return;
+    await deleteMutation.mutateAsync(deleteItem.id);
     if (items.length <= 1 && currentPage > 1) setCurrentPage((p) => p - 1);
-    setDeleteId(null);
+    setDeleteItem(null);
   };
 
   if (view === "form") {
@@ -80,15 +80,15 @@ export default function VideosPage() {
         totalCount={totalCount}
         onPageChange={setCurrentPage}
         onEdit={(item) => { setEditing(item); setView("form"); }}
-        onDelete={setDeleteId}
+        onDelete={(id) => { const item = items.find(i => i.id === id); if (item) setDeleteItem(item); }}
         groupLabel="Videos"
       />
       <DeleteDialog
-        open={!!deleteId}
-        onOpenChange={(o) => { if (!o) setDeleteId(null); }}
+        open={!!deleteItem}
+        onOpenChange={(o) => { if (!o) setDeleteItem(null); }}
         onConfirm={confirmDelete}
-        title="Delete Media"
-        description="Are you sure you want to delete this media? This action cannot be undone."
+        title={`Delete "${deleteItem?.title || deleteItem?.alt || "this item"}"?`}
+        description={`Are you sure you want to delete "${deleteItem?.title || deleteItem?.alt || "this item"}"? This cannot be undone.`}
       />
     </PageHeader>
   );

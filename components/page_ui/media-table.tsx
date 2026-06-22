@@ -5,6 +5,7 @@ import { ImageIcon, Box, Boxes } from "lucide-react";
 import type { MediaItem } from "@/api/types/media.types";
 import { isVideoUrl, isModelUrl } from "@/lib/media";
 import { formatDate } from "@/lib/dates";
+import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
 import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 
@@ -27,9 +28,9 @@ function GroupBadge({ group }: { group: string }) {
   };
   const cls = colors[group] || "bg-gray-50 text-gray-600";
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${cls}`}>
+    <Badge variant="outline" className={`rounded-md font-medium border-0 ${cls}`}>
       {group || "—"}
-    </span>
+    </Badge>
   );
 }
 
@@ -85,6 +86,7 @@ export function MediaTable({ items, page, totalPages, totalCount, onPageChange, 
       totalPages={totalPages}
       onPageChange={onPageChange}
       totalCount={totalCount}
+      hideDeleteDialog
       emptyState={{
         icon: ImageIcon,
         title: `No ${groupLabel.toLowerCase()} yet`,
