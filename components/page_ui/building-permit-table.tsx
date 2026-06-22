@@ -1,36 +1,22 @@
 "use client";
 
 import { FileText } from "lucide-react";
-import type { BuildingPermitItem, BuildingPermitItemType } from "@/api/types/building-permit.types";
-import { Badge } from "@/components/ui/badge";
+import type { BuildingPermit } from "@/api/types/building-permit.types";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
 import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 
-const TYPE_STYLES: Record<BuildingPermitItemType, { color: string; label: string }> = {
-  workflow_step: { color: "border-blue-200 bg-blue-50 text-blue-600", label: "Workflow Step" },
-  doc_category: { color: "border-green-200 bg-green-50 text-green-600", label: "Doc Category" },
-  regulation: { color: "border-amber-200 bg-amber-50 text-amber-600", label: "Regulation" },
-  municipality: { color: "border-purple-200 bg-purple-50 text-purple-600", label: "Municipality" },
-};
-
 interface Props {
-  items: BuildingPermitItem[];
-  onEdit: (item: BuildingPermitItem) => void;
+  items: BuildingPermit[];
+  onEdit: (item: BuildingPermit) => void;
   onDelete: (id: string) => void;
-
   page: number;
   totalPages: number;
+  totalCount: number;
   onPageChange: (page: number) => void;
 }
 
-function getItemsCount(item: BuildingPermitItem): number {
-  if (item.type === "workflow_step") return item.documents.length;
-  if (item.type === "doc_category" || item.type === "regulation") return item.items.length;
-  return 0;
-}
-
-export function BuildingPermitTable({ items, onEdit, onDelete, page, totalPages, onPageChange }: Props) {
-  const columns: ColumnDef<BuildingPermitItem>[] = [
+export function BuildingPermitTable({ items, onEdit, onDelete, page, totalPages, totalCount, onPageChange }: Props) {
+  const columns: ColumnDef<BuildingPermit>[] = [
     {
       header: "Title",
       render: (item) => (
@@ -43,23 +29,8 @@ export function BuildingPermitTable({ items, onEdit, onDelete, page, totalPages,
       ),
     },
     {
-      header: "Type",
-      render: (item) => {
-        const typeStyle = TYPE_STYLES[item.type];
-        return (
-          <Badge variant="outline" className={`font-normal gap-1.5 ${typeStyle.color}`}>
-            {typeStyle.label}
-          </Badge>
-        );
-      },
-    },
-    {
-      header: "Items",
-      render: (item) => (
-        <Badge variant="outline" className="font-normal border-gray-200 bg-gray-50 text-gray-600">
-          {getItemsCount(item)}
-        </Badge>
-      ),
+      header: "Slug",
+      render: (item) => <span className="text-xs text-gray-500 font-mono">/{item.slug}</span>,
     },
     {
       header: "Status",
@@ -76,8 +47,19 @@ export function BuildingPermitTable({ items, onEdit, onDelete, page, totalPages,
       getIdentifier={(item) => item.id}
       page={page}
       totalPages={totalPages}
+      totalCount={totalCount}
       onPageChange={onPageChange}
-      emptyState={{ icon: FileText, title: "No items yet", description: "Add a workflow step, doc category, regulation, or municipality to get started." }}
+      emptyState={{ icon: FileText, title: "No building permit yet", description: "Add a building permit to get started." }}
+      deleteDialog={{
+        title: (id) => {
+          const item = items.find((i) => i.id === id);
+          return `Delete "${item?.title || "this building permit"}"?`;
+        },
+        description: (id) => {
+          const item = items.find((i) => i.id === id);
+          return `Are you sure you want to delete "${item?.title || "this building permit"}"? All workflow steps, regulations, municipality data, and banners inside it will be removed.`;
+        },
+      }}
     />
   );
 }

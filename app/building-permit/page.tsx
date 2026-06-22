@@ -1,175 +1,151 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { toast } from "sonner";
 import { BuildingPermitAdmin } from "@/api/services/building-permit.service";
-import type { BuildingPermitItem, BuildingPermitItemType, BilingualPair, DocumentExample } from "@/api/types/building-permit.types";
+import type { BuildingPermit } from "@/api/types/building-permit.types";
 import { BuildingPermitTable } from "@/components/page_ui/building-permit-table";
 import { BuildingPermitForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/building-permit-form";
 import type { BuildingPermitFormData } from "@/components/page_ui/building-permit-form";
 import { toSlug } from "@/lib/slug";
 import { PageHeader } from "@/components/global_ui/page-header";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
+  InputGroup, InputGroupAddon, InputGroupInput,
 } from "@/components/ui/input-group";
+import { useMutation } from "@tanstack/react-query";
 
 const ITEMS_PER_PAGE = 10;
-
 type View = "list" | "form";
 
-const TYPE_BUTTONS: { type: BuildingPermitItemType; label: string }[] = [
-  { type: "workflow_step", label: "Workflow Step" },
-  { type: "doc_category", label: "Doc Category" },
-  { type: "regulation", label: "Regulation" },
-  { type: "municipality", label: "Municipality" },
-];
-
-function formForType(type: BuildingPermitItemType): BuildingPermitFormData {
-  return { ...EMPTY_FORM, type };
-}
-
-function itemToForm(item: BuildingPermitItem): BuildingPermitFormData {
+function itemToForm(item: BuildingPermit): BuildingPermitFormData {
   return {
-    type: item.type,
     title: item.title,
     slug: item.slug,
-    order: item.order,
     isActive: item.is_active,
-    stepNumber: item.step_number,
-    description: { ...item.description },
-    duration: item.duration,
-    documents: [...item.documents],
-    label: { ...item.label },
-    items: item.items.map((c) => ({ ...c })),
-    district: item.district,
-    phone: item.phone,
-    documentExamples: (item.document_examples ?? []).map((d) => ({ ...d })),
+    workflowSteps: item.workflow_steps?.length
+      ? item.workflow_steps.map((s) => ({
+          name: s.name || "",
+          description: { ...s.description },
+          duration: s.duration || "",
+          requiredDocs: s.requiredDocs?.length
+            ? s.requiredDocs.map((d) => ({ name: d.name, imageUrl: d.imageUrl || "" }))
+            : [],
+        }))
+      : [],
+    regulationItems: item.regulation_items?.length
+      ? item.regulation_items.map((r) => ({
+          name: r.name || "",
+          items: r.items?.length ? r.items.map((c) => ({ ...c })) : [],
+        }))
+      : [],
+    municipalityItems: item.municipality_items?.length
+      ? item.municipality_items.map((m) => ({
+          district: m.district || "",
+          phone: m.phone || "",
+          location: m.location || "",
+        }))
+      : [],
+    banners: item.banners?.length ? item.banners.map((b) => ({ ...b })) : [],
     metaTitle: item.meta_title,
     metaKeywords: item.meta_keywords,
     metaDescription: item.meta_description,
   };
 }
 
+function formToPayload(form: BuildingPermitFormData) {
+  return {
+    title: form.title,
+    slug: form.slug,
+    is_active: form.isActive,
+    workflow_steps: form.workflowSteps.map((s) => ({
+      name: s.name,
+      description: s.description,
+      duration: s.duration,
+      requiredDocs: s.requiredDocs.map((d) => ({ name: d.name, imageUrl: d.imageUrl })),
+    })),
+    regulation_items: form.regulationItems.map((r) => ({
+      name: r.name,
+      items: r.items,
+    })),
+    municipality_items: form.municipalityItems.map((m) => ({
+      district: m.district,
+      phone: m.phone,
+      location: m.location,
+    })),
+    banners: form.banners,
+    meta_title: form.metaTitle,
+    meta_keywords: form.metaKeywords,
+    meta_description: form.metaDescription,
+  };
+}
+
 export default function AdminBuildingPermitPage() {
-  const [items, setItems] = useState<BuildingPermitItem[]>([]);
+  const [items, setItems] = useState<BuildingPermit[]>([]);
   const [total, setTotal] = useState(0);
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<BuildingPermitFormData>(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<BuildingPermitItemType | "all">("all");
   const [currentPage, setCurrentPage] = useState(1);
 
   const searchParams = useMemo(() => ({
     search: search || undefined,
-    type: typeFilter !== "all" ? typeFilter : undefined,
     page: currentPage,
     page_size: ITEMS_PER_PAGE,
-  }), [search, typeFilter, currentPage]);
+  }), [search, currentPage]);
 
   useEffect(() => {
     BuildingPermitAdmin.search(searchParams)
-      .then((res) => {
-        setItems(res.results ?? []);
-        setTotal(res.count ?? 0);
-      })
+      .then((res) => { setItems(res.results ?? []); setTotal(res.count ?? 0); })
       .catch(() => toast.error("Failed to load data"));
   }, [searchParams]);
 
+  const createMutation = useMutation({
+    mutationFn: (payload: ReturnType<typeof formToPayload>) => BuildingPermitAdmin.create(payload),
+    onSuccess: () => {
+      toast.success("Building permit created");
+      refetch();
+      back();
+    },
+    onError: () => toast.error("Failed to create"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: ReturnType<typeof formToPayload> }) =>
+      BuildingPermitAdmin.update(id, payload),
+    onSuccess: () => {
+      toast.success("Building permit updated");
+      refetch();
+      back();
+    },
+    onError: () => toast.error("Failed to update"),
+  });
+
   const refetch = () =>
     BuildingPermitAdmin.search(searchParams)
-      .then((res) => {
-        setItems(res.results ?? []);
-        setTotal(res.count ?? 0);
-      })
-      .catch(() => toast.error("Failed to load building permit items"));
+      .then((res) => { setItems(res.results ?? []); setTotal(res.count ?? 0); })
+      .catch(() => toast.error("Failed to load building permit"));
 
-  const openNew = (type: BuildingPermitItemType) => {
-    setForm(formForType(type));
-    setEditingId(null);
-    setView("form");
-  };
+  const openNew = () => { setForm(EMPTY_FORM); setEditingId(null); setView("form"); };
+  const openEdit = (item: BuildingPermit) => { setForm(itemToForm(item)); setEditingId(item.id); setView("form"); };
+  const back = () => { setForm(EMPTY_FORM); setView("list"); };
 
-  const openEdit = (item: BuildingPermitItem) => {
-    setForm(itemToForm(item));
-    setEditingId(item.id);
-    setView("form");
-  };
-
-  const back = () => {
-    setForm(EMPTY_FORM);
-    setView("list");
-  };
-
-  const handleChange = (key: string, value: string | boolean | number | BilingualPair | BilingualPair[] | string[] | DocumentExample[]) => {
+  const handleChange = (key: string, value: unknown) => {
     setForm((prev) => ({
       ...prev,
       [key]: value,
-      ...(key === "title" && !editingId && typeof value === "string"
-        ? { slug: toSlug(value) }
-        : {}),
+      ...(key === "title" && !editingId && typeof value === "string" ? { slug: toSlug(value) } : {}),
     }));
   };
 
-  const handleListChange = (listKey: string, items: BilingualPair[]) => {
-    setForm((prev) => ({ ...prev, [listKey]: items }));
-  };
-
-  const save = async () => {
+  const save = () => {
     if (!form.title.trim()) return;
-    setSaving(true);
-    try {
-      const payload = {
-        type: form.type,
-        title: form.title,
-        slug: form.slug,
-        order: form.order,
-        is_active: form.isActive,
-        step_number: form.stepNumber,
-        description: form.description,
-        duration: form.duration,
-        documents: form.documents,
-        label: form.label,
-        items: form.items,
-        district: form.district,
-        phone: form.phone,
-        document_examples: form.documentExamples,
-        meta_title: form.metaTitle,
-        meta_keywords: form.metaKeywords,
-        meta_description: form.metaDescription,
-      };
-      if (editingId) {
-        await BuildingPermitAdmin.update(editingId, payload);
-        toast.success("Building permit item updated");
-      } else {
-        const create =
-          form.type === "workflow_step"
-            ? BuildingPermitAdmin.createWorkflowStep(payload)
-            : form.type === "doc_category"
-              ? BuildingPermitAdmin.createDocCategory(payload)
-              : form.type === "regulation"
-                ? BuildingPermitAdmin.createRegulation(payload)
-                : BuildingPermitAdmin.createMunicipality(payload);
-        await create;
-        toast.success("Building permit item created");
-      }
-      await refetch();
-      back();
-    } catch {
-      toast.error("Something went wrong");
-    } finally {
-      setSaving(false);
+    const payload = formToPayload(form);
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, payload });
+    } else {
+      createMutation.mutate(payload);
     }
   };
 
@@ -177,95 +153,29 @@ export default function AdminBuildingPermitPage() {
     try {
       await BuildingPermitAdmin.delete(id);
       setItems((prev) => prev.filter((g) => g.id !== id));
-      toast.success("Building permit item deleted");
-    } catch {
-      toast.error("Failed to delete");
-    }
+      toast.success("Building permit deleted");
+    } catch { toast.error("Failed to delete"); }
   };
 
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
-
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
-    setCurrentPage(1);
-  };
-
-  const handleTypeFilterChange = (v: string) => {
-    setTypeFilter(v as BuildingPermitItemType | "all");
-    setCurrentPage(1);
-  };
+  const handleSearchChange = (value: string) => { setSearch(value); setCurrentPage(1); };
 
   return (
     <>
       {view === "list" ? (
-        <PageHeader
-          title="Building Permit"
-          subtitle="Workflow steps, document categories, regulations, and municipalities"
-          actions={
-            <div className="flex items-center gap-2">
-              {TYPE_BUTTONS.map((btn) => (
-                <button
-                  key={btn.type}
-                  onClick={() => openNew(btn.type)}
-                  className="inline-flex items-center gap-1.5 h-10 px-4 rounded-lg border border-sidebar-primary/20 text-sidebar-primary text-sm font-medium transition hover:bg-sidebar-primary/5"
-                >
-                  <Plus className="w-4 h-4" /> {btn.label}
-                </button>
-              ))}
-            </div>
-          }
-        >
+        <PageHeader title="Building Permit" subtitle="Manage workflow, regulations, municipalities, and banners" actionLabel="Add Building Permit" onAction={openNew}>
           <div className="flex items-center gap-3 mb-4">
             <InputGroup className="flex-1 max-w-sm h-9">
-              <InputGroupAddon align="inline-start">
-                <Search className="size-4 text-muted-foreground" />
-              </InputGroupAddon>
-              <InputGroupInput
-                value={search}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="Search"
-              />
+              <InputGroupAddon align="inline-start"><Search className="size-4 text-muted-foreground" /></InputGroupAddon>
+              <InputGroupInput value={search} onChange={(e) => handleSearchChange(e.target.value)} placeholder="Search" />
             </InputGroup>
-            <Select
-              value={typeFilter}
-              onValueChange={handleTypeFilterChange}
-            >
-              <SelectTrigger className="w-40 h-9 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="workflow_step">Workflow Step</SelectItem>
-                <SelectItem value="doc_category">Doc Category</SelectItem>
-                <SelectItem value="regulation">Regulation</SelectItem>
-                <SelectItem value="municipality">Municipality</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-sidebar-primary font-medium whitespace-nowrap">
-              Total: {total} {total === 1 ? "item" : "items"} found.
-            </p>
+            <p className="text-sm text-sidebar-primary font-medium whitespace-nowrap">Total: {total} {total === 1 ? "item" : "items"} found.</p>
           </div>
-
-          <BuildingPermitTable
-            items={items}
-            onEdit={openEdit}
-            onDelete={confirmDelete}
-            page={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
+          <BuildingPermitTable items={items} onEdit={openEdit} onDelete={confirmDelete} page={currentPage} totalPages={totalPages} totalCount={total} onPageChange={setCurrentPage} />
         </PageHeader>
       ) : (
         <div className="px-4">
-          <BuildingPermitForm
-            form={form}
-            editingId={editingId}
-            saving={saving}
-            onChange={handleChange}
-            onListChange={handleListChange}
-            onSave={save}
-            onBack={back}
-          />
+          <BuildingPermitForm form={form} editingId={editingId} saving={createMutation.isPending || updateMutation.isPending} onChange={handleChange} onSave={save} onBack={back} />
         </div>
       )}
     </>

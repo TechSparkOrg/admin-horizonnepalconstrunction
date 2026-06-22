@@ -3,29 +3,27 @@ export interface BilingualPair {
   np: string;
 }
 
-export type BuildingPermitItemType = "workflow_step" | "doc_category" | "regulation" | "municipality";
-
-export interface DocumentExample {
-  document_name: string;
-  image_url: string;
-}
-
-export interface BuildingPermitItem {
+export interface BuildingPermit {
   id: string;
-  type: BuildingPermitItemType;
   title: string;
   slug: string;
-  order: number;
   is_active: boolean;
-  step_number: number;
-  description: BilingualPair;
-  duration: string;
-  documents: string[];
-  label: BilingualPair;
-  items: BilingualPair[];
-  district: string;
-  phone: string;
-  document_examples: DocumentExample[];
+  workflow_steps: {
+    name: string;
+    description: BilingualPair;
+    duration: string;
+    requiredDocs: { name: string; imageUrl: string }[];
+  }[];
+  regulation_items: {
+    name: string;
+    items: BilingualPair[];
+  }[];
+  municipality_items: {
+    district: string;
+    phone: string;
+    location: string;
+  }[];
+  banners: { url: string; name: string }[];
   meta_title: string;
   meta_keywords: string;
   meta_description: string;
@@ -33,5 +31,5 @@ export interface BuildingPermitItem {
   updated_at: string;
 }
 
-export type BuildingPermitItemCreate = Omit<BuildingPermitItem, 'id' | 'created_at' | 'updated_at'>;
-export type BuildingPermitItemUpdate = Partial<BuildingPermitItemCreate>;
+export type BuildingPermitCreate = Omit<BuildingPermit, 'id' | 'created_at' | 'updated_at'>;
+export type BuildingPermitUpdate = Partial<BuildingPermitCreate>;
