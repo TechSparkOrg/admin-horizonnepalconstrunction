@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Plus, Search } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAttributeOptions } from "@/api/hooks/use-attribute-query";
 import { TemplateAdmin } from "@/api/services/template.service";
 import type { TemplateItem } from "@/api/types/template.types";
+import { templateSchema } from "@/api/validation/template";
 import { TemplateTable } from "@/components/page_ui/template-table";
 import { TemplateForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/template-form";
 import type { TemplateFormData } from "@/components/page_ui/template-form";
@@ -54,7 +56,6 @@ export default function TemplatesPage() {
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<TemplateFormData>(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -126,24 +127,32 @@ export default function TemplatesPage() {
     }));
   };
 
-  const save = async () => {
-    if (!form.title.trim() || !selectedAttributeId) return;
-    setSaving(true);
-    try {
-      const payload = formToPayload(form, selectedAttributeId);
-      if (editingId) {
-        await TemplateAdmin.update(editingId, payload);
-        toast.success("Template updated");
-      } else {
-        await TemplateAdmin.create(payload);
-        toast.success("Template created");
-      }
-      await refetch();
-      back();
-    } catch {
-      toast.error("Something went wrong");
-    } finally {
-      setSaving(false);
+  const createMutation = useMutation({
+    mutationFn: (payload: Parameters<typeof TemplateAdmin.create>[0]) =>
+      TemplateAdmin.create(payload),
+    onSuccess: () => { toast.success("Template created"); refetch(); back(); },
+    onError: () => toast.error("Failed to create template"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Parameters<typeof TemplateAdmin.update>[1] }) =>
+      TemplateAdmin.update(id, payload),
+    onSuccess: () => { toast.success("Template updated"); refetch(); back(); },
+    onError: () => toast.error("Failed to update template"),
+  });
+
+  const save = () => {
+    if (!selectedAttributeId) return;
+    const parsed = templateSchema.safeParse(form);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message || "Validation failed");
+      return;
+    }
+    const payload = formToPayload(form, selectedAttributeId);
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, payload });
+    } else {
+      createMutation.mutate(payload);
     }
   };
 
@@ -221,6 +230,7 @@ export default function TemplatesPage() {
               onDelete={confirmDelete}
               page={currentPage}
               totalPages={totalPages}
+              totalCount={total}
               onPageChange={setCurrentPage}
             />
           )}
@@ -230,7 +240,7 @@ export default function TemplatesPage() {
           <TemplateForm
             form={form}
             editingId={editingId}
-            saving={saving}
+            saving={createMutation.isPending || updateMutation.isPending}
             attributeGroups={attributeGroups}
             onChange={handleChange}
             onSave={save}

@@ -12,10 +12,11 @@ interface Props {
   onDelete: (id: string) => void;
   page: number;
   totalPages: number;
+  totalCount: number;
   onPageChange: (page: number) => void;
 }
 
-export function UnitConverterTable({ items, onEdit, onDelete, page, totalPages, onPageChange }: Props) {
+export function UnitConverterTable({ items, onEdit, onDelete, page, totalPages, totalCount, onPageChange }: Props) {
   const columns: ColumnDef<UnitConversionItem>[] = [
     {
       header: "Title",
@@ -53,8 +54,19 @@ export function UnitConverterTable({ items, onEdit, onDelete, page, totalPages, 
       getIdentifier={(item) => item.id}
       page={page}
       totalPages={totalPages}
+      totalCount={totalCount}
       onPageChange={onPageChange}
       emptyState={{ icon: ArrowLeftRight, title: "No conversions yet", description: "Create a unit conversion rule to get started." }}
+      deleteDialog={{
+        title: (id) => {
+          const item = items.find((m) => m.id === id);
+          return `Delete "${item?.title || "this conversion"}"?`;
+        },
+        description: (id) => {
+          const item = items.find((m) => m.id === id);
+          return `Delete "${item?.title || "this conversion"}"? This cannot be undone.`;
+        },
+      }}
     />
   );
 }

@@ -2,14 +2,14 @@
 
 import { FileText, Printer, FileDown, TriangleAlert } from "lucide-react";
 import { FormHeader } from "@/components/global_ui/form-header";
+import { FormCard } from "@/components/global_ui/form-card";
 import { FormTabs } from "@/components/global_ui/form-tabs";
+import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import {
@@ -25,6 +25,7 @@ import { TemplateAdmin } from "@/api/services/template.service";
 import { ProjectAdmin } from "@/api/services/project.service";
 import type { TemplateItem } from "@/api/types/template.types";
 import type { Project } from "@/api/types/project.types";
+
 interface AgreementFormData {
   name: string;
   clientName: string;
@@ -223,135 +224,127 @@ export function AgreementForm({ form, editingId, saving, onChange, onVariablesCh
 
         <div>
           <TabsContent value="overview" className="mt-4">
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5 space-y-4">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label>Name</Label>
-                    <Input value={form.name} onChange={(e) => onChange("name", e.target.value)} placeholder="e.g. Construction Contract" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Client Name</Label>
-                    <Input value={form.clientName} onChange={(e) => onChange("clientName", e.target.value)} placeholder="e.g. Mr. Sharma" />
-                  </div>
+            <FormCard>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Name <span className="text-red-500">*</span></Label>
+                  <Input value={form.name} onChange={(e) => onChange("name", e.target.value)} placeholder="e.g. Construction Contract" />
                 </div>
+                <div className="space-y-1.5">
+                  <Label>Client Name</Label>
+                  <Input value={form.clientName} onChange={(e) => onChange("clientName", e.target.value)} placeholder="e.g. Mr. Sharma" />
+                </div>
+              </div>
 
-                <div className="border-t border-gray-200 pt-4">
-                  <p className="text-sm font-semibold text-gray-900 mb-3">Template</p>
-                  <div className="space-y-1.5 max-w-md">
-                    <Label>Select Template</Label>
-                    <SearchableSelect
-                      options={templates.map((t) => ({ value: t.id, label: t.title }))}
-                      value={form.templateId}
-                      onChange={handleTemplateChange}
-                      placeholder="Choose a document template..."
-                      searchPlaceholder="Search templates..."
-                      onSearchChange={setTemplateSearch}
-                    />
-                    {selectedTemplate && (
-                      <p className="text-xs text-gray-500">Attribute: {selectedTemplate.attribute_name}</p>
-                    )}
-                    {templateHasNewTokens && (
-                      <div className="flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-md bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium">
-                        <TriangleAlert className="size-3.5 shrink-0" />
-                        Template updated — review variables
-                      </div>
-                    )}
-                  </div>
+              <div className="border-t border-gray-200 pt-4">
+                <p className="text-sm font-semibold text-gray-900 mb-3">Template</p>
+                <div className="space-y-1.5 max-w-md">
+                  <Label>Select Template</Label>
+                  <SearchableSelect
+                    options={templates.map((t) => ({ value: t.id, label: t.title }))}
+                    value={form.templateId}
+                    onChange={handleTemplateChange}
+                    placeholder="Choose a document template..."
+                    searchPlaceholder="Search templates..."
+                    onSearchChange={setTemplateSearch}
+                  />
+                  {selectedTemplate && (
+                    <p className="text-xs text-gray-500">Attribute: {selectedTemplate.attribute_name}</p>
+                  )}
+                  {templateHasNewTokens && (
+                    <div className="flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-md bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium">
+                      <TriangleAlert className="size-3.5 shrink-0" />
+                      Template updated — review variables
+                    </div>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </FormCard>
           </TabsContent>
 
           <TabsContent value="variables" className="mt-4">
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5 space-y-4">
-                <p className="text-sm font-semibold text-gray-900">Template Variables</p>
-                {!form.templateId ? (
-                  <p className="text-sm text-gray-400">Select a template in Overview to see its variables.</p>
-                ) : contentTokens.length === 0 ? (
-                  <p className="text-sm text-gray-400">This template has no variables.</p>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {contentTokens.map((token) => (
-                      <div key={token} className="space-y-1">
-                        <Label className="text-xs text-gray-600 font-mono">{`{${token}}`}</Label>
-                        <Input
-                          value={form.variables[token] ?? ""}
-                          onChange={(e) => handleVariableChange(token, e.target.value)}
-                          placeholder={`Enter ${token}...`}
-                          className="h-9 text-sm"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <FormCard>
+              <p className="text-sm font-semibold text-gray-900">Template Variables</p>
+              {!form.templateId ? (
+                <p className="text-sm text-gray-400">Select a template in Overview to see its variables.</p>
+              ) : contentTokens.length === 0 ? (
+                <p className="text-sm text-gray-400">This template has no variables.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {contentTokens.map((token) => (
+                    <div key={token} className="space-y-1">
+                      <Label className="text-xs text-gray-600 font-mono">{`{${token}}`}</Label>
+                      <Input
+                        value={form.variables[token] ?? ""}
+                        onChange={(e) => handleVariableChange(token, e.target.value)}
+                        placeholder={`Enter ${token}...`}
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </FormCard>
           </TabsContent>
 
           <TabsContent value="settings" className="mt-4">
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5 space-y-4">
-                <div className="space-y-1.5">
-                  <p className="text-sm font-semibold text-gray-900 mb-3">Status</p>
-                  <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-                    <button type="button" onClick={() => onChange("status", "draft")}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                        form.status === "draft" ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
-                      }`}>Draft</button>
-                    <button type="button" onClick={() => onChange("status", "completed")}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                        form.status === "completed" ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
-                      }`}>Completed</button>
-                  </div>
-                </div>
+            <FormCard>
+              <div className="space-y-1.5">
+                <p className="text-sm font-semibold text-gray-900 mb-3">Status</p>
+                <SegmentedToggle<string>
+                  value={form.status}
+                  onChange={(v) => onChange("status", v)}
+                  options={[
+                    { value: "draft", label: "Draft" },
+                    { value: "completed", label: "Completed" },
+                  ]}
+                />
+              </div>
 
-                <div className="border-t border-gray-200 pt-4">
-                  <p className="text-sm font-semibold text-gray-900 mb-3">Link to Project</p>
-                  <div className="space-y-1.5 max-w-md">
-                    <Label>Project</Label>
-                    <SearchableSelect
-                      options={[
-                        { value: "", label: "None" },
-                        ...projects.map((p) => ({ value: p.slug, label: p.title })),
-                      ]}
-                      value={form.projectId}
-                      onChange={(v) => onChange("projectId", v)}
-                      placeholder="Select a project..."
-                      searchPlaceholder="Search projects..."
-                      onSearchChange={setProjectSearch}
-                    />
-                  </div>
+              <div className="border-t border-gray-200 pt-4">
+                <p className="text-sm font-semibold text-gray-900 mb-3">Link to Project</p>
+                <div className="space-y-1.5 max-w-md">
+                  <Label>Project</Label>
+                  <SearchableSelect
+                    options={[
+                      { value: "", label: "None" },
+                      ...projects.map((p) => ({ value: p.slug, label: p.title })),
+                    ]}
+                    value={form.projectId}
+                    onChange={(v) => onChange("projectId", v)}
+                    placeholder="Select a project..."
+                    searchPlaceholder="Search projects..."
+                    onSearchChange={setProjectSearch}
+                  />
                 </div>
+              </div>
 
-                <div className="border-t border-gray-200 pt-4">
-                  <p className="text-sm font-semibold text-gray-900 mb-3">Download & Export</p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex items-center gap-2">
-                      <Select value={exportFormat} onValueChange={setExportFormat}>
-                        <SelectTrigger className="w-[170px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="docx">Word (.docx)</SelectItem>
-                          <SelectItem value="txt">Plain Text (.txt)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button variant="outline" size="sm" onClick={() => downloadFile(exportFormat, exportFormat === "docx" ? "docx" : "txt")}>
-                        <FileDown className="size-3.5" /> Download
-                      </Button>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={saveAsPdf}>
-                      <FileText className="size-3.5" /> PDF
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={handlePrint}>
-                      <Printer className="size-3.5" /> Print
+              <div className="border-t border-gray-200 pt-4">
+                <p className="text-sm font-semibold text-gray-900 mb-3">Download & Export</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <Select value={exportFormat} onValueChange={setExportFormat}>
+                      <SelectTrigger className="w-[170px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="docx">Word (.docx)</SelectItem>
+                        <SelectItem value="txt">Plain Text (.txt)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button variant="outline" size="sm" onClick={() => downloadFile(exportFormat, exportFormat === "docx" ? "docx" : "txt")}>
+                      <FileDown className="size-3.5" /> Download
                     </Button>
                   </div>
+                  <Button variant="outline" size="sm" onClick={saveAsPdf}>
+                    <FileText className="size-3.5" /> PDF
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handlePrint}>
+                    <Printer className="size-3.5" /> Print
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </FormCard>
           </TabsContent>
         </div>
       </Tabs>

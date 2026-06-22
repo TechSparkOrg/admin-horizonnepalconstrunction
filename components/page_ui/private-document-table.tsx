@@ -13,10 +13,11 @@ interface Props {
   onDelete: (id: string) => void;
   page: number;
   totalPages: number;
+  totalCount: number;
   onPageChange: (page: number) => void;
 }
 
-export function PrivateDocumentTable({ items, onEdit, onDelete, page, totalPages, onPageChange }: Props) {
+export function PrivateDocumentTable({ items, onEdit, onDelete, page, totalPages, totalCount, onPageChange }: Props) {
   const columns: ColumnDef<PrivateDocument>[] = [
     {
       header: "Image",
@@ -74,8 +75,19 @@ export function PrivateDocumentTable({ items, onEdit, onDelete, page, totalPages
       getIdentifier={(item) => item.id}
       page={page}
       totalPages={totalPages}
+      totalCount={totalCount}
       onPageChange={onPageChange}
       emptyState={{ icon: FileText, title: "No documents yet", description: "Create a document to get started." }}
+      deleteDialog={{
+        title: (id) => {
+          const item = items.find((d) => d.id === id);
+          return `Delete "${item?.title || "this document"}"?`;
+        },
+        description: (id) => {
+          const item = items.find((d) => d.id === id);
+          return `Delete "${item?.title || "this document"}"? This cannot be undone.`;
+        },
+      }}
     />
   );
 }

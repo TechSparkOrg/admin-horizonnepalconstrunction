@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { Plus, Search } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ReviewAdmin } from "@/api/services/review.service";
 import type { ReviewGroup, ReviewItemData } from "@/api/types/review.types";
+import { reviewSchema } from "@/api/validation/review";
 import { ReviewTable } from "@/components/page_ui/review-table";
 import { ReviewForm } from "@/components/page_ui/review-form";
 import { toSlug } from "@/lib/slug";
@@ -37,22 +39,23 @@ type View = "list" | "form";
 
 export default function AdminReviewsPage() {
   const [groups, setGroups] = useState<ReviewGroup[]>([]);
+  const [total, setTotal] = useState(0);
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ReviewFormData>(EMPTY);
-  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => {
-    ReviewAdmin.list()
-      .then((res) => setGroups(res.results ?? []))
-      .catch(() => toast.error("Failed to load data"));
-  }, []);
+  const fetchAll = () =>
+    ReviewAdmin.list({ search: search || undefined, page: currentPage, page_size: ITEMS_PER_PAGE })
+      .then((res) => { setGroups(res.results ?? []); setTotal(res.count ?? 0); })
+      .catch(() => toast.error("Failed to load reviews"));
+
+  useEffect(() => { fetchAll(); }, [currentPage, search]);
 
   const refetch = () =>
-    ReviewAdmin.list()
-      .then((res) => setGroups(res.results ?? []))
+    ReviewAdmin.list({ search: search || undefined, page: currentPage, page_size: ITEMS_PER_PAGE })
+      .then((res) => { setGroups(res.results ?? []); setTotal(res.count ?? 0); })
       .catch(() => toast.error("Failed to load reviews"));
 
   const openNew = () => {
@@ -90,36 +93,43 @@ export default function AdminReviewsPage() {
   const handleItemsChange = (items: ReviewItemData[]) =>
     setForm((prev) => ({ ...prev, items }));
 
-  const save = async () => {
-    if (!form.title.trim()) return;
-    setSaving(true);
-    try {
-      const payload = {
-        title: form.title,
-        slug: form.slug,
-        order: form.order,
-        is_active: form.isActive,
-        items: form.items.map((it, i) => ({
-          name: it.name,
-          role: it.role,
-          quote: it.quote,
-          rating: it.rating,
-          order: it.order || i + 1,
-        })),
-      };
-      if (editingId) {
-        await ReviewAdmin.update(editingId, payload);
-        toast.success("Review group updated");
-      } else {
-        await ReviewAdmin.create(payload);
-        toast.success("Review group created");
-      }
-      await refetch();
-      back();
-    } catch {
-      toast.error("Something went wrong");
-    } finally {
-      setSaving(false);
+  const createMutation = useMutation({
+    mutationFn: (payload: Parameters<typeof ReviewAdmin.create>[0]) =>
+      ReviewAdmin.create(payload),
+    onSuccess: () => { toast.success("Review group created"); refetch(); back(); },
+    onError: () => toast.error("Failed to create review group"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Parameters<typeof ReviewAdmin.update>[1] }) =>
+      ReviewAdmin.update(id, payload),
+    onSuccess: () => { toast.success("Review group updated"); refetch(); back(); },
+    onError: () => toast.error("Failed to update review group"),
+  });
+
+  const save = () => {
+    const parsed = reviewSchema.safeParse(form);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message || "Validation failed");
+      return;
+    }
+    const payload = {
+      title: form.title,
+      slug: form.slug,
+      order: form.order,
+      is_active: form.isActive,
+      items: form.items.map((it, i) => ({
+        name: it.name,
+        role: it.role,
+        quote: it.quote,
+        rating: it.rating,
+        order: it.order || i + 1,
+      })),
+    };
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, payload });
+    } else {
+      createMutation.mutate(payload);
     }
   };
 
@@ -127,21 +137,14 @@ export default function AdminReviewsPage() {
     try {
       await ReviewAdmin.delete(id);
       setGroups((prev) => prev.filter((g) => g.id !== id));
+      setTotal((prev) => prev - 1);
       toast.success("Review group deleted");
     } catch {
       toast.error("Failed to delete");
     }
   };
 
-  const filtered = groups.filter((g) =>
-    g.title.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const paginatedGroups = filtered.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
@@ -164,16 +167,17 @@ export default function AdminReviewsPage() {
               />
             </InputGroup>
             <p className="text-sm text-sidebar-primary font-medium whitespace-nowrap">
-              Total: {filtered.length} {filtered.length === 1 ? "item" : "items"} found.
+              Total: {total} {total === 1 ? "item" : "items"} found.
             </p>
           </div>
 
           <ReviewTable
-            groups={paginatedGroups}
+            groups={groups}
             onEdit={openEdit}
             onDelete={confirmDelete}
             page={currentPage}
             totalPages={totalPages}
+            totalCount={total}
             onPageChange={setCurrentPage}
           />
         </PageHeader>
@@ -182,7 +186,7 @@ export default function AdminReviewsPage() {
           <ReviewForm
             form={form}
             editingId={editingId}
-            saving={saving}
+            saving={createMutation.isPending || updateMutation.isPending}
             onChange={handleChange}
             onItemsChange={handleItemsChange}
             onSave={save}

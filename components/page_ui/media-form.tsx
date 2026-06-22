@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { Upload, Eye, X, Box, Boxes } from "lucide-react";
+import { Upload, Eye, X, Box } from "lucide-react";
 import { FormHeader } from "@/components/global_ui/form-header";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,6 +13,9 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Tabs,
@@ -234,7 +237,7 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
                           ) : isVideoUrl(editing.url) ? (
                             <video src={editing.url} className="w-full h-full object-cover" muted />
                           ) : isModelUrl(editing.url) ? (
-                            <Boxes className="w-6 h-6 text-emerald-500" />
+                            <ModelViewer src={editing.url} className="w-full h-full" cameraControls={false} autoRotate={false} />
                           ) : (
                             <Box className="w-6 h-6 text-gray-400" />
                           )}
@@ -263,7 +266,7 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
                           ) : files[0].type.startsWith("video/") ? (
                             <video src={preview} className="w-full h-full object-cover" muted />
                           ) : files[0].name.match(/\.(glb|gltf|fbx|obj|stl|usdz|usd|ply|3ds|blend)$/i) ? (
-                            <Boxes className="w-6 h-6 text-emerald-500" />
+                            <ModelViewer src={preview} className="w-full h-full" cameraControls={false} autoRotate={false} />
                           ) : (
                             <Box className="w-6 h-6 text-gray-400" />
                           )}
@@ -345,7 +348,13 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
       </form>
 
       <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
-        <DialogContent className="!max-w-[90vw] !max-h-[90vh] p-0 overflow-hidden bg-black/90 border-0">
+        <DialogContent className="!max-w-[90vw] !max-h-[90vh] p-0 overflow-hidden bg-black/90 border-0" aria-describedby="preview-desc">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Media Preview</DialogTitle>
+            <DialogDescription id="preview-desc" className="sr-only">
+              Full-size preview of the selected media file
+            </DialogDescription>
+          </DialogHeader>
           {renderPreviewContent()}
         </DialogContent>
       </Dialog>

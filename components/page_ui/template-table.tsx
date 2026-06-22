@@ -13,10 +13,11 @@ interface Props {
   onDelete: (id: string) => void;
   page: number;
   totalPages: number;
+  totalCount: number;
   onPageChange: (page: number) => void;
 }
 
-export function TemplateTable({ items, onEdit, onDelete, page, totalPages, onPageChange }: Props) {
+export function TemplateTable({ items, onEdit, onDelete, page, totalPages, totalCount, onPageChange }: Props) {
   const columns: ColumnDef<TemplateItem>[] = [
     {
       header: "Type",
@@ -56,8 +57,19 @@ export function TemplateTable({ items, onEdit, onDelete, page, totalPages, onPag
       getIdentifier={(item) => item.id}
       page={page}
       totalPages={totalPages}
+      totalCount={totalCount}
       onPageChange={onPageChange}
       emptyState={{ icon: FileText, title: "No templates yet", description: "Add a template to get started." }}
+      deleteDialog={{
+        title: (id) => {
+          const item = items.find((t) => t.id === id);
+          return `Delete "${item?.title || "this template"}"?`;
+        },
+        description: (id) => {
+          const item = items.find((t) => t.id === id);
+          return `Delete "${item?.title || "this template"}"? This cannot be undone.`;
+        },
+      }}
     />
   );
 }

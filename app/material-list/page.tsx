@@ -3,9 +3,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { Plus, Search, ArrowLeftRight } from "lucide-react";
 import Link from "next/link";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { MaterialListAdmin } from "@/api/services/material-list.service";
 import type { MaterialItem } from "@/api/types/material-list.types";
+import { materialSchema } from "@/api/validation/material";
 import { MaterialListTable } from "@/components/page_ui/material-list-table";
 import { MaterialListForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/material-list-form";
 import type { MaterialListFormData } from "@/components/page_ui/material-list-form";
@@ -54,7 +56,6 @@ export default function AdminMaterialListPage() {
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<MaterialListFormData>(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -105,24 +106,31 @@ export default function AdminMaterialListPage() {
     }));
   };
 
-  const save = async () => {
-    if (!form.name.trim()) return;
-    setSaving(true);
-    try {
-      const payload = formToPayload(form);
-      if (editingId) {
-        await MaterialListAdmin.update(editingId, payload);
-        toast.success("Material updated");
-      } else {
-        await MaterialListAdmin.create(payload);
-        toast.success("Material created");
-      }
-      await refetch();
-      back();
-    } catch {
-      toast.error("Something went wrong");
-    } finally {
-      setSaving(false);
+  const createMutation = useMutation({
+    mutationFn: (payload: Parameters<typeof MaterialListAdmin.create>[0]) =>
+      MaterialListAdmin.create(payload),
+    onSuccess: () => { toast.success("Material created"); refetch(); back(); },
+    onError: () => toast.error("Failed to create material"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Parameters<typeof MaterialListAdmin.update>[1] }) =>
+      MaterialListAdmin.update(id, payload),
+    onSuccess: () => { toast.success("Material updated"); refetch(); back(); },
+    onError: () => toast.error("Failed to update material"),
+  });
+
+  const save = () => {
+    const parsed = materialSchema.safeParse(form);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message || "Validation failed");
+      return;
+    }
+    const payload = formToPayload(form);
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, payload });
+    } else {
+      createMutation.mutate(payload);
     }
   };
 
@@ -130,6 +138,7 @@ export default function AdminMaterialListPage() {
     try {
       await MaterialListAdmin.delete(id);
       setItems((prev) => prev.filter((g) => g.id !== id));
+      setTotal((prev) => prev - 1);
       toast.success("Material deleted");
     } catch {
       toast.error("Failed to delete");
@@ -184,6 +193,7 @@ export default function AdminMaterialListPage() {
             onDelete={confirmDelete}
             page={currentPage}
             totalPages={totalPages}
+            totalCount={total}
             onPageChange={setCurrentPage}
           />
         </PageHeader>
@@ -192,7 +202,7 @@ export default function AdminMaterialListPage() {
           <MaterialListForm
             form={form}
             editingId={editingId}
-            saving={saving}
+            saving={createMutation.isPending || updateMutation.isPending}
             onChange={handleChange}
             onSave={save}
             onBack={back}

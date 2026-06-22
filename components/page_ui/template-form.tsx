@@ -15,8 +15,9 @@ import { TableHeader } from "@tiptap/extension-table-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { FormCard } from "@/components/global_ui/form-card";
+import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
 import { MediaPickerDialog } from "@/components/global_ui/media-handler-picker";
 import type { PickerMediaItem } from "@/components/global_ui/media-handler-picker";
 
@@ -63,21 +64,6 @@ const EMPTY: TemplateFormData = {
 
 export { EMPTY };
 export type { TemplateFormData };
-
-function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-      <button type="button" onClick={() => onChange(true)}
-        className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-          value ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
-        }`}>Yes</button>
-      <button type="button" onClick={() => onChange(false)}
-        className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-          !value ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
-        }`}>No</button>
-    </div>
-  );
-}
 
 function ToolbarButton({ active, onClick, label, children }: { active?: boolean; onClick: () => void; label: string; children: React.ReactNode }) {
   return (
@@ -178,43 +164,38 @@ export function TemplateForm({ form, editingId, saving, attributeGroups, onChang
 
         <div>
           <TabsContent value="overview" className="mt-4">
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5 space-y-4">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label>Title</Label>
-                    <Input value={form.title} onChange={(e) => onChange("title", e.target.value)} placeholder="Template title" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Slug</Label>
-                    <div className="flex rounded-md border border-gray-200 overflow-hidden">
-                      <span className="px-3 flex items-center text-xs text-gray-500 bg-gray-100 border-r border-gray-200 shrink-0">/</span>
-                      <Input value={form.slug} onChange={(e) => onChange("slug", e.target.value)} placeholder="template-slug"
-                        className="border-0 rounded-none font-mono focus-visible:ring-0" />
-                    </div>
+            <FormCard>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Title <span className="text-red-500">*</span></Label>
+                  <Input value={form.title} onChange={(e) => onChange("title", e.target.value)} placeholder="Template title" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Slug <span className="text-red-500">*</span></Label>
+                  <div className="flex rounded-md border border-gray-200 overflow-hidden">
+                    <span className="px-3 flex items-center text-xs text-gray-500 bg-gray-100 border-r border-gray-200 shrink-0">/</span>
+                    <Input value={form.slug} onChange={(e) => onChange("slug", e.target.value)} placeholder="template-slug"
+                      className="border-0 rounded-none font-mono focus-visible:ring-0" />
                   </div>
                 </div>
+              </div>
 
-                <div className="border-t border-gray-200 pt-4">
-                  <p className="text-sm font-semibold text-gray-900 mb-3">Status</p>
-                  <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-                    <button type="button" onClick={() => onChange("isActive", true)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                        form.isActive ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
-                      }`}>Active</button>
-                    <button type="button" onClick={() => onChange("isActive", false)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                        !form.isActive ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-900"
-                      }`}>Inactive</button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              <div className="border-t border-gray-200 pt-4">
+                <p className="text-sm font-semibold text-gray-900 mb-3">Status</p>
+                <SegmentedToggle<boolean>
+                  value={form.isActive}
+                  onChange={(v) => onChange("isActive", v)}
+                  options={[
+                    { value: true, label: "Active" },
+                    { value: false, label: "Inactive" },
+                  ]}
+                />
+              </div>
+            </FormCard>
           </TabsContent>
 
           <TabsContent value="content" className="mt-4">
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5 space-y-4">
+            <FormCard>
                 <p className="text-sm font-semibold text-gray-900">Template Body</p>
 
                 <div className="space-y-2">
@@ -296,19 +277,24 @@ export function TemplateForm({ form, editingId, saving, attributeGroups, onChang
                     " />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+            </FormCard>
           </TabsContent>
 
           <TabsContent value="media" className="mt-4 space-y-4">
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5">
+            <FormCard>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <Image className="size-4 text-gray-400" />
                     <p className="text-sm font-semibold text-gray-900">Background Image</p>
                   </div>
-                  <Toggle value={form.backgroundImage} onChange={(v) => onChange("backgroundImage", v)} />
+                  <SegmentedToggle<boolean>
+                    value={form.backgroundImage}
+                    onChange={(v) => onChange("backgroundImage", v)}
+                    options={[
+                      { value: true, label: "Yes" },
+                      { value: false, label: "No" },
+                    ]}
+                  />
                 </div>
                 {form.backgroundImage && (
                   <div className="space-y-3">
@@ -326,17 +312,22 @@ export function TemplateForm({ form, editingId, saving, attributeGroups, onChang
                     )}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+            </FormCard>
 
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5">
+            <FormCard>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <Stamp className="size-4 text-gray-400" />
                     <p className="text-sm font-semibold text-gray-900">Stamp</p>
                   </div>
-                  <Toggle value={form.showStamp} onChange={(v) => onChange("showStamp", v)} />
+                  <SegmentedToggle<boolean>
+                    value={form.showStamp}
+                    onChange={(v) => onChange("showStamp", v)}
+                    options={[
+                      { value: true, label: "Yes" },
+                      { value: false, label: "No" },
+                    ]}
+                  />
                 </div>
                 {form.showStamp && (
                   <div className="space-y-3">
@@ -354,17 +345,22 @@ export function TemplateForm({ form, editingId, saving, attributeGroups, onChang
                     )}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+            </FormCard>
 
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5">
+            <FormCard>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <Signature className="size-4 text-gray-400" />
                     <p className="text-sm font-semibold text-gray-900">Signature</p>
                   </div>
-                  <Toggle value={form.showSignature} onChange={(v) => onChange("showSignature", v)} />
+                  <SegmentedToggle<boolean>
+                    value={form.showSignature}
+                    onChange={(v) => onChange("showSignature", v)}
+                    options={[
+                      { value: true, label: "Yes" },
+                      { value: false, label: "No" },
+                    ]}
+                  />
                 </div>
                 {form.showSignature && (
                   <div className="space-y-3">
@@ -382,8 +378,7 @@ export function TemplateForm({ form, editingId, saving, attributeGroups, onChang
                     )}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+            </FormCard>
           </TabsContent>
         </div>
       </Tabs>

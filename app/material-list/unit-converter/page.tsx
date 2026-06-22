@@ -3,9 +3,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { Plus, Search } from "lucide-react";
 import Link from "next/link";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { UnitConversionAdmin } from "@/api/services/unit-converter.service";
 import type { UnitConversionItem } from "@/api/types/unit-converter.types";
+import { unitConverterSchema } from "@/api/validation/unit-converter";
 import { UnitConverterTable } from "@/components/page_ui/unit-converter-table";
 import { UnitConverterForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/unit-converter-form";
 import type { UnitConverterFormData } from "@/components/page_ui/unit-converter-form";
@@ -53,7 +55,6 @@ export default function AdminUnitConverterPage() {
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<UnitConverterFormData>(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -104,24 +105,31 @@ export default function AdminUnitConverterPage() {
     }));
   };
 
-  const save = async () => {
-    if (!form.title.trim()) return;
-    setSaving(true);
-    try {
-      const payload = formToPayload(form);
-      if (editingId) {
-        await UnitConversionAdmin.update(editingId, payload);
-        toast.success("Conversion updated");
-      } else {
-        await UnitConversionAdmin.create(payload);
-        toast.success("Conversion created");
-      }
-      await refetch();
-      back();
-    } catch {
-      toast.error("Something went wrong");
-    } finally {
-      setSaving(false);
+  const createMutation = useMutation({
+    mutationFn: (payload: Parameters<typeof UnitConversionAdmin.create>[0]) =>
+      UnitConversionAdmin.create(payload),
+    onSuccess: () => { toast.success("Conversion created"); refetch(); back(); },
+    onError: () => toast.error("Failed to create conversion"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Parameters<typeof UnitConversionAdmin.update>[1] }) =>
+      UnitConversionAdmin.update(id, payload),
+    onSuccess: () => { toast.success("Conversion updated"); refetch(); back(); },
+    onError: () => toast.error("Failed to update conversion"),
+  });
+
+  const save = () => {
+    const parsed = unitConverterSchema.safeParse(form);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message || "Validation failed");
+      return;
+    }
+    const payload = formToPayload(form);
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, payload });
+    } else {
+      createMutation.mutate(payload);
     }
   };
 
@@ -129,6 +137,7 @@ export default function AdminUnitConverterPage() {
     try {
       await UnitConversionAdmin.delete(id);
       setItems((prev) => prev.filter((g) => g.id !== id));
+      setTotal((prev) => prev - 1);
       toast.success("Conversion deleted");
     } catch {
       toast.error("Failed to delete");
@@ -188,6 +197,7 @@ export default function AdminUnitConverterPage() {
             onDelete={confirmDelete}
             page={currentPage}
             totalPages={totalPages}
+            totalCount={total}
             onPageChange={setCurrentPage}
           />
         </div>
@@ -196,7 +206,7 @@ export default function AdminUnitConverterPage() {
           <UnitConverterForm
             form={form}
             editingId={editingId}
-            saving={saving}
+            saving={createMutation.isPending || updateMutation.isPending}
             onChange={handleChange}
             onSave={save}
             onBack={back}

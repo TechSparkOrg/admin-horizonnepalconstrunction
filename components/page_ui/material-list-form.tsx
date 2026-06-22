@@ -2,14 +2,15 @@
 
 import { ImagePlus, X } from "lucide-react";
 import { FormHeader } from "@/components/global_ui/form-header";
+import { FormCard } from "@/components/global_ui/form-card";
 import { FormTabs } from "@/components/global_ui/form-tabs";
+import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
 import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -129,228 +130,201 @@ export function MaterialListForm({
 
         <div>
           <TabsContent value="overview" className="mt-4">
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5 space-y-4">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label>Name</Label>
-                    <Input
-                      value={form.name}
-                      onChange={(e) => onChange("name", e.target.value)}
-                      placeholder="Material name"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Price Per Unit</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={form.pricePerUnit}
-                      onChange={(e) => onChange("pricePerUnit", e.target.value === "" ? "" : parseFloat(e.target.value))}
-                      placeholder="0.00"
-                    />
-                  </div>
-                </div>
-
+            <FormCard>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label>Attribute Type</Label>
-                  <SearchableSelect
-                    options={[
-                      { value: "", label: "None" },
-                      ...attributes.map((a) => ({ value: a.id, label: a.title })),
-                    ]}
-                    value={form.attributeId ?? ""}
-                    onChange={(v) => {
-                      const id = v || null;
-                      onChange("attributeId", id);
-                      setUnitLabel("");
-                      setCompanyLabel("");
-                      onChange("unitValue", "");
-                      onChange("companyValue", "");
-                    }}
-                    placeholder="Select an attribute"
-                    searchPlaceholder="Search attributes..."
-
+                  <Label>Name <span className="text-red-500">*</span></Label>
+                  <Input
+                    value={form.name}
+                    onChange={(e) => onChange("name", e.target.value)}
+                    placeholder="Material name"
                   />
                 </div>
+                <div className="space-y-1.5">
+                  <Label>Price Per Unit</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.pricePerUnit}
+                    onChange={(e) => onChange("pricePerUnit", e.target.value === "" ? "" : parseFloat(e.target.value))}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
 
-                {selectedAttribute && (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-sm font-semibold text-gray-900">Unit</Label>
-                      <div className="flex items-center gap-2">
-                        <Select value={unitLabel} onValueChange={(v) => { setUnitLabel(v); onChange("unitValue", ""); }}>
-                          <SelectTrigger className="w-full h-9 text-sm">
-                            <SelectValue placeholder="Pick a field" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {fieldLabels.map((l) => (
-                              <SelectItem key={l} value={l}>{l}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <span className="text-gray-300 select-none shrink-0 text-sm font-medium">|</span>
-                        <Select
-                          value={form.unitValue}
-                          onValueChange={(v) => onChange("unitValue", v)}
-                          disabled={!unitLabel}
-                        >
-                          <SelectTrigger className="w-full h-9 text-sm">
-                            <SelectValue placeholder="Select value" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {selectedUnitField?.values.map((val) => (
-                              <SelectItem key={val} value={val}>{val}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
+              <div className="space-y-1.5">
+                <Label>Attribute Type</Label>
+                <SearchableSelect
+                  options={[
+                    { value: "", label: "None" },
+                    ...attributes.map((a) => ({ value: a.id, label: a.title })),
+                  ]}
+                  value={form.attributeId ?? ""}
+                  onChange={(v) => {
+                    const id = v || null;
+                    onChange("attributeId", id);
+                    setUnitLabel("");
+                    setCompanyLabel("");
+                    onChange("unitValue", "");
+                    onChange("companyValue", "");
+                  }}
+                  placeholder="Select an attribute"
+                  searchPlaceholder="Search attributes..."
+                />
+              </div>
 
-                    <div className="space-y-1.5">
-                      <Label className="text-sm font-semibold text-gray-900">Company</Label>
-                      <div className="flex items-center gap-2">
-                        <Select value={companyLabel} onValueChange={(v) => { setCompanyLabel(v); onChange("companyValue", ""); }}>
-                          <SelectTrigger className="w-full h-9 text-sm">
-                            <SelectValue placeholder="Pick a field" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {fieldLabels.map((l) => (
-                              <SelectItem key={l} value={l}>{l}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <span className="text-gray-300 select-none shrink-0 text-sm font-medium">|</span>
-                        <Select
-                          value={form.companyValue}
-                          onValueChange={(v) => onChange("companyValue", v)}
-                          disabled={!companyLabel}
-                        >
-                          <SelectTrigger className="w-full h-9 text-sm">
-                            <SelectValue placeholder="Select value" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {selectedCompanyField?.values.map((val) => (
-                              <SelectItem key={val} value={val}>{val}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+              {selectedAttribute && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-semibold text-gray-900">Unit</Label>
+                    <div className="flex items-center gap-2">
+                      <Select value={unitLabel} onValueChange={(v) => { setUnitLabel(v); onChange("unitValue", ""); }}>
+                        <SelectTrigger className="w-full h-9 text-sm">
+                          <SelectValue placeholder="Pick a field" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {fieldLabels.map((l) => (
+                            <SelectItem key={l} value={l}>{l}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-gray-300 select-none shrink-0 text-sm font-medium">|</span>
+                      <Select
+                        value={form.unitValue}
+                        onValueChange={(v) => onChange("unitValue", v)}
+                        disabled={!unitLabel}
+                      >
+                        <SelectTrigger className="w-full h-9 text-sm">
+                          <SelectValue placeholder="Select value" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedUnitField?.values.map((val) => (
+                            <SelectItem key={val} value={val}>{val}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-semibold text-gray-900">Company</Label>
+                    <div className="flex items-center gap-2">
+                      <Select value={companyLabel} onValueChange={(v) => { setCompanyLabel(v); onChange("companyValue", ""); }}>
+                        <SelectTrigger className="w-full h-9 text-sm">
+                          <SelectValue placeholder="Pick a field" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {fieldLabels.map((l) => (
+                            <SelectItem key={l} value={l}>{l}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-gray-300 select-none shrink-0 text-sm font-medium">|</span>
+                      <Select
+                        value={form.companyValue}
+                        onValueChange={(v) => onChange("companyValue", v)}
+                        disabled={!companyLabel}
+                      >
+                        <SelectTrigger className="w-full h-9 text-sm">
+                          <SelectValue placeholder="Select value" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedCompanyField?.values.map((val) => (
+                            <SelectItem key={val} value={val}>{val}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </FormCard>
           </TabsContent>
 
           <TabsContent value="usecase" className="mt-4">
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5 space-y-4">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label>Service Category</Label>
-                    <Select
-                      value={form.serviceCategoryId ?? "all"}
-                      onValueChange={(v) => onChange("serviceCategoryId", v === "all" ? null : v)}
-                    >
-                      <SelectTrigger className="w-full h-9 text-sm">
-                        <SelectValue placeholder="All Services" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Services</SelectItem>
-                        {serviceCategories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
+            <FormCard>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label>Photo</Label>
-                  <div className="flex items-start gap-4">
-                    {form.photo ? (
-                      <div className="relative w-32 h-24 rounded-lg border border-gray-200 overflow-hidden group shrink-0">
-                        <Image src={form.photo} alt={form.name} fill className="object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => onChange("photo", "")}
-                          className="absolute top-1 right-1 w-6 h-6 grid place-items-center bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition"
-                        >
-                          <X className="size-3" />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="w-32 h-24 rounded-lg border border-dashed border-gray-200 grid place-items-center text-gray-400 shrink-0">
-                        <span className="text-[11px]">No image</span>
-                      </div>
-                    )}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setMediaPickerOpen(true)}
-                    >
-                      <ImagePlus className="size-3.5" />
-                      Choose Image
-                    </Button>
-                  </div>
+                  <Label>Service Category</Label>
+                  <SearchableSelect
+                    options={[
+                      { value: "", label: "All Services" },
+                      ...serviceCategories.map((cat) => ({ value: cat.id, label: cat.name })),
+                    ]}
+                    value={form.serviceCategoryId ?? ""}
+                    onChange={(v) => onChange("serviceCategoryId", v || null)}
+                    placeholder="All Services"
+                    searchPlaceholder="Search categories..."
+                  />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Photo</Label>
+                <div className="flex items-start gap-4">
+                  {form.photo ? (
+                    <div className="relative w-32 h-24 rounded-lg border border-gray-200 overflow-hidden group shrink-0">
+                      <Image src={form.photo} alt={form.name} fill className="object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => onChange("photo", "")}
+                        className="absolute top-1 right-1 w-6 h-6 grid place-items-center bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-32 h-24 rounded-lg border border-dashed border-gray-200 grid place-items-center text-gray-400 shrink-0">
+                      <span className="text-[11px]">No image</span>
+                    </div>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMediaPickerOpen(true)}
+                  >
+                    <ImagePlus className="size-3.5" />
+                    Choose Image
+                  </Button>
+                </div>
+              </div>
+            </FormCard>
           </TabsContent>
 
           <TabsContent value="settings" className="mt-4">
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5 space-y-4">
-                <div className="space-y-1.5">
-                  <Label>Status</Label>
-                  <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-                    <button
-                      type="button"
-                      onClick={() => onChange("isActive", true)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                        form.isActive
-                          ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                          : "text-gray-500 hover:text-gray-900"
-                      }`}
-                    >
-                      Active
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onChange("isActive", false)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                        !form.isActive
-                          ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                          : "text-gray-500 hover:text-gray-900"
-                      }`}
-                    >
-                      Inactive
-                    </button>
-                  </div>
-                </div>
+            <FormCard>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <SegmentedToggle<boolean>
+                  value={form.isActive}
+                  onChange={(v) => onChange("isActive", v)}
+                  options={[
+                    { value: true, label: "Active" },
+                    { value: false, label: "Inactive" },
+                  ]}
+                />
+              </div>
 
-                <div className="border-t border-gray-200 pt-4">
-                  <p className="text-sm font-semibold text-gray-900 mb-3">Linked Blog</p>
-                  <div className="space-y-1.5 max-w-md">
-                    <Label>Blog Post</Label>
-                    <Select value={form.blogId} onValueChange={(v) => onChange("blogId", v)}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="None" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {blogs.map((b) => (
-                          <SelectItem key={b.id} value={b.id}>{b.title}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-gray-400">Link this material to a blog post for public rendering.</p>
-                  </div>
+              <div className="border-t border-gray-200 pt-4">
+                <p className="text-sm font-semibold text-gray-900 mb-3">Linked Blog</p>
+                <div className="space-y-1.5 max-w-md">
+                  <Label>Blog Post</Label>
+                  <SearchableSelect
+                    options={[
+                      { value: "", label: "None" },
+                      ...blogs.map((b) => ({ value: b.id, label: b.title })),
+                    ]}
+                    value={form.blogId}
+                    onChange={(v) => onChange("blogId", v)}
+                    placeholder="None"
+                    searchPlaceholder="Search blog posts..."
+                  />
+                  <p className="text-xs text-gray-400">Link this material to a blog post for public rendering.</p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </FormCard>
           </TabsContent>
         </div>
       </Tabs>

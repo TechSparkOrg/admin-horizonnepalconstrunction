@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Plus, Search } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { PrivateDocumentAdmin } from "@/api/services/private-document.service";
-import { ProjectAdmin } from "@/api/services/project.service";
 import type { PrivateDocument } from "@/api/types/private-document.types";
-import type { Project } from "@/api/types/project.types";
+import { privateDocumentSchema } from "@/api/validation/private-document";
 import { PrivateDocumentTable } from "@/components/page_ui/private-document-table";
 import { PrivateDocumentForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/private-document-form";
 import type { PrivateDocumentFormData } from "@/components/page_ui/private-document-form";
@@ -16,19 +16,6 @@ import { toSlug } from "@/lib/slug";
 
 const ITEMS_PER_PAGE = 10;
 type View = "list" | "form";
-
-function apiToForm(item: PrivateDocument): PrivateDocumentFormData {
-  return {
-    title: item.title,
-    slug: item.slug,
-    project_id: item.project_id ?? "",
-    documents: item.documents,
-    proposals: item.proposals,
-    status: item.status,
-    contract_closed: item.contract_closed,
-    date: item.date,
-  };
-}
 
 function formToPayload(form: PrivateDocumentFormData) {
   return {
@@ -46,11 +33,9 @@ function formToPayload(form: PrivateDocumentFormData) {
 export default function PrivateDocumentsPage() {
   const [items, setItems] = useState<PrivateDocument[]>([]);
   const [total, setTotal] = useState(0);
-  const [projects, setProjects] = useState<Project[]>([]);
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<PrivateDocumentFormData>(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -69,12 +54,6 @@ export default function PrivateDocumentsPage() {
       .catch(() => toast.error("Failed to load documents"));
   }, [searchParams]);
 
-  useEffect(() => {
-    ProjectAdmin.list({ page_size: 10 })
-      .then((res) => setProjects(res.results ?? []))
-      .catch(() => {});
-  }, []);
-
   const refetch = () => {
     PrivateDocumentAdmin.search(searchParams)
       .then((res) => {
@@ -91,7 +70,16 @@ export default function PrivateDocumentsPage() {
   };
 
   const openEdit = (item: PrivateDocument) => {
-    setForm(apiToForm(item));
+    setForm({
+      title: item.title,
+      slug: item.slug,
+      project_id: item.project_id ?? "",
+      documents: item.documents,
+      proposals: item.proposals,
+      status: item.status,
+      contract_closed: item.contract_closed,
+      date: item.date,
+    });
     setEditingId(item.id);
     setView("form");
   };
@@ -119,28 +107,37 @@ export default function PrivateDocumentsPage() {
     setForm((prev) => ({ ...prev, proposals: props }));
   };
 
-  const save = async () => {
-    if (!form.title.trim()) return;
-    setSaving(true);
-    try {
-      const payload = formToPayload(form);
-      if (editingId) {
-        await PrivateDocumentAdmin.update(editingId, payload);
-        toast.success("Document updated");
-      } else {
-        await PrivateDocumentAdmin.create(payload as any);
-        toast.success("Document created");
-      }
-      await refetch();
-      back();
-    } catch (err: unknown) {
+  const createMutation = useMutation({
+    mutationFn: (payload: Parameters<typeof PrivateDocumentAdmin.create>[0]) =>
+      PrivateDocumentAdmin.create(payload),
+    onSuccess: () => { toast.success("Document created"); refetch(); back(); },
+    onError: (err: unknown) => {
       const msg = (err as { response?: { data?: Record<string, string[]> } })?.response?.data;
-      const text = msg
-        ? Object.values(msg).flat().join(", ")
-        : "Something went wrong";
-      toast.error(text);
-    } finally {
-      setSaving(false);
+      toast.error(msg ? Object.values(msg).flat().join(", ") : "Failed to create document");
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Parameters<typeof PrivateDocumentAdmin.update>[1] }) =>
+      PrivateDocumentAdmin.update(id, payload),
+    onSuccess: () => { toast.success("Document updated"); refetch(); back(); },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: Record<string, string[]> } })?.response?.data;
+      toast.error(msg ? Object.values(msg).flat().join(", ") : "Failed to update document");
+    },
+  });
+
+  const save = () => {
+    const parsed = privateDocumentSchema.safeParse(form);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message || "Validation failed");
+      return;
+    }
+    const payload = formToPayload(form) as any;
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, payload });
+    } else {
+      createMutation.mutate(payload);
     }
   };
 
@@ -202,6 +199,7 @@ export default function PrivateDocumentsPage() {
             onDelete={confirmDelete}
             page={currentPage}
             totalPages={totalPages}
+            totalCount={total}
             onPageChange={setCurrentPage}
           />
         </div>
@@ -210,8 +208,7 @@ export default function PrivateDocumentsPage() {
           <PrivateDocumentForm
             form={form}
             editingId={editingId}
-            saving={saving}
-            projects={projects}
+            saving={createMutation.isPending || updateMutation.isPending}
             onChange={handleChange}
             onDocumentsChange={handleDocumentsChange}
             onProposalsChange={handleProposalsChange}

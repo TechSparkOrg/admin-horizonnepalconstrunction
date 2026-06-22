@@ -12,10 +12,11 @@ interface Props {
   onDelete: (id: string) => void;
   page: number;
   totalPages: number;
+  totalCount: number;
   onPageChange: (page: number) => void;
 }
 
-export function ReviewTable({ groups, onEdit, onDelete, page, totalPages, onPageChange }: Props) {
+export function ReviewTable({ groups, onEdit, onDelete, page, totalPages, totalCount, onPageChange }: Props) {
   const columns: ColumnDef<ReviewGroup>[] = [
     {
       header: "Title",
@@ -55,9 +56,19 @@ export function ReviewTable({ groups, onEdit, onDelete, page, totalPages, onPage
       getIdentifier={(item) => item.id}
       page={page}
       totalPages={totalPages}
+      totalCount={totalCount}
       onPageChange={onPageChange}
       emptyState={{ icon: MessageSquareQuote, title: "No reviews yet", description: "Create your first review group to get started." }}
-      deleteDialog={{ title: "Delete review group?", description: "This will also remove all reviews inside it." }}
+      deleteDialog={{
+        title: (id) => {
+          const item = groups.find((g) => g.id === id);
+          return `Delete "${item?.title || "this review group"}"?`;
+        },
+        description: (id) => {
+          const item = groups.find((g) => g.id === id);
+          return `Delete "${item?.title || "this review group"}"? This will also remove all reviews inside it.`;
+        },
+      }}
     />
   );
 }

@@ -12,10 +12,11 @@ interface Props {
   onDelete: (id: string) => void;
   page: number;
   totalPages: number;
+  totalCount: number;
   onPageChange: (page: number) => void;
 }
 
-export function MaterialListTable({ items, onEdit, onDelete, page, totalPages, onPageChange }: Props) {
+export function MaterialListTable({ items, onEdit, onDelete, page, totalPages, totalCount, onPageChange }: Props) {
   const columns: ColumnDef<MaterialItem>[] = [
     {
       header: "Name",
@@ -63,9 +64,19 @@ export function MaterialListTable({ items, onEdit, onDelete, page, totalPages, o
       getIdentifier={(item) => item.id}
       page={page}
       totalPages={totalPages}
+      totalCount={totalCount}
       onPageChange={onPageChange}
       emptyState={{ icon: Package, title: "No materials yet", description: "Add a material to get started." }}
-      deleteDialog={{ title: "Delete this material?", description: "This cannot be undone." }}
+      deleteDialog={{
+        title: (id) => {
+          const item = items.find((m) => m.id === id);
+          return `Delete "${item?.name || "this material"}"?`;
+        },
+        description: (id) => {
+          const item = items.find((m) => m.id === id);
+          return `Delete "${item?.name || "this material"}"? This cannot be undone.`;
+        },
+      }}
     />
   );
 }

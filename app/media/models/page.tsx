@@ -3,10 +3,8 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useMediaList, useMediaMutations } from "@/api/hooks/use-media-query";
-import { StaffAdmin as StaffC } from "@/api/services/staff.service";
 import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
 import type { MediaItem } from "@/api/types/media.types";
-import type { StaffMember } from "@/api/types/staff.types";
 import { MediaTable } from "@/components/page_ui/media-table";
 import { MediaForm, type MediaFormData } from "@/components/page_ui/media-form";
 import { PageHeader } from "@/components/global_ui/page-header";
@@ -24,11 +22,6 @@ export default function ModelsPage() {
   const [view, setView] = useState<"list" | "form">("list");
   const [saving, setSaving] = useState(false);
   const [deleteItem, setDeleteItem] = useState<MediaItem | null>(null);
-  const [teamMembers, setStaffMembers] = useState<StaffMember[]>([]);
-
-  useEffect(() => {
-    StaffC.search({}).then((res) => setStaffMembers(res.results ?? [])).catch(() => {});
-  }, []);
 
   const items = data?.items ?? [];
   const totalCount = data?.totalCount ?? 0;
@@ -36,12 +29,7 @@ export default function ModelsPage() {
   const handleSave = async (formData: MediaFormData, files?: File[]) => {
     setSaving(true);
     try {
-      const authorVal = formData.authorMode === "team"
-        ? teamMembers.find((m) => m.id === formData.authorTeamId)?.name || ""
-        : formData.authorName || "";
-      const payload = toMediaPayload(formData, {
-        custom_fields: authorVal ? [{ key: "author", value: authorVal }] : [],
-      });
+      const payload = toMediaPayload(formData);
       if (editing) {
         await updateMutation.mutateAsync({ id: editing.id, data: payload });
         toast.success("Model updated");
@@ -79,9 +67,6 @@ export default function ModelsPage() {
         onBack={() => { setView("list"); setEditing(null); }}
         groupTitle="3D Models"
         accept=".glb,.gltf,.fbx,.obj,.stl,.step,.stp,.iges,.igs,.dae,.3ds,.ply,.blend,.max,.c4d,.ma,.mb,.dwg,.dxf,.rvt,.ifc,.usdz,.usd,.abc,.amf,.3mf,.skp"
-        showProjectLink
-        showAuthor
-        teamMembers={teamMembers}
       />
     );
   }

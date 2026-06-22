@@ -10,9 +10,9 @@ interface Props {
   items: AgreementItem[];
   onEdit: (item: AgreementItem) => void;
   onDelete: (id: string) => void;
-
   page: number;
   totalPages: number;
+  totalCount: number;
   onPageChange: (page: number) => void;
 }
 
@@ -21,7 +21,7 @@ const AGREEMENT_STATUS = {
   draft: { label: "Draft", color: "border-amber-200 bg-amber-50 text-amber-600", dotColor: "bg-amber-500" },
 } as const;
 
-export function AgreementTable({ items, onEdit, onDelete, page, totalPages, onPageChange }: Props) {
+export function AgreementTable({ items, onEdit, onDelete, page, totalPages, totalCount, onPageChange }: Props) {
   const columns: ColumnDef<AgreementItem>[] = [
     {
       header: "Name",
@@ -48,7 +48,7 @@ export function AgreementTable({ items, onEdit, onDelete, page, totalPages, onPa
     },
     {
       header: "Project",
-      render: (item) => <span className="text-sm text-gray-500">{item.project_name || "—"}</span>,
+      render: (item) => <span className="text-sm text-gray-500">{item.project_name || "\u2014"}</span>,
     },
     {
       header: "Status",
@@ -65,8 +65,19 @@ export function AgreementTable({ items, onEdit, onDelete, page, totalPages, onPa
       getIdentifier={(item) => item.id}
       page={page}
       totalPages={totalPages}
+      totalCount={totalCount}
       onPageChange={onPageChange}
       emptyState={{ icon: FileText, title: "No agreements yet", description: "Create an agreement to get started." }}
+      deleteDialog={{
+        title: (id) => {
+          const item = items.find((a) => a.id === id);
+          return `Delete "${item?.name || "this agreement"}"?`;
+        },
+        description: (id) => {
+          const item = items.find((a) => a.id === id);
+          return `Delete "${item?.name || "this agreement"}"? This cannot be undone.`;
+        },
+      }}
     />
   );
 }

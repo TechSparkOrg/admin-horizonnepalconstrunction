@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { ImageIcon, Box, Boxes } from "lucide-react";
+import { ImageIcon, Box } from "lucide-react";
 import type { MediaItem } from "@/api/types/media.types";
 import { isVideoUrl, isModelUrl } from "@/lib/media";
+import { ModelViewer } from "@/components/global_ui/ModelViewer";
 import { formatDate } from "@/lib/dates";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
@@ -46,7 +47,7 @@ export function MediaTable({ items, page, totalPages, totalCount, onPageChange, 
           ) : isVideoUrl(item.url) ? (
             <video src={item.url} className="w-full h-full object-cover" muted />
           ) : isModelUrl(item.url) ? (
-            <Boxes className="w-5 h-5 text-emerald-500" />
+            <ModelViewer src={item.url} className="w-full h-full" cameraControls={false} autoRotate={false} />
           ) : (
             <Box className="w-5 h-5 text-gray-400" />
           )}

@@ -1,13 +1,14 @@
 "use client";
 
 import { FormHeader } from "@/components/global_ui/form-header";
+import { FormCard } from "@/components/global_ui/form-card";
 import { FormTabs } from "@/components/global_ui/form-tabs";
+import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
 import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -136,42 +137,40 @@ export function UnitConverterForm({
 
         <div>
           <TabsContent value="overview" className="mt-4">
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5 space-y-4">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label>Title</Label>
+            <FormCard>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Title <span className="text-red-500">*</span></Label>
+                  <Input
+                    value={form.title}
+                    onChange={(e) => {
+                      onChange("title", e.target.value);
+                      if (!editingId) onChange("slug", toSlug(e.target.value));
+                    }}
+                    placeholder="Conversion title"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Slug <span className="text-red-500">*</span></Label>
+                  <div className="flex rounded-md border border-gray-200 overflow-hidden">
+                    <span className="px-3 flex items-center text-xs text-gray-500 bg-gray-100 border-r border-gray-200 shrink-0">
+                      /convert/
+                    </span>
                     <Input
-                      value={form.title}
-                      onChange={(e) => {
-                        onChange("title", e.target.value);
-                        if (!editingId) onChange("slug", toSlug(e.target.value));
-                      }}
-                      placeholder="Conversion title"
+                      value={form.slug}
+                      onChange={(e) => onChange("slug", e.target.value)}
+                      placeholder="conversion-slug"
+                      className="border-0 rounded-none font-mono focus-visible:ring-0"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label>Slug</Label>
-                    <div className="flex rounded-md border border-gray-200 overflow-hidden">
-                      <span className="px-3 flex items-center text-xs text-gray-500 bg-gray-100 border-r border-gray-200 shrink-0">
-                        /convert/
-                      </span>
-                      <Input
-                        value={form.slug}
-                        onChange={(e) => onChange("slug", e.target.value)}
-                        placeholder="conversion-slug"
-                        className="border-0 rounded-none font-mono focus-visible:ring-0"
-                      />
-                    </div>
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </FormCard>
           </TabsContent>
 
           <TabsContent value="content" className="mt-4">
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5 space-y-5">
+            <FormCard>
+              <div className="space-y-5">
                 <div className="space-y-1.5">
                   <Label>Attribute Type</Label>
                   <SearchableSelect
@@ -183,7 +182,6 @@ export function UnitConverterForm({
                     onChange={(v) => handleAttributeChange(v || "none")}
                     placeholder="Select an attribute"
                     searchPlaceholder="Search attributes..."
-
                   />
                 </div>
 
@@ -256,60 +254,42 @@ export function UnitConverterForm({
                     </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </FormCard>
           </TabsContent>
 
           <TabsContent value="settings" className="mt-4">
-            <Card className="bg-white border border-gray-200 rounded-xl">
-              <CardContent className="p-5 space-y-4">
-                <div className="space-y-1.5">
-                  <Label>Status</Label>
-                  <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
-                    <button
-                      type="button"
-                      onClick={() => onChange("isActive", true)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                        form.isActive
-                          ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                          : "text-gray-500 hover:text-gray-900"
-                      }`}
-                    >
-                      Active
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onChange("isActive", false)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                        !form.isActive
-                          ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                          : "text-gray-500 hover:text-gray-900"
-                      }`}
-                    >
-                      Inactive
-                    </button>
-                  </div>
-                </div>
+            <FormCard>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <SegmentedToggle<boolean>
+                  value={form.isActive}
+                  onChange={(v) => onChange("isActive", v)}
+                  options={[
+                    { value: true, label: "Active" },
+                    { value: false, label: "Inactive" },
+                  ]}
+                />
+              </div>
 
-                <div className="border-t border-gray-200 pt-4">
-                  <p className="text-sm font-semibold text-gray-900 mb-3">Linked Blog</p>
-                  <div className="space-y-1.5 max-w-md">
-                    <Label>Blog Post</Label>
-                    <Select value={form.blogId} onValueChange={(v) => onChange("blogId", v)}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="None" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {blogs.map((b) => (
-                          <SelectItem key={b.id} value={b.id}>{b.title}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-gray-400">Link this conversion to a blog post for public rendering.</p>
-                  </div>
+              <div className="border-t border-gray-200 pt-4">
+                <p className="text-sm font-semibold text-gray-900 mb-3">Linked Blog</p>
+                <div className="space-y-1.5 max-w-md">
+                  <Label>Blog Post</Label>
+                  <SearchableSelect
+                    options={[
+                      { value: "", label: "None" },
+                      ...blogs.map((b) => ({ value: b.id, label: b.title })),
+                    ]}
+                    value={form.blogId}
+                    onChange={(v) => onChange("blogId", v)}
+                    placeholder="None"
+                    searchPlaceholder="Search blog posts..."
+                  />
+                  <p className="text-xs text-gray-400">Link this conversion to a blog post for public rendering.</p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </FormCard>
           </TabsContent>
         </div>
       </Tabs>

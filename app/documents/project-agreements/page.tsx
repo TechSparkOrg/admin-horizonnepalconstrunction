@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Plus, Search } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AgreementAdmin } from "@/api/services/agreement.service";
 import type { AgreementItem } from "@/api/types/agreement.types";
+import { agreementSchema } from "@/api/validation/agreement";
 import { AgreementTable } from "@/components/page_ui/agreement-table";
 import { AgreementForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/agreement-form";
 import type { AgreementFormData } from "@/components/page_ui/agreement-form";
@@ -42,7 +44,6 @@ export default function ProjectAgreementsPage() {
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<AgreementFormData>(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -95,24 +96,31 @@ export default function ProjectAgreementsPage() {
     setForm((prev) => ({ ...prev, variables: vars }));
   };
 
-  const save = async () => {
-    if (!form.name.trim() || !form.templateId) return;
-    setSaving(true);
-    try {
-      const payload = formToPayload(form);
-      if (editingId) {
-        await AgreementAdmin.update(editingId, payload);
-        toast.success("Agreement updated");
-      } else {
-        await AgreementAdmin.create(payload);
-        toast.success("Agreement created");
-      }
-      await refetch();
-      back();
-    } catch {
-      toast.error("Something went wrong");
-    } finally {
-      setSaving(false);
+  const createMutation = useMutation({
+    mutationFn: (payload: Parameters<typeof AgreementAdmin.create>[0]) =>
+      AgreementAdmin.create(payload),
+    onSuccess: () => { toast.success("Agreement created"); refetch(); back(); },
+    onError: () => toast.error("Failed to create agreement"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Parameters<typeof AgreementAdmin.update>[1] }) =>
+      AgreementAdmin.update(id, payload),
+    onSuccess: () => { toast.success("Agreement updated"); refetch(); back(); },
+    onError: () => toast.error("Failed to update agreement"),
+  });
+
+  const save = () => {
+    const parsed = agreementSchema.safeParse(form);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message || "Validation failed");
+      return;
+    }
+    const payload = formToPayload(form);
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, payload });
+    } else {
+      createMutation.mutate(payload);
     }
   };
 
@@ -174,6 +182,7 @@ export default function ProjectAgreementsPage() {
             onDelete={confirmDelete}
             page={currentPage}
             totalPages={totalPages}
+            totalCount={total}
             onPageChange={setCurrentPage}
           />
         </div>
@@ -182,7 +191,7 @@ export default function ProjectAgreementsPage() {
           <AgreementForm
             form={form}
             editingId={editingId}
-            saving={saving}
+            saving={createMutation.isPending || updateMutation.isPending}
             onChange={handleChange}
             onVariablesChange={handleVariablesChange}
             onSave={save}
