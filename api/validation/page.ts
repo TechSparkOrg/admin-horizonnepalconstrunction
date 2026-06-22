@@ -12,7 +12,6 @@ export const pageSchema = z.object({
   isActive: z.boolean(),
   isPublished: z.boolean(),
   publishDate: z.string().optional(),
-  projectId: z.string().optional(),
   authorMode: z.enum(["manual", "team"]),
   authorName: z.string().optional(),
   authorImage: z.string().optional(),

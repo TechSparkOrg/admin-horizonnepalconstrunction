@@ -4,15 +4,15 @@ import type { PaginatedResponse } from '../types/consultation.types';
 
 export const BlogAdmin = {
   list: (page?: number) =>
-    apiPrivate.get<PaginatedResponse<BlogPost>>('/admin/blogs/', {
+    apiPrivate.get<PaginatedResponse<BlogPost>>('/admin/blogs', {
       params: page ? { page } : {},
     }),
   adminGet: (slug: string) =>
-    apiPrivate.get<BlogPost>(`/admin/blogs/${slug}/`),
+    apiPrivate.get<BlogPost>(`/admin/blogs/${slug}`),
   create: (data: BlogPostCreate) =>
-    apiPrivate.post<BlogPost>('/admin/blogs/', data),
+    apiPrivate.post<BlogPost>('/admin/blogs', data),
   update: (slug: string, data: BlogPostUpdate) =>
-    apiPrivate.put<BlogPost>(`/admin/blogs/${slug}/`, data),
+    apiPrivate.put<BlogPost>(`/admin/blogs/${slug}`, data),
   delete: (slug: string) =>
-    apiPrivate.delete<{ ok: boolean }>(`/admin/blogs/${slug}/`),
+    apiPrivate.delete<{ ok: boolean }>(`/admin/blogs/${slug}`),
 };

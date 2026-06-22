@@ -1,31 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, Search } from "lucide-react";
+import { useState } from "react";
+import { Search } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageAdmin } from "@/api/services/page.service";
-import { ProjectAdmin } from "@/api/services/project.service";
 import { StaffAdmin as StaffC } from "@/api/services/staff.service";
-import type { Page as ApiPage } from "@/api/types/page.types";
-import type { Project } from "@/api/types/project.types";
+import type { Page as ApiPage, PageCreate, PageUpdate } from "@/api/types/page.types";
 import type { StaffMember } from "@/api/types/staff.types";
+import { pageSchema } from "@/api/validation/page";
+import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
 import { PagesTable } from "@/components/page_ui/pages-table";
 import { PagesForm } from "@/components/page_ui/pages-form";
 import { toSlug } from "@/lib/slug";
 import { PageHeader } from "@/components/global_ui/page-header";
 import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationPrevious,
-  PaginationNext,
-} from "@/components/ui/pagination";
-import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+
+const QUERY_KEY = "pages-admin";
 
 interface PageFormData {
   title: string;
@@ -39,7 +34,6 @@ interface PageFormData {
   isActive: boolean;
   isPublished: boolean;
   publishDate: string;
-  projectId: string;
   authorMode: "manual" | "team";
   authorName: string;
   authorImage: string;
@@ -50,7 +44,7 @@ const EMPTY: PageFormData = {
   title: "", slug: "", content: "", iconName: "",
   metaTitle: "", metaDescription: "", metaKeywords: "", featuredImage: "",
   isActive: true, isPublished: false, publishDate: "",
-  projectId: "", authorMode: "manual", authorName: "", authorImage: "", authorTeamId: "",
+  authorMode: "manual", authorName: "", authorImage: "", authorTeamId: "",
 };
 
 const ITEMS_PER_PAGE = 10;
@@ -70,7 +64,6 @@ function apiToForm(p: ApiPage): PageFormData {
     isActive: p.is_active ?? true,
     isPublished: p.is_published ?? false,
     publishDate: p.publish_date ?? "",
-    projectId: p.project_id ?? "",
     authorMode: "manual",
     authorName: p.author_name ?? "",
     authorImage: p.author_image ?? "",
@@ -79,36 +72,69 @@ function apiToForm(p: ApiPage): PageFormData {
 }
 
 export default function AdminPagesPage() {
-  const [pages, setPages] = useState<ApiPage[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [teamMembers, setStaffMembers] = useState<StaffMember[]>([]);
   const [view, setView] = useState<View>("list");
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [form, setForm] = useState<PageFormData>(EMPTY);
   const [bannerImages, setBannerImages] = useState<{ id: string; url: string; name: string }[]>([]);
-  const [deleteSlug, setDeleteSlug] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    Promise.all([
-      PageAdmin.list(),
-      ProjectAdmin.list(),
-      StaffC.search({}),
-    ])
-      .then(([pageRes, projectRes, teamRes]) => {
-        setPages(pageRes.results ?? []);
-        setProjects(projectRes.results ?? []);
-        setStaffMembers(teamRes.results ?? []);
-      })
-      .catch(() => toast.error("Failed to load data"));
-  }, []);
+  const { data: pagesRes } = useQuery({
+    queryKey: [QUERY_KEY, "list"],
+    queryFn: () => PageAdmin.list(),
+  });
 
-  const refetch = () =>
-    PageAdmin.list()
-      .then((res) => setPages(res.results ?? []))
-      .catch(() => toast.error("Failed to load pages"));
+  const { data: teamRes } = useQuery({
+    queryKey: [QUERY_KEY, "team"],
+    queryFn: () => StaffC.search({}),
+  });
+
+  const pages = pagesRes?.results ?? [];
+  const teamMembers = teamRes?.results ?? [];
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+
+  const createMutation = useMutation({
+    mutationFn: (payload: PageCreate) => PageAdmin.create(payload),
+    onSuccess: () => { toast.success("Page created"); invalidate(); },
+    onError: (err) => {
+      const parsed = ErrorHandler.parse(err);
+      ErrorHandler.toast(parsed.message);
+      if (parsed.raw && typeof parsed.raw === "object") {
+        const raw = parsed.raw as Record<string, unknown>;
+        const fieldErrors: Record<string, string> = {};
+        for (const key in raw) {
+          if (Array.isArray(raw[key])) fieldErrors[key] = (raw[key] as string[]).join(", ");
+        }
+        setErrors(fieldErrors);
+      }
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ slug, data }: { slug: string; data: PageUpdate }) => PageAdmin.update(slug, data),
+    onSuccess: () => { toast.success("Page updated"); invalidate(); },
+    onError: (err) => {
+      const parsed = ErrorHandler.parse(err);
+      ErrorHandler.toast(parsed.message);
+      if (parsed.raw && typeof parsed.raw === "object") {
+        const raw = parsed.raw as Record<string, unknown>;
+        const fieldErrors: Record<string, string> = {};
+        for (const key in raw) {
+          if (Array.isArray(raw[key])) fieldErrors[key] = (raw[key] as string[]).join(", ");
+        }
+        setErrors(fieldErrors);
+      }
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (slug: string) => PageAdmin.delete(slug),
+    onSuccess: () => { toast.success("Page deleted"); invalidate(); },
+    onError: () => { toast.error("Failed to delete"); },
+  });
 
   const openNew = () => {
     setForm(EMPTY);
@@ -126,11 +152,20 @@ export default function AdminPagesPage() {
 
   const back = () => {
     setForm(EMPTY);
-    setDeleteSlug(null);
+    setBannerImages([]);
+    setEditingSlug(null);
     setView("list");
   };
 
-  const handleChange = (key: string, value: string | boolean) =>
+  const clearErrors = (key: string) =>
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+
+  const handleChange = (key: string, value: string | boolean) => {
+    clearErrors(key);
     setForm((prev) => ({
       ...prev,
       [key]: value,
@@ -138,54 +173,48 @@ export default function AdminPagesPage() {
         ? { slug: toSlug(value) }
         : {}),
     }));
+  };
 
   const save = async () => {
-    if (!form.title.trim()) return;
-    setSaving(true);
-    try {
-      const payload = {
-        title: form.title,
-        slug: form.slug,
-        content: form.content,
-        icon_name: form.iconName,
-        meta_title: form.metaTitle,
-        meta_description: form.metaDescription,
-        meta_keywords: form.metaKeywords,
-        featured_image: form.featuredImage,
-        is_active: form.isActive,
-        is_published: form.isPublished,
-        publish_date: form.publishDate,
-        project_id: form.projectId,
-        author_name: form.authorName,
-        author_image: form.authorImage,
-        author_team_id: form.authorTeamId,
-        banner_images: bannerImages,
-      };
-      if (editingSlug) {
-        await PageAdmin.update(editingSlug, payload);
-        toast.success("Page updated");
-      } else {
-        await PageAdmin.create(payload);
-        toast.success("Page created");
+    const result = pageSchema.safeParse(form);
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of result.error.issues) {
+        const key = issue.path[0] as string;
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
       }
-      await refetch();
-      back();
-    } catch {
-      toast.error("Something went wrong");
-    } finally {
-      setSaving(false);
+      setErrors(fieldErrors);
+      return;
     }
+    const payload = {
+      title: form.title,
+      slug: form.slug,
+      content: form.content,
+      icon_name: form.iconName,
+      meta_title: form.metaTitle,
+      meta_description: form.metaDescription,
+      meta_keywords: form.metaKeywords,
+      featured_image: form.featuredImage,
+      is_active: form.isActive,
+      is_published: form.isPublished,
+      publish_date: form.publishDate,
+      author_name: form.authorName,
+      author_image: form.authorImage,
+      author_team_id: form.authorTeamId,
+      banner_images: bannerImages,
+    } as PageCreate;
+    try {
+      if (editingSlug) {
+        await updateMutation.mutateAsync({ slug: editingSlug, data: payload });
+      } else {
+        await createMutation.mutateAsync(payload);
+      }
+      back();
+    } catch {}
   };
 
   const confirmDelete = async (slug: string) => {
-    try {
-      await PageAdmin.delete(slug);
-      setPages((prev) => prev.filter((p) => p.slug !== slug));
-      toast.success("Page deleted");
-    } catch {
-      toast.error("Failed to delete");
-    }
-    setDeleteSlug(null);
+    await deleteMutation.mutateAsync(slug);
   };
 
   const filtered = pages.filter((p) =>
@@ -227,49 +256,19 @@ export default function AdminPagesPage() {
             pages={paginatedPages}
             onEdit={openEdit}
             onDelete={confirmDelete}
-            deleteSlug={deleteSlug}
-            setDeleteSlug={setDeleteSlug}
+            page={currentPage}
+            totalPages={totalPages}
+            totalCount={filtered.length}
+            onPageChange={setCurrentPage}
           />
-
-          {totalPages > 1 && (
-            <div className="mt-6">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      className={currentPage === 1 ? "pointer-events-none opacity-40" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <PaginationItem key={page}>
-                      <PaginationLink
-                        isActive={page === currentPage}
-                        onClick={() => setCurrentPage(page)}
-                        className="cursor-pointer"
-                      >
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      className={currentPage === totalPages ? "pointer-events-none opacity-40" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
         </PageHeader>
       ) : (
         <div className="px-4">
           <PagesForm
             form={form}
             editingSlug={editingSlug}
-            saving={saving}
-            projects={projects}
+            saving={createMutation.isPending || updateMutation.isPending}
+            errors={errors}
             teamMembers={teamMembers}
             bannerImages={bannerImages}
             onBannerImagesChange={setBannerImages}

@@ -15,6 +15,7 @@ export interface FaqGroup {
   title: string;
   slug: string;
   category_id: string;
+  category_name: string;
   order: number;
   is_active: boolean;
   items: FaqItemData[];

@@ -35,8 +35,8 @@ interface DataTableProps<T> {
     description: string;
   };
   deleteDialog?: {
-    title: string;
-    description: string;
+    title: string | ((id: string) => string);
+    description: string | ((id: string) => string);
   };
   getDepth?: (item: T) => number;
   totalCount?: number;
@@ -59,6 +59,13 @@ export function DataTable<T>({
   hideDeleteDialog = false,
 }: DataTableProps<T>) {
   const [deleteIdentifier, setDeleteIdentifier] = useState<string | null>(null);
+
+  const dialogTitle = deleteIdentifier && typeof deleteDialog?.title === "function"
+    ? deleteDialog.title(deleteIdentifier)
+    : (deleteDialog?.title ?? "Delete this item?") as string | undefined;
+  const dialogDesc = deleteIdentifier && typeof deleteDialog?.description === "function"
+    ? deleteDialog.description(deleteIdentifier)
+    : (deleteDialog?.description ?? "This cannot be undone.") as string | undefined;
 
   if (data.length === 0) return <EmptyState {...emptyState} />;
 
@@ -117,8 +124,8 @@ export function DataTable<T>({
           open={!!deleteIdentifier}
           onOpenChange={(o) => !o && setDeleteIdentifier(null)}
           onConfirm={() => deleteIdentifier && onDelete(deleteIdentifier)}
-          title={deleteDialog?.title ?? "Delete this item?"}
-          description={deleteDialog?.description ?? "This cannot be undone."}
+          title={dialogTitle}
+          description={dialogDesc}
         />
       )}
     </>

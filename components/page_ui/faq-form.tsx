@@ -23,6 +23,7 @@ interface FaqFormData {
   title: string;
   slug: string;
   categoryId: string;
+  categoryName: string;
   order: number;
   isActive: boolean;
   items: FaqItemData[];
@@ -129,7 +130,11 @@ export function FaqForm({
                   <Label>Category</Label>
                   <Select
                     value={form.categoryId}
-                    onValueChange={(v) => onChange("categoryId", v)}
+                    onValueChange={(v) => {
+                      onChange("categoryId", v);
+                      const cat = categories.find((c) => c.id === v);
+                      if (cat) onChange("categoryName", cat.name);
+                    }}
                   >
                     <SelectTrigger className="max-w-sm">
                       <SelectValue placeholder="Select a category" />

@@ -30,7 +30,6 @@ export interface Page {
   is_active?: boolean;
   is_published?: boolean;
   publish_date?: string;
-  project_id?: string;
   author_name?: string;
   author_image?: string;
   author_team_id?: string;

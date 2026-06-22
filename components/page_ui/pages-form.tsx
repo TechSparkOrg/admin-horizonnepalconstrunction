@@ -1,22 +1,15 @@
 "use client";
 
-import { ImagePlus, X, User, Eye, Pencil, Trash2 } from "lucide-react";
+import { ImagePlus, User, Eye, Pencil, Trash2, X } from "lucide-react";
 import { FormHeader } from "@/components/global_ui/form-header";
 import { FormTabs } from "@/components/global_ui/form-tabs";
-import { useRef, useState, useEffect } from "react";
+import { useState } from "react";
 import { RichEditor } from "@/components/page_ui/rich-editor";
 import { SeoFields } from "@/components/global_ui/seo-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -35,6 +28,8 @@ import {
 } from "@/components/ui/pagination";
 import { MediaPickerDialog } from "@/components/global_ui/media-handler-picker";
 import type { PickerMediaItem } from "@/components/global_ui/media-handler-picker";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { MediaService } from "@/api/services/media.service";
 import { toast } from "sonner";
 import { ImagePreviewDialog } from "@/components/global_ui/image-preview-dialog";
@@ -43,11 +38,6 @@ interface StaffMember {
   id: string;
   name: string;
   image?: string;
-}
-
-interface Project {
-  id: string;
-  title: string;
 }
 
 interface PageFormData {
@@ -62,7 +52,6 @@ interface PageFormData {
   isActive: boolean;
   isPublished: boolean;
   publishDate: string;
-  projectId: string;
   authorMode: "manual" | "team";
   authorName: string;
   authorImage: string;
@@ -73,7 +62,7 @@ interface Props {
   form: PageFormData;
   editingSlug: string | null;
   saving: boolean;
-  projects?: Project[];
+  errors?: Record<string, string>;
   teamMembers?: StaffMember[];
   bannerImages: { id: string; url: string; name: string }[];
   onBannerImagesChange: (images: { id: string; url: string; name: string }[]) => void;
@@ -86,7 +75,7 @@ export function PagesForm({
   form,
   editingSlug,
   saving,
-  projects = [],
+  errors = {},
   teamMembers = [],
   bannerImages,
   onBannerImagesChange,
@@ -95,11 +84,8 @@ export function PagesForm({
   onBack,
 }: Props) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [featuredPreview, setFeaturedPreview] = useState<string | null>(form.featuredImage || null);
-  const [authorPreview, setAuthorPreview] = useState<string | null>(form.authorImage || null);
-  const featuredInputRef = useRef<HTMLInputElement>(null);
-  const authorInputRef = useRef<HTMLInputElement>(null);
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [authorPickerOpen, setAuthorPickerOpen] = useState(false);
   const [editingBannerId, setEditingBannerId] = useState<string | null>(null);
   const [bannerPage, setBannerPage] = useState(1);
 
@@ -152,18 +138,6 @@ export function PagesForm({
     onBannerImagesChange(bannerImages.filter((img) => img.id !== id));
   };
 
-  const handleImagePick = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    setPreview: (v: string | null) => void,
-    key: string
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    onChange(key, url);
-  };
-
   return (
     <div>
       <FormHeader
@@ -186,15 +160,20 @@ export function PagesForm({
             <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 w-full">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label>Title</Label>
+                  <Label>
+                    Title <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     value={form.title}
                     onChange={(e) => onChange("title", e.target.value)}
                     placeholder="Page title"
                   />
+                  {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Slug</Label>
+                  <Label>
+                    Slug <span className="text-red-500">*</span>
+                  </Label>
                   <div className="flex rounded-md border border-gray-200 overflow-hidden">
                     <span className="px-3 flex items-center text-xs text-gray-500 bg-gray-100 border-r border-gray-200 shrink-0">
                       /
@@ -206,6 +185,7 @@ export function PagesForm({
                       className="border-0 rounded-none font-mono focus-visible:ring-0"
                     />
                   </div>
+                  {errors.slug && <p className="text-xs text-red-500 mt-1">{errors.slug}</p>}
                 </div>
               </div>
 
@@ -333,17 +313,6 @@ export function PagesForm({
                 </div>
               )}
             </div>
-
-            <MediaPickerDialog
-              open={mediaPickerOpen}
-              onOpenChange={(o) => {
-                setMediaPickerOpen(o);
-                if (!o) setEditingBannerId(null);
-              }}
-              mode="image"
-              title={editingBannerId ? "Update Banner Image" : "Select Banner Image"}
-              onSelect={handleBannerSelect}
-            />
           </TabsContent>
 
           <TabsContent value="seo" className="mt-4">
@@ -402,29 +371,6 @@ export function PagesForm({
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 p-5 w-full">
-              <p className="text-sm font-semibold text-gray-900 mb-4">Project</p>
-              <div className="space-y-1.5">
-                <Label>Linked Project</Label>
-                <Select
-                  value={form.projectId}
-                  onValueChange={(v) => onChange("projectId", v)}
-                >
-                  <SelectTrigger className="max-w-sm">
-                    <SelectValue placeholder="Select a project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projects.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-400">Link this page to an existing project.</p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-gray-200 p-5 w-full">
               <p className="text-sm font-semibold text-gray-900 mb-4">Author</p>
 
               <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-1 w-fit mb-4">
@@ -456,36 +402,32 @@ export function PagesForm({
                 <div className="flex items-end gap-6">
                   <div className="space-y-1.5">
                     <Label>Author Image</Label>
-                    {authorPreview ? (
-                      <div className="relative size-16 rounded-full border border-gray-200 overflow-hidden group">
-                        <img src={authorPreview} alt="Author" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setAuthorPreview(null);
+                    <button
+                      type="button"
+                      onClick={() => setAuthorPickerOpen(true)}
+                      className="relative size-16 rounded-full overflow-hidden group"
+                    >
+                      <Avatar className="size-16">
+                        <AvatarImage src={form.authorImage} alt={form.authorName} />
+                        <AvatarFallback>
+                          <User className="size-5 text-gray-400" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition flex items-center justify-center rounded-full bg-black/40">
+                        <Pencil className="size-4 text-white" />
+                      </div>
+                      {form.authorImage && (
+                        <span
+                          onClick={(e) => {
+                            e.stopPropagation();
                             onChange("authorImage", "");
                           }}
-                          className="absolute inset-0 grid place-items-center bg-black/50 text-white opacity-0 group-hover:opacity-100 transition"
+                          className="absolute -top-1 -right-1 size-5 rounded-full bg-red-500 text-white flex items-center justify-center cursor-pointer hover:bg-red-600 transition"
                         >
-                          <X className="size-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => authorInputRef.current?.click()}
-                        className="size-16 rounded-full border border-dashed border-gray-200 grid place-items-center text-gray-500 hover:bg-gray-100 transition"
-                      >
-                        <User className="size-5" />
-                      </button>
-                    )}
-                    <input
-                      ref={authorInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => handleImagePick(e, setAuthorPreview, "authorImage")}
-                    />
+                          <X className="size-3" />
+                        </span>
+                      )}
+                    </button>
                   </div>
                   <div className="space-y-1.5 flex-1 max-w-sm">
                     <Label>Author Name</Label>
@@ -499,27 +441,42 @@ export function PagesForm({
               ) : (
                 <div className="space-y-1.5">
                   <Label>Select Team Member</Label>
-                  <Select
+                  <SearchableSelect
+                    options={teamMembers.map((m) => ({ value: m.id, label: m.name }))}
                     value={form.authorTeamId}
-                    onValueChange={(v) => onChange("authorTeamId", v)}
-                  >
-                    <SelectTrigger className="max-w-sm">
-                      <SelectValue placeholder="Select a team member" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {teamMembers.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={(v) => onChange("authorTeamId", v)}
+                    placeholder="Select a team member"
+                    searchPlaceholder="Search members..."
+                    emptyMessage="No team members found."
+                  />
                 </div>
               )}
             </div>
           </TabsContent>
         </div>
       </Tabs>
+
+      <MediaPickerDialog
+        open={mediaPickerOpen}
+        onOpenChange={(o) => {
+          setMediaPickerOpen(o);
+          if (!o) setEditingBannerId(null);
+        }}
+        mode="image"
+        title={editingBannerId ? "Update Banner Image" : "Select Banner Image"}
+        onSelect={handleBannerSelect}
+      />
+
+      <MediaPickerDialog
+        open={authorPickerOpen}
+        onOpenChange={setAuthorPickerOpen}
+        mode="image"
+        title="Select Author Image"
+        onSelect={(item) => {
+          onChange("authorImage", item.url);
+          setAuthorPickerOpen(false);
+        }}
+      />
 
       <ImagePreviewDialog url={previewUrl} onClose={() => setPreviewUrl(null)} />
     </div>

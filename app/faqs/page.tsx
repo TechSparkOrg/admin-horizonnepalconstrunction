@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, Search } from "lucide-react";
+import { useState } from "react";
+import { Search } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { FaqAdmin } from "@/api/services/faq.service";
 import { CategoryAdmin } from "@/api/services/category.service";
-import type { FaqGroup, FaqItemData } from "@/api/types/faq.types";
-import type { Category } from "@/api/types/category.types";
+import type { FaqGroup, FaqGroupCreate, FaqItemData } from "@/api/types/faq.types";
 import { FaqTable } from "@/components/page_ui/faq-table";
 import { FaqForm } from "@/components/page_ui/faq-form";
 import { toSlug } from "@/lib/slug";
@@ -17,10 +17,14 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 
+const ITEMS_PER_PAGE = 10;
+const QUERY_KEY = "faq-admin";
+
 interface FaqFormData {
   title: string;
   slug: string;
   categoryId: string;
+  categoryName: string;
   order: number;
   isActive: boolean;
   items: FaqItemData[];
@@ -30,41 +34,56 @@ const EMPTY: FaqFormData = {
   title: "",
   slug: "",
   categoryId: "",
+  categoryName: "",
   order: 0,
   isActive: true,
   items: [],
 };
 
-const ITEMS_PER_PAGE = 10;
-
 type View = "list" | "form";
 
 export default function AdminFaqsPage() {
-  const [groups, setGroups] = useState<FaqGroup[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FaqFormData>(EMPTY);
-  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    Promise.all([
-      FaqAdmin.list(),
-      CategoryAdmin.listFaq(),
-    ])
-      .then(([faqRes, catRes]) => {
-        setGroups(faqRes.results ?? []);
-        setCategories(catRes.results ?? []);
-      })
-      .catch(() => toast.error("Failed to load data"));
-  }, []);
+  const { data: faqRes } = useQuery({
+    queryKey: [QUERY_KEY, "list"],
+    queryFn: () => FaqAdmin.list(),
+  });
 
-  const refetch = () =>
-    FaqAdmin.list()
-      .then((res) => setGroups(res.results ?? []))
-      .catch(() => toast.error("Failed to load FAQs"));
+  const { data: catRes } = useQuery({
+    queryKey: [QUERY_KEY, "categories"],
+    queryFn: () => CategoryAdmin.listFaq(),
+  });
+
+  const groups = faqRes?.results ?? [];
+  const categories = catRes?.results ?? [];
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+  };
+
+  const createMutation = useMutation({
+    mutationFn: (payload: FaqGroupCreate) => FaqAdmin.create(payload),
+    onSuccess: () => { toast.success("FAQ group created"); invalidate(); },
+    onError: () => { toast.error("Something went wrong"); },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: FaqGroupCreate }) => FaqAdmin.update(id, data),
+    onSuccess: () => { toast.success("FAQ group updated"); invalidate(); },
+    onError: () => { toast.error("Something went wrong"); },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => FaqAdmin.delete(id),
+    onSuccess: () => { toast.success("FAQ group deleted"); invalidate(); },
+    onError: () => { toast.error("Failed to delete"); },
+  });
 
   const openNew = () => {
     setForm(EMPTY);
@@ -77,6 +96,7 @@ export default function AdminFaqsPage() {
       title: item.title,
       slug: item.slug,
       categoryId: item.category_id,
+      categoryName: item.category_name,
       order: item.order,
       isActive: item.is_active,
       items: item.items.map((it) => ({ ...it })),
@@ -104,44 +124,31 @@ export default function AdminFaqsPage() {
 
   const save = async () => {
     if (!form.title.trim()) return;
-    setSaving(true);
+    const payload = {
+      title: form.title,
+      slug: form.slug,
+      category_id: form.categoryId,
+      category_name: form.categoryName,
+      order: form.order,
+      is_active: form.isActive,
+      items: form.items.map((it, i) => ({
+        question: it.question,
+        answer: it.answer,
+        order: it.order || i + 1,
+      })),
+    };
     try {
-      const payload = {
-        title: form.title,
-        slug: form.slug,
-        category_id: form.categoryId,
-        order: form.order,
-        is_active: form.isActive,
-        items: form.items.map((it, i) => ({
-          question: it.question,
-          answer: it.answer,
-          order: it.order || i + 1,
-        })),
-      };
       if (editingId) {
-        await FaqAdmin.update(editingId, payload);
-        toast.success("FAQ group updated");
+        await updateMutation.mutateAsync({ id: editingId, data: payload });
       } else {
-        await FaqAdmin.create(payload);
-        toast.success("FAQ group created");
+        await createMutation.mutateAsync(payload);
       }
-      await refetch();
       back();
-    } catch {
-      toast.error("Something went wrong");
-    } finally {
-      setSaving(false);
-    }
+    } catch {}
   };
 
   const confirmDelete = async (id: string) => {
-    try {
-      await FaqAdmin.delete(id);
-      setGroups((prev) => prev.filter((g) => g.id !== id));
-      toast.success("FAQ group deleted");
-    } catch {
-      toast.error("Failed to delete");
-    }
+    await deleteMutation.mutateAsync(id);
   };
 
   const filtered = groups.filter((g) =>
@@ -185,6 +192,7 @@ export default function AdminFaqsPage() {
             onDelete={confirmDelete}
             page={currentPage}
             totalPages={totalPages}
+            totalCount={filtered.length}
             onPageChange={setCurrentPage}
           />
         </PageHeader>
@@ -193,7 +201,7 @@ export default function AdminFaqsPage() {
           <FaqForm
             form={form}
             editingId={editingId}
-            saving={saving}
+            saving={createMutation.isPending || updateMutation.isPending}
             categories={categories}
             onChange={handleChange}
             onItemsChange={handleItemsChange}

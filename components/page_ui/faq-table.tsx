@@ -12,10 +12,11 @@ interface Props {
   onDelete: (id: string) => void;
   page: number;
   totalPages: number;
+  totalCount: number;
   onPageChange: (page: number) => void;
 }
 
-export function FaqTable({ groups, onEdit, onDelete, page, totalPages, onPageChange }: Props) {
+export function FaqTable({ groups, onEdit, onDelete, page, totalPages, totalCount, onPageChange }: Props) {
   const columns: ColumnDef<FaqGroup>[] = [
     {
       header: "Title",
@@ -34,7 +35,7 @@ export function FaqTable({ groups, onEdit, onDelete, page, totalPages, onPageCha
     },
     {
       header: "Category",
-      render: (item) => <span className="text-sm text-gray-500">{item.category_id || "—"}</span>,
+      render: (item) => <span className="text-sm text-gray-500">{item.category_name || "—"}</span>,
     },
     {
       header: "Items",
@@ -59,9 +60,19 @@ export function FaqTable({ groups, onEdit, onDelete, page, totalPages, onPageCha
       getIdentifier={(item) => item.id}
       page={page}
       totalPages={totalPages}
+      totalCount={totalCount}
       onPageChange={onPageChange}
       emptyState={{ icon: HelpCircle, title: "No FAQs yet", description: "Create your first FAQ group to get started." }}
-      deleteDialog={{ title: "Delete FAQ group?", description: "This will also remove all questions inside it." }}
+      deleteDialog={{
+        title: (id) => {
+          const item = groups.find((g) => g.id === id);
+          return `Delete "${item?.title || "this FAQ group"}"?`;
+        },
+        description: (id) => {
+          const item = groups.find((g) => g.id === id);
+          return `This will also remove all ${item?.items.length || ""} questions inside it.`;
+        },
+      }}
     />
   );
 }
