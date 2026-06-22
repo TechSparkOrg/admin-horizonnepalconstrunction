@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Search } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useProjectStore } from "@/api/zustand/use-project-store";
 import { ProjectTable } from "@/components/page_ui/project-table";
 import { ProjectForm } from "@/components/page_ui/project-form";
@@ -11,23 +13,88 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { CategoryAdmin } from "@/api/services/category.service";
+import { StaffAdmin } from "@/api/services/staff.service";
+import { MaterialListAdmin } from "@/api/services/material-list.service";
+import { DocumentAdmin } from "@/api/services/document.service";
+import { ProjectAdmin } from "@/api/services/project.service";
+import { projectSchema } from "@/api/validation/project";
+import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
+import type { Category } from "@/api/types/category.types";
+import type { StaffMember } from "@/api/types/staff.types";
+import type { MaterialItem } from "@/api/types/material-list.types";
+import type { DocumentItem } from "@/api/types/document.types";
 
 export default function AdminProjectsPage() {
   const {
-    projects, total, currentPage, search, view, editingSlug, saving,
+    projects, total, currentPage, search, view, editingSlug,
     form, client, milestones, spendingRecords, thumbnail,
-    categories, staffMembers, materials, documents,
     fetchAll, refetch, setSearch, setPage,
     openNew, openEdit, back, setFormField, setClient,
     setMilestones, setThumbnail, setSpendingRecords,
-    save, confirmDelete,
+    confirmDelete,
   } = useProjectStore();
 
-  useEffect(() => { fetchAll(); }, []);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
+  const [materials, setMaterials] = useState<MaterialItem[]>([]);
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
 
-  const filtered = projects.filter((p) =>
-    p.title.toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => { fetchAll(); }, [currentPage, search]);
+
+  useEffect(() => {
+    if (view !== "form") return;
+    if (categories.length > 0) return;
+    Promise.all([
+      CategoryAdmin.listProject(),
+      StaffAdmin.search({}),
+      MaterialListAdmin.search({}),
+      DocumentAdmin.search({}),
+    ])
+      .then(([catRes, staffRes, matRes, docRes]) => {
+        setCategories(catRes.results ?? []);
+        setStaffMembers(staffRes.results ?? []);
+        setMaterials(matRes.results ?? []);
+        setDocuments(docRes.results ?? []);
+      })
+      .catch((err) => ErrorHandler.toast(ErrorHandler.parse(err).message));
+  }, [view]);
+
+  const createMutation = useMutation({
+    mutationFn: (payload: Parameters<typeof ProjectAdmin.create>[0]) =>
+      ProjectAdmin.create(payload),
+    onSuccess: () => { toast.success("Project created"); refetch(); back(); },
+    onError: () => toast.error("Failed to create project"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ slug, payload }: { slug: string; payload: Parameters<typeof ProjectAdmin.update>[1] }) =>
+      ProjectAdmin.update(slug, payload),
+    onSuccess: () => { toast.success("Project updated"); refetch(); back(); },
+    onError: () => toast.error("Failed to update project"),
+  });
+
+  const save = () => {
+    const parsed = projectSchema.safeParse(form);
+    if (!parsed.success) {
+      ErrorHandler.toast(parsed.error.issues[0]?.message || "Validation failed");
+      return;
+    }
+    const { authorMode, ...formData } = form;
+    const payload = {
+      ...formData,
+      thumbnail,
+      clients: client.name ? [client] : [],
+      milestones,
+      spending_records: spendingRecords,
+    };
+    if (editingSlug) {
+      updateMutation.mutate({ slug: editingSlug, payload });
+    } else {
+      createMutation.mutate(payload as any);
+    }
+  };
+
   const totalPages = Math.ceil(total / 10);
 
   return (
@@ -51,11 +118,12 @@ export default function AdminProjectsPage() {
           </div>
 
           <ProjectTable
-            projects={filtered}
+            projects={projects}
             onEdit={openEdit}
             onDelete={confirmDelete}
             page={currentPage}
             totalPages={totalPages}
+            totalCount={total}
             onPageChange={setPage}
           />
         </PageHeader>
@@ -64,7 +132,7 @@ export default function AdminProjectsPage() {
           <ProjectForm
             form={form}
             editingSlug={editingSlug}
-            saving={saving}
+            saving={createMutation.isPending || updateMutation.isPending}
             categories={categories}
             client={client}
             onClientChange={setClient}

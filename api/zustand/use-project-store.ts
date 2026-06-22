@@ -1,16 +1,7 @@
 import { create } from "zustand";
 import { ProjectAdmin } from "@/api/services/project.service";
-import { CategoryAdmin } from "@/api/services/category.service";
-import { StaffAdmin } from "@/api/services/staff.service";
-import { MaterialListAdmin } from "@/api/services/material-list.service";
-import { DocumentAdmin } from "@/api/services/document.service";
 import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
 import { toSlug } from "@/lib/slug";
-import { projectSchema } from "@/api/validation/project";
-import type { Category } from "@/api/types/category.types";
-import type { StaffMember } from "@/api/types/staff.types";
-import type { MaterialItem } from "@/api/types/material-list.types";
-import type { DocumentItem } from "@/api/types/document.types";
 import type { Project, Client, ProjectMilestone, SpendingRecord } from "@/api/types/project.types";
 
 export interface ProjectFormData {
@@ -67,42 +58,24 @@ interface ProjectStore {
   search: string;
   view: View;
   editingSlug: string | null;
-  deleteSlug: string | null;
-  saving: boolean;
   form: ProjectFormData;
   client: Client;
   milestones: ProjectMilestone[];
   spendingRecords: SpendingRecord[];
   thumbnail: string;
-  categories: Category[];
-  staffMembers: StaffMember[];
-  materials: MaterialItem[];
-  documents: DocumentItem[];
 
   fetchAll: () => Promise<void>;
   refetch: () => Promise<void>;
   setSearch: (search: string) => void;
   setPage: (page: number) => void;
-  setDeleteSlug: (slug: string | null) => void;
   openNew: () => void;
   openEdit: (item: Project) => void;
   back: () => void;
   setFormField: (key: string, value: string | boolean | null) => void;
   setClient: (client: Client) => void;
   setThumbnail: (thumbnail: string) => void;
-  addMilestone: () => void;
-  updateMilestone: (id: string, data: Partial<ProjectMilestone>) => void;
-  removeMilestone: (id: string) => void;
   setMilestones: (milestones: ProjectMilestone[]) => void;
-  addMilestoneImage: (msId: string, item: { id: string; url: string; name: string }) => void;
-  removeMilestoneImage: (msId: string, imgId: string) => void;
-  addMilestoneEmbed: (msId: string, embed: ProjectMilestone["video_embed_urls"][number]) => void;
-  removeMilestoneEmbed: (msId: string, embedId: string) => void;
-  addSpendingRecord: () => void;
-  updateSpendingRecord: (id: string, data: Partial<SpendingRecord>) => void;
-  removeSpendingRecord: (id: string) => void;
   setSpendingRecords: (records: SpendingRecord[]) => void;
-  save: () => Promise<void>;
   confirmDelete: (slug: string) => Promise<void>;
 }
 
@@ -113,45 +86,26 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   search: "",
   view: "list",
   editingSlug: null,
-  deleteSlug: null,
-  saving: false,
   form: { ...EMPTY_FORM },
   client: { ...EMPTY_CLIENT },
   milestones: [],
   spendingRecords: [],
   thumbnail: "",
-  categories: [],
-  staffMembers: [],
-  materials: [],
-  documents: [],
 
   fetchAll: async () => {
-    const { currentPage } = get();
+    const { currentPage, search } = get();
     try {
-      const [projectRes, catRes, staffRes, materialRes, docRes] = await Promise.all([
-        ProjectAdmin.list({ page: currentPage, page_size: ITEMS_PER_PAGE }),
-        CategoryAdmin.listProject(),
-        StaffAdmin.search({}),
-        MaterialListAdmin.search({}),
-        DocumentAdmin.search({}),
-      ]);
-      set({
-        projects: projectRes.results ?? [],
-        total: projectRes.count ?? 0,
-        categories: catRes.results ?? [],
-        staffMembers: staffRes.results ?? [],
-        materials: materialRes.results ?? [],
-        documents: docRes.results ?? [],
-      });
+      const res = await ProjectAdmin.list({ search: search || undefined, page: currentPage, page_size: ITEMS_PER_PAGE });
+      set({ projects: res.results ?? [], total: res.count ?? 0 });
     } catch (err) {
       ErrorHandler.toast(ErrorHandler.parse(err).message);
     }
   },
 
   refetch: async () => {
-    const { currentPage } = get();
+    const { currentPage, search } = get();
     try {
-      const res = await ProjectAdmin.list({ page: currentPage, page_size: ITEMS_PER_PAGE });
+      const res = await ProjectAdmin.list({ search: search || undefined, page: currentPage, page_size: ITEMS_PER_PAGE });
       set({ projects: res.results ?? [], total: res.count ?? 0 });
     } catch (err) {
       ErrorHandler.toast(ErrorHandler.parse(err).message);
@@ -161,8 +115,6 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   setSearch: (search) => set({ search, currentPage: 1 }),
 
   setPage: (currentPage) => set({ currentPage }),
-
-  setDeleteSlug: (deleteSlug) => set({ deleteSlug }),
 
   openNew: () => {
     set({
@@ -188,7 +140,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     set({
       form: { ...EMPTY_FORM }, client: { ...EMPTY_CLIENT },
       milestones: [], spendingRecords: [], thumbnail: "",
-      deleteSlug: null, view: "list",
+      view: "list",
     });
   },
 
@@ -205,103 +157,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   setClient: (client) => set({ client }),
   setThumbnail: (thumbnail) => set({ thumbnail }),
   setMilestones: (milestones) => set({ milestones }),
-
-  addMilestone: () => {
-    const ms: ProjectMilestone = { ...EMPTY_MILESTONE, id: genId() };
-    set((state) => ({ milestones: [...state.milestones, ms] }));
-  },
-
-  updateMilestone: (id, data) => {
-    set((state) => ({
-      milestones: state.milestones.map((m) => (m.id === id ? { ...m, ...data } : m)),
-    }));
-  },
-
-  removeMilestone: (id) => {
-    set((state) => ({ milestones: state.milestones.filter((m) => m.id !== id) }));
-  },
-
-  addMilestoneImage: (msId, item) => {
-    set((state) => ({
-      milestones: state.milestones.map((ms) =>
-        ms.id === msId ? { ...ms, images: [...ms.images, item] } : ms
-      ),
-    }));
-  },
-
-  removeMilestoneImage: (msId, imgId) => {
-    set((state) => ({
-      milestones: state.milestones.map((ms) =>
-        ms.id === msId ? { ...ms, images: ms.images.filter((img) => img.id !== imgId) } : ms
-      ),
-    }));
-  },
-
-  addMilestoneEmbed: (msId, embed) => {
-    set((state) => ({
-      milestones: state.milestones.map((ms) =>
-        ms.id === msId ? { ...ms, video_embed_urls: [...(ms.video_embed_urls || []), embed] } : ms
-      ),
-    }));
-  },
-
-  removeMilestoneEmbed: (msId, embedId) => {
-    set((state) => ({
-      milestones: state.milestones.map((ms) =>
-        ms.id === msId ? { ...ms, video_embed_urls: ms.video_embed_urls.filter((e) => e.id !== embedId) } : ms
-      ),
-    }));
-  },
-
-  addSpendingRecord: () => {
-    const record: SpendingRecord = { ...EMPTY_SPENDING, id: genId() };
-    set((state) => ({ spendingRecords: [...state.spendingRecords, record] }));
-  },
-
-  updateSpendingRecord: (id, data) => {
-    set((state) => ({
-      spendingRecords: state.spendingRecords.map((r) => (r.id === id ? { ...r, ...data } : r)),
-    }));
-  },
-
-  removeSpendingRecord: (id) => {
-    set((state) => ({ spendingRecords: state.spendingRecords.filter((r) => r.id !== id) }));
-  },
-
   setSpendingRecords: (spendingRecords) => set({ spendingRecords }),
-
-  save: async () => {
-    const { form, editingSlug, client, milestones, spendingRecords, thumbnail } = get();
-    const parsed = projectSchema.safeParse(form);
-    if (!parsed.success) {
-      const first = parsed.error.issues[0]?.message || "Validation failed";
-      ErrorHandler.toast(first);
-      return;
-    }
-    set({ saving: true });
-    try {
-      const { authorMode, ...formData } = form;
-      const payload = {
-        ...formData,
-        thumbnail,
-        clients: client.name ? [client] : [],
-        milestones,
-        spending_records: spendingRecords,
-      };
-      if (editingSlug) {
-        await ProjectAdmin.update(editingSlug, payload);
-      } else {
-        await ProjectAdmin.create(payload as any);
-      }
-      await get().refetch();
-      get().back();
-    } catch (err) {
-      const parsed = ErrorHandler.parse(err);
-      ErrorHandler.toast(parsed.message);
-    } finally {
-      set({ saving: false });
-    }
-  },
 
   confirmDelete: async (slug) => {
     try {
@@ -313,6 +169,5 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     } catch (err) {
       ErrorHandler.toast(ErrorHandler.parse(err).message);
     }
-    set({ deleteSlug: null });
   },
 }));

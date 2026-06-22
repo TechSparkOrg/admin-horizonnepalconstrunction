@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Plus, Trash2, ImagePlus, Eye, Upload, X, Box } from "lucide-react";
 import { FormHeader } from "@/components/global_ui/form-header";
 import Image from "next/image";
@@ -26,6 +26,7 @@ import type { StaffMember } from "@/api/types/staff.types";
 import type { MaterialItem } from "@/api/types/material-list.types";
 import type { DocumentItem } from "@/api/types/document.types";
 import type { Client, ProjectMilestone as Milestone, SpendingRecord, ProjectMilestoneImage, ProjectMilestoneEmbed } from "@/api/types/project.types";
+import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { ImagePreviewDialog } from "@/components/global_ui/image-preview-dialog";
 
 interface ProjectFormData {
@@ -116,19 +117,7 @@ export function ProjectForm({
   const [modelPreview, setModelPreview] = useState<string | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [authorPreview, setAuthorPreview] = useState<string | null>(form.author_image || null);
-  const authorInputRef = useRef<HTMLInputElement>(null);
-
-  const handleImagePick = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    setPreview: (v: string | null) => void,
-    key: string
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    onChange(key, url);
-  };
+  const [authorMediaPickerOpen, setAuthorMediaPickerOpen] = useState(false);
 
   const addMilestoneImage = (msId: string, item: PickerMediaItem) => {
     const newImage: ProjectMilestoneImage = {
@@ -208,7 +197,7 @@ export function ProjectForm({
                     <Input value={form.title} onChange={(e) => onChange("title", e.target.value)} placeholder="Enter project title" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Slug</Label>
+                    <Label>Slug <span className="text-red-500">*</span></Label>
                     <div className="flex rounded-md border border-gray-200 overflow-hidden">
                       <span className="px-3 flex items-center text-xs text-gray-500 bg-gray-100 border-r border-gray-200 shrink-0">/</span>
                       <Input value={form.slug} onChange={(e) => onChange("slug", e.target.value)} placeholder="project-slug" className="border-0 rounded-none font-mono focus-visible:ring-0" />
@@ -218,16 +207,13 @@ export function ProjectForm({
 
                 <div className="space-y-1.5">
                   <Label>Category</Label>
-                  <Select value={form.category_id || ""} onValueChange={(v) => onChange("category_id", v || null)}>
-                    <SelectTrigger className="max-w-sm">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={categories.map((c) => ({ value: c.id, label: c.name }))}
+                    value={form.category_id || ""}
+                    onChange={(v) => onChange("category_id", v || null)}
+                    placeholder="Select category"
+                    searchPlaceholder="Search categories..."
+                  />
                 </div>
 
                 <div className="space-y-1.5">
@@ -649,15 +635,14 @@ export function ProjectForm({
                           </button>
                         </div>
                       ) : (
-                        <button type="button" onClick={() => authorInputRef.current?.click()}
+                        <button type="button" onClick={() => setAuthorMediaPickerOpen(true)}
                           className="size-16 rounded-full border border-dashed border-gray-200 grid place-items-center text-gray-500 hover:bg-gray-100 transition">
                           <Upload className="size-5" />
                         </button>
                       )}
-                      <input ref={authorInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleImagePick(e, setAuthorPreview, "author_image")} />
                     </div>
                     <div className="space-y-1.5 flex-1 max-w-sm">
-                      <Label>Author Name</Label>
+                      <Label>Author Name <span className="text-red-500">*</span></Label>
                       <Input value={form.author} onChange={(e) => onChange("author", e.target.value)} placeholder="e.g. Jane Doe" />
                     </div>
                     <div className="space-y-1.5 flex-1 max-w-sm">
@@ -668,20 +653,22 @@ export function ProjectForm({
                 ) : (
                   <div className="space-y-1.5 max-w-sm">
                     <Label>Select Team Member</Label>
-                    <Select value={form.author} onValueChange={(v) => {
-                      const member = staffMembers.find(m => m.id === v);
-                      onChange("author", member?.name || "");
-                      onChange("author_image", member?.photo || "");
-                    }}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a team member" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {staffMembers.map((m) => (
-                          <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      options={staffMembers.map((m) => ({ value: m.id, label: m.name }))}
+                      value={(() => {
+                        const member = staffMembers.find((m) => m.name === form.author);
+                        return member?.id || "";
+                      })()}
+                      onChange={(v) => {
+                        const member = staffMembers.find((m) => m.id === v);
+                        if (member) {
+                          onChange("author", member.name);
+                          onChange("author_image", member.photo || "");
+                        }
+                      }}
+                      placeholder="Select a team member"
+                      searchPlaceholder="Search team members..."
+                    />
                   </div>
                 )}
               </FormCard>
@@ -724,30 +711,24 @@ export function ProjectForm({
                         {s.spending_type === "team" ? (
                           <div className="space-y-1">
                             <Label className="text-[11px] text-gray-500">Team Member</Label>
-                            <Select value={s.staff_member_id || ""} onValueChange={(v) => onSpendingRecordsChange(spendingRecords.map((r) => r.id === s.id ? { ...r, staff_member_id: v } : r))}>
-                              <SelectTrigger className="h-7 text-xs max-w-sm">
-                                <SelectValue placeholder="Select team member" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {staffMembers.map((m) => (
-                                  <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <SearchableSelect
+                              options={staffMembers.map((m) => ({ value: m.id, label: m.name }))}
+                              value={s.staff_member_id || ""}
+                              onChange={(v) => onSpendingRecordsChange(spendingRecords.map((r) => r.id === s.id ? { ...r, staff_member_id: v } : r))}
+                              placeholder="Select team member"
+                              searchPlaceholder="Search team members..."
+                            />
                           </div>
                         ) : (
                           <div className="space-y-1">
                             <Label className="text-[11px] text-gray-500">Material</Label>
-                            <Select value={s.material_id || ""} onValueChange={(v) => onSpendingRecordsChange(spendingRecords.map((r) => r.id === s.id ? { ...r, material_id: v } : r))}>
-                              <SelectTrigger className="h-7 text-xs max-w-sm">
-                                <SelectValue placeholder="Select material" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {materials.map((m) => (
-                                  <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <SearchableSelect
+                              options={materials.map((m) => ({ value: m.id, label: m.name }))}
+                              value={s.material_id || ""}
+                              onChange={(v) => onSpendingRecordsChange(spendingRecords.map((r) => r.id === s.id ? { ...r, material_id: v } : r))}
+                              placeholder="Select material"
+                              searchPlaceholder="Search materials..."
+                            />
                           </div>
                         )}
                         <div className="grid grid-cols-2 gap-3">
@@ -802,6 +783,18 @@ export function ProjectForm({
           }
           setMilestonePickerOpen(false);
           setMilestonePickerTarget(null);
+        }}
+      />
+
+      <MediaPickerDialog
+        open={authorMediaPickerOpen}
+        onOpenChange={(o) => setAuthorMediaPickerOpen(o)}
+        mode="image"
+        title="Select Author Image"
+        onSelect={(item) => {
+          onChange("author_image", item.url);
+          setAuthorPreview(item.url);
+          setAuthorMediaPickerOpen(false);
         }}
       />
 

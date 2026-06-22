@@ -16,6 +16,10 @@ export const projectSchema = z.object({
   author_image: z.string().optional(),
   author_role: z.string().optional(),
   authorMode: z.enum(["manual", "team"]),
+}).superRefine((data, ctx) => {
+  if (data.authorMode === "manual" && (!data.author || !data.author.trim())) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Author name is required", path: ["author"] });
+  }
 });
 
 export type ProjectFormData = z.infer<typeof projectSchema>;

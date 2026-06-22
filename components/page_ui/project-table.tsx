@@ -25,10 +25,11 @@ interface Props {
   onDelete: (slug: string) => void;
   page: number;
   totalPages: number;
+  totalCount: number;
   onPageChange: (page: number) => void;
 }
 
-export function ProjectTable({ projects, onEdit, onDelete, page, totalPages, onPageChange }: Props) {
+export function ProjectTable({ projects, onEdit, onDelete, page, totalPages, totalCount, onPageChange }: Props) {
   const columns: ColumnDef<Project>[] = [
     {
       header: "Title",
@@ -79,9 +80,19 @@ export function ProjectTable({ projects, onEdit, onDelete, page, totalPages, onP
       getIdentifier={(item) => item.slug}
       page={page}
       totalPages={totalPages}
+      totalCount={totalCount}
       onPageChange={onPageChange}
       emptyState={{ icon: FolderOpen, title: "No projects yet", description: "Create your first project to get started." }}
-      deleteDialog={{ title: "Delete project?", description: "This cannot be undone." }}
+      deleteDialog={{
+        title: (slug) => {
+          const item = projects.find((p) => p.slug === slug);
+          return `Delete "${item?.title || "this project"}"?`;
+        },
+        description: (slug) => {
+          const item = projects.find((p) => p.slug === slug);
+          return `Are you sure you want to delete "${item?.title || "this project"}"? This cannot be undone.`;
+        },
+      }}
     />
   );
 }

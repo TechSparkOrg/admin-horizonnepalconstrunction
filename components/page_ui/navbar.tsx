@@ -86,6 +86,7 @@ const navLinks: NavLink[] = [
     children: [
       { label: "Blogs", href: "/blogs" },
             { label: "Projects", href: "/projects" },
+                       { label: "Courses", href: "/edu-course" },
                       { label: "Vastu", href: "/vastu"},
           { label: "Building Permit", href: "/building-permit" },
   
@@ -99,8 +100,8 @@ const navLinks: NavLink[] = [
   },
   { label: "Costumer Relations", href: "/dashboard/content-management", icon: Activity ,
     children: [
-      // { label: "Enquiries", href: "/dashboard/enquiries" },
-      { label: "Testimonials", href: "/dashboard/testimonials" },
+      { label: "Enquiries", href: "/customer-enquires" },
+
         { label: "Reviews", href: "/reviews"},
           // { label: "Consultation", href: "/dashboard/consultation" }
     ],
