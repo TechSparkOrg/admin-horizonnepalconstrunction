@@ -4,6 +4,7 @@ export interface BannerImage {
   id: string;
   url: string;
   name: string;
+  isPrimary?: boolean;
 }
 
 export interface Category {

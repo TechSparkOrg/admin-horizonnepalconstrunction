@@ -8,6 +8,7 @@ import { useProjectStore } from "@/api/zustand/use-project-store";
 import { ProjectTable } from "@/components/page_ui/project-table";
 import { ProjectForm } from "@/components/page_ui/project-form";
 import { PageHeader } from "@/components/global_ui/page-header";
+import { stripHtml } from "@/lib/html-content";
 import {
   InputGroup,
   InputGroupAddon,
@@ -28,10 +29,10 @@ import type { DocumentItem } from "@/api/types/document.types";
 export default function AdminProjectsPage() {
   const {
     projects, total, currentPage, search, view, editingSlug,
-    form, client, milestones, spendingRecords, thumbnail,
+    form, client, milestones, spendingRecords, bannerImages,
     fetchAll, refetch, setSearch, setPage,
     openNew, openEdit, back, setFormField, setClient,
-    setMilestones, setThumbnail, setSpendingRecords,
+    setMilestones, setBannerImages, setSpendingRecords,
     confirmDelete,
   } = useProjectStore();
 
@@ -81,12 +82,17 @@ export default function AdminProjectsPage() {
       return;
     }
     const { authorMode, ...formData } = form;
+    const primary = bannerImages.find((b) => b.isPrimary) ?? bannerImages[0];
     const payload = {
       ...formData,
-      thumbnail,
+      meta_title: stripHtml(formData.meta_title || ""),
+      meta_description: stripHtml(formData.meta_description || ""),
+      meta_keywords: stripHtml(formData.meta_keywords || ""),
+      thumbnail: primary?.url ?? "",
       clients: client.name ? [client] : [],
       milestones,
       spending_records: spendingRecords,
+      banner_images: bannerImages,
     };
     if (editingSlug) {
       updateMutation.mutate({ slug: editingSlug, payload });
@@ -138,8 +144,8 @@ export default function AdminProjectsPage() {
             onClientChange={setClient}
             milestones={milestones}
             onMilestonesChange={setMilestones}
-            thumbnail={thumbnail}
-            onThumbnailChange={setThumbnail}
+            bannerImages={bannerImages}
+            onBannerImagesChange={setBannerImages}
             spendingRecords={spendingRecords}
             onSpendingRecordsChange={setSpendingRecords}
             staffMembers={staffMembers}

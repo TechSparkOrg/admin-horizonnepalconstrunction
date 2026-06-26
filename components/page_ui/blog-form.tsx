@@ -48,8 +48,8 @@ interface Props {
   projects?: Project[];
   teamMembers?: StaffMember[];
   categories?: Category[];
-  bannerImages: { id: string; url: string; name: string }[];
-  onBannerImagesChange: (images: { id: string; url: string; name: string }[]) => void;
+  bannerImages: { id: string; url: string; name: string; isPrimary?: boolean }[];
+  onBannerImagesChange: (images: { id: string; url: string; name: string; isPrimary?: boolean }[]) => void;
   reelBlocks: { url: string }[];
   onReelBlocksChange: (blocks: { url: string }[]) => void;
   onChange: (key: string, value: string | boolean) => void;

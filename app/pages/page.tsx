@@ -13,6 +13,7 @@ import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
 import { PagesTable } from "@/components/page_ui/pages-table";
 import { PagesForm } from "@/components/page_ui/pages-form";
 import { toSlug } from "@/lib/slug";
+import { stripHtml } from "@/lib/html-content";
 import { PageHeader } from "@/components/global_ui/page-header";
 import {
   InputGroup,
@@ -57,9 +58,9 @@ function apiToForm(p: ApiPage): PageFormData {
     slug: p.slug,
     content: p.content ?? "",
     iconName: p.icon_name ?? "",
-    metaTitle: p.meta_title ?? "",
-    metaDescription: p.meta_description ?? "",
-    metaKeywords: p.meta_keywords ?? "",
+    metaTitle: stripHtml(p.meta_title ?? ""),
+    metaDescription: stripHtml(p.meta_description ?? ""),
+    metaKeywords: stripHtml(p.meta_keywords ?? ""),
     featuredImage: p.featured_image ?? "",
     isActive: p.is_active ?? true,
     isPublished: p.is_published ?? false,
@@ -75,7 +76,7 @@ export default function AdminPagesPage() {
   const [view, setView] = useState<View>("list");
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [form, setForm] = useState<PageFormData>(EMPTY);
-  const [bannerImages, setBannerImages] = useState<{ id: string; url: string; name: string }[]>([]);
+  const [bannerImages, setBannerImages] = useState<{ id: string; url: string; name: string; isPrimary?: boolean }[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -191,9 +192,9 @@ export default function AdminPagesPage() {
       slug: form.slug,
       content: form.content,
       icon_name: form.iconName,
-      meta_title: form.metaTitle,
-      meta_description: form.metaDescription,
-      meta_keywords: form.metaKeywords,
+      meta_title: stripHtml(form.metaTitle),
+      meta_description: stripHtml(form.metaDescription),
+      meta_keywords: stripHtml(form.metaKeywords),
       featured_image: form.featuredImage,
       is_active: form.isActive,
       is_published: form.isPublished,

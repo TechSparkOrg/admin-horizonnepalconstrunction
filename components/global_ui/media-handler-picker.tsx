@@ -43,7 +43,9 @@ interface MediaPickerDialogProps {
   mode?: MediaPickerMode;
   title?: string;
   defaultCategory?: string;
-  onSelect: (item: PickerMediaItem, altText: string, file?: File) => void;
+  onSelect?: (item: PickerMediaItem, altText: string, file?: File) => void;
+  multiSelect?: boolean;
+  onMultiSelect?: (items: PickerMediaItem[]) => void;
 }
 
 export function MediaPickerDialog({
@@ -53,6 +55,8 @@ export function MediaPickerDialog({
   title,
   defaultCategory,
   onSelect,
+  multiSelect = false,
+  onMultiSelect,
 }: MediaPickerDialogProps) {
   const isModel = mode === "model";
   const acceptTypes = isModel ? ".glb,.gltf,.obj" : "image/*";
@@ -65,6 +69,7 @@ export function MediaPickerDialog({
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>(defaultCategory || "all");
   const [selected, setSelected] = useState<PickerMediaItem | null>(null);
+  const [multiSelected, setMultiSelected] = useState<PickerMediaItem[]>([]);
   const [altText, setAltText] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
@@ -83,11 +88,8 @@ export function MediaPickerDialog({
 
   useEffect(() => {
     if (open && tab === "existing") {
-      const initial = defaultCategory && defaultCategory !== "all"
-        ? { group_title: defaultCategory, page_size: 10 }
-        : { page_size: 10 };
-      setCategoryFilter(defaultCategory || "all");
-      setListParams(initial);
+      setCategoryFilter("all");
+      setListParams({ page_size: 10 });
     }
   }, [open, tab]);
 
@@ -107,8 +109,16 @@ export function MediaPickerDialog({
   };
 
   const handleSelectExisting = (item: PickerMediaItem) => {
-    setSelected(item);
-    setAltText(item.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " "));
+    if (multiSelect) {
+      setMultiSelected(prev =>
+        prev.some(i => i.id === item.id)
+          ? prev.filter(i => i.id !== item.id)
+          : [...prev, item]
+      );
+    } else {
+      setSelected(item);
+      setAltText(item.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " "));
+    }
   };
 
   const handleFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,6 +138,7 @@ export function MediaPickerDialog({
     setSearch("");
     setCategoryFilter("all");
     setSelected(null);
+    setMultiSelected([]);
     setAltText("");
     setUploadFile(null);
     setUploadPreview(null);
@@ -135,11 +146,17 @@ export function MediaPickerDialog({
   };
 
   const handleConfirm = async () => {
+    if (multiSelect) {
+      onMultiSelect?.(multiSelected);
+      reset();
+      onOpenChange(false);
+      return;
+    }
     if (tab === "existing" && selected) {
       if (altText !== selected.name) {
         await updateMutation.mutateAsync({ id: selected.id, data: { alt: altText } });
       }
-      onSelect(selected, altText);
+      onSelect?.(selected, altText);
     } else if (tab === "upload" && uploadFile) {
       const media = await uploadMutation.mutateAsync({ file: uploadFile, metadata: { alt: altText } });
       if (!media) {
@@ -154,13 +171,13 @@ export function MediaPickerDialog({
         category: media.group_title || "General",
         type: isModel ? uploadFile.name.split(".").pop() : undefined,
       };
-      onSelect(persisted, altText);
+      onSelect?.(persisted, altText);
     }
     reset();
     onOpenChange(false);
   };
 
-  const canConfirm = tab === "existing" ? !!selected : !!uploadFile;
+  const canConfirm = multiSelect ? multiSelected.length > 0 : (tab === "existing" ? !!selected : !!uploadFile);
 
   return (
     <Dialog
@@ -220,7 +237,9 @@ export function MediaPickerDialog({
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {pickerItems.map((item) => {
                       const thumb = item.thumbnail ?? item.url;
-                      const active = selected?.id === item.id;
+                      const active = multiSelect
+                        ? multiSelected.some(i => i.id === item.id)
+                        : selected?.id === item.id;
                       return (
                         <button
                           key={item.id}
@@ -275,7 +294,16 @@ export function MediaPickerDialog({
 
               <div className="p-3 flex flex-col bg-gray-50/60">
                 <div className="aspect-square w-full rounded-lg border border-gray-200 bg-white flex items-center justify-center mb-3 overflow-hidden relative">
-                  {selected ? (
+                  {multiSelect ? (
+                    <div className="text-center text-gray-400 px-3">
+                      <ImageIcon className="size-6 mx-auto mb-1.5" />
+                      <p className="text-[11px] font-medium text-gray-500">
+                        {multiSelected.length > 0
+                          ? `${multiSelected.length} selected`
+                          : "Select images"}
+                      </p>
+                    </div>
+                  ) : selected ? (
                     <Image
                       src={selected.thumbnail ?? selected.url}
                       alt={selected.name}
@@ -295,14 +323,18 @@ export function MediaPickerDialog({
                   )}
                 </div>
 
-                <Label className="text-[11px] mb-1 text-gray-600">Alt Text</Label>
-                <Input
-                  value={altText}
-                  onChange={(e) => setAltText(e.target.value)}
-                  disabled={!selected}
-                  placeholder="Describe this asset"
-                  className="h-8 text-xs rounded-lg border-gray-200 bg-white"
-                />
+                {!multiSelect && (
+                  <>
+                    <Label className="text-[11px] mb-1 text-gray-600">Alt Text</Label>
+                    <Input
+                      value={altText}
+                      onChange={(e) => setAltText(e.target.value)}
+                      disabled={!selected}
+                      placeholder="Describe this asset"
+                      className="h-8 text-xs rounded-lg border-gray-200 bg-white"
+                    />
+                  </>
+                )}
               </div>
             </div>
           </TabsContent>
@@ -361,7 +393,9 @@ export function MediaPickerDialog({
             size="sm"
             className="h-8 text-xs px-4 rounded-lg bg-sidebar-primary hover:bg-sidebar-primary/90 disabled:opacity-50"
           >
-            {tab === "existing" ? "Select" : "Upload"}
+            {multiSelect
+              ? `Select (${multiSelected.length})`
+              : tab === "existing" ? "Select" : "Upload"}
           </Button>
         </div>
       </DialogContent>

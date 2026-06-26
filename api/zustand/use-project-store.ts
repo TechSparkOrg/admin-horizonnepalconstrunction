@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { ProjectAdmin } from "@/api/services/project.service";
 import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
 import { toSlug } from "@/lib/slug";
+import { stripHtml } from "@/lib/html-content";
 import type { Project, Client, ProjectMilestone, SpendingRecord } from "@/api/types/project.types";
 
 export interface ProjectFormData {
@@ -40,8 +41,11 @@ function apiToForm(item: Project): ProjectFormData {
   return {
     title: item.title, slug: item.slug, category_id: item.category_id,
     description: item.description, status: item.status, pause_reason: item.pause_reason,
-    priority: item.priority, meta_title: item.meta_title, meta_description: item.meta_description,
-    meta_keywords: item.meta_keywords, is_published: item.is_published,
+    priority: item.priority,
+    meta_title: stripHtml(item.meta_title),
+    meta_description: stripHtml(item.meta_description),
+    meta_keywords: stripHtml(item.meta_keywords),
+    is_published: item.is_published,
     author: item.author, author_image: item.author_image, author_role: item.author_role,
     authorMode: "manual",
   };
@@ -62,7 +66,7 @@ interface ProjectStore {
   client: Client;
   milestones: ProjectMilestone[];
   spendingRecords: SpendingRecord[];
-  thumbnail: string;
+  bannerImages: { id: string; url: string; name: string; isPrimary?: boolean }[];
 
   fetchAll: () => Promise<void>;
   refetch: () => Promise<void>;
@@ -73,7 +77,7 @@ interface ProjectStore {
   back: () => void;
   setFormField: (key: string, value: string | boolean | null) => void;
   setClient: (client: Client) => void;
-  setThumbnail: (thumbnail: string) => void;
+  setBannerImages: (images: { id: string; url: string; name: string; isPrimary?: boolean }[]) => void;
   setMilestones: (milestones: ProjectMilestone[]) => void;
   setSpendingRecords: (records: SpendingRecord[]) => void;
   confirmDelete: (slug: string) => Promise<void>;
@@ -90,7 +94,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   client: { ...EMPTY_CLIENT },
   milestones: [],
   spendingRecords: [],
-  thumbnail: "",
+  bannerImages: [],
 
   fetchAll: async () => {
     const { currentPage, search } = get();
@@ -119,7 +123,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   openNew: () => {
     set({
       form: { ...EMPTY_FORM }, client: { ...EMPTY_CLIENT },
-      milestones: [], spendingRecords: [], thumbnail: "",
+      milestones: [], spendingRecords: [], bannerImages: [],
       editingSlug: null, view: "form",
     });
   },
@@ -130,7 +134,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       client: item.clients?.[0] || { ...EMPTY_CLIENT },
       milestones: item.milestones,
       spendingRecords: item.spending_records,
-      thumbnail: item.thumbnail,
+      bannerImages: item.banner_images ?? [],
       editingSlug: item.slug,
       view: "form",
     });
@@ -139,7 +143,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   back: () => {
     set({
       form: { ...EMPTY_FORM }, client: { ...EMPTY_CLIENT },
-      milestones: [], spendingRecords: [], thumbnail: "",
+      milestones: [], spendingRecords: [], bannerImages: [],
       view: "list",
     });
   },
@@ -155,7 +159,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   setClient: (client) => set({ client }),
-  setThumbnail: (thumbnail) => set({ thumbnail }),
+  setBannerImages: (bannerImages) => set({ bannerImages }),
   setMilestones: (milestones) => set({ milestones }),
   setSpendingRecords: (spendingRecords) => set({ spendingRecords }),
 

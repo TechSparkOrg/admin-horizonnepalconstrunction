@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { Upload, X, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Upload, ChevronLeft, ChevronRight, Library } from "lucide-react";
+import { ActionButtons } from "@/components/global_ui/action-buttons";
 import { FormHeader } from "@/components/global_ui/form-header";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,13 +21,16 @@ import { FormTabs } from "@/components/global_ui/form-tabs";
 import { SeoFields } from "@/components/global_ui/seo-fields";
 import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
 import { toSlug } from "@/lib/slug";
-import { cn } from "@/lib/utils";
-import type { MediaItem } from "@/api/types/media.types";
+import type { BannerGroup } from "@/api/types/media.types";
+import { MediaPickerDialog, type PickerMediaItem } from "@/components/global_ui/media-handler-picker";
+
+const altFromUrl = (url: string) =>
+  url.split('/').pop()?.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ") || "";
 
 const bannerSchema = z.object({
   title: z.string().min(1, "Title is required"),
   slug: z.string().optional(),
-  alt: z.string().min(1, "Alt text is required"),
+  alt: z.string().optional(),
   is_active: z.boolean(),
   meta_title: z.string().optional(),
   meta_description: z.string().optional(),
@@ -36,22 +40,26 @@ const bannerSchema = z.object({
 export type BannerFormData = z.infer<typeof bannerSchema>;
 
 interface Props {
-  editing: MediaItem | null;
+  editing: { group: BannerGroup } | null;
   saving: boolean;
-  onSave: (data: BannerFormData, files: File[]) => Promise<void>;
+  onSave: (data: BannerFormData, files: File[], pickedImageIds?: string[], pickedAlts?: string[], deletedImageIds?: string[]) => Promise<void>;
   onBack: () => void;
 }
 
 export function BannerForm({ editing, saving, onSave, onBack }: Props) {
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
-  const [dragOver, setDragOver] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("overview");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickedLibraryImages, setPickedLibraryImages] = useState<PickerMediaItem[]>([]);
+  const [altOverrides, setAltOverrides] = useState<Record<string, string>>({});
+  const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const slugManuallyEdited = useRef(!!editing?.slug);
+  const slugManuallyEdited = useRef(!!editing?.group?.slug);
+  const existingImages = (editing?.group?.images ?? []).filter(img => !deletedImageIds.includes(img.id));
 
   const {
     handleSubmit,
@@ -62,13 +70,13 @@ export function BannerForm({ editing, saving, onSave, onBack }: Props) {
   } = useForm<BannerFormData>({
     resolver: zodResolver(bannerSchema),
     defaultValues: {
-      title: editing?.title || "",
-      slug: editing?.slug || "",
-      alt: editing?.alt || "",
-      is_active: editing?.is_active ?? true,
-      meta_title: editing?.meta_title || "",
-      meta_description: editing?.meta_description || "",
-      keywords: editing?.keywords || "",
+      title: editing?.group?.title || "",
+      slug: editing?.group?.slug || "",
+      alt: editing?.group?.alt || "",
+      is_active: editing?.group?.is_active ?? true,
+      meta_title: editing?.group?.meta_title || "",
+      meta_description: editing?.group?.meta_description || "",
+      keywords: editing?.group?.keywords || "",
     },
   });
 
@@ -78,14 +86,7 @@ export function BannerForm({ editing, saving, onSave, onBack }: Props) {
         if (p.startsWith("blob:")) URL.revokeObjectURL(p);
       });
     };
-  }, []);
-
-  useEffect(() => {
-    if (!editing) return;
-    if (editing.url && previews.length === 0 && files.length === 0) {
-      setPreviews([editing.url]);
-    }
-  }, [editing]);
+  }, [previews]);
 
   const watchTitle = watch("title");
   const watchIsActive = watch("is_active");
@@ -118,21 +119,15 @@ export function BannerForm({ editing, saving, onSave, onBack }: Props) {
         return;
       }
       setFileError(null);
-      const updated = editing ? images : [...files, ...images];
+      const updated = [...files, ...images];
       setFiles(updated);
       rebuildPreviews(updated);
     },
-    [files, editing, rebuildPreviews]
+    [files, rebuildPreviews]
   );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleFiles(Array.from(e.target.files || []));
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    handleFiles(Array.from(e.dataTransfer.files));
   };
 
   const removeFile = (index: number) => {
@@ -149,23 +144,28 @@ export function BannerForm({ editing, saving, onSave, onBack }: Props) {
   };
 
   const openViewer = (index: number) => {
-    const activePreviews = editing?.url && files.length === 0 ? [editing.url] : previews;
-    if (!activePreviews[index]) return;
+    if (!allUrls[index]) return;
     setViewerIndex(index);
     setViewerOpen(true);
   };
 
   const onSubmit = async (data: BannerFormData) => {
-    if (!editing && files.length === 0) {
+    if (!editing && files.length === 0 && pickedLibraryImages.length === 0) {
       setFileError("Please select at least one banner image.");
       return;
     }
     setFileError(null);
-    await onSave(data, files);
+    const ids = pickedLibraryImages.map(i => i.id);
+    const pickedAlts = pickedLibraryImages.map(item =>
+      altOverrides[item.url] ?? altFromUrl(item.url)
+    );
+    await onSave(data, files, ids, pickedAlts, deletedImageIds);
   };
 
-  const displayPreviews = editing?.url && files.length === 0 ? [editing.url] : previews;
-  const totalItems = displayPreviews.length || files.length || (editing?.url ? 1 : 0);
+  const existingUrls = existingImages.map(i => i.url);
+  const pickedUrls = pickedLibraryImages.map(i => i.url);
+  const allUrls = [...existingUrls, ...pickedUrls, ...previews];
+  const totalItems = existingUrls.length + pickedUrls.length + files.length;
 
   return (
     <div>
@@ -246,103 +246,91 @@ export function BannerForm({ editing, saving, onSave, onBack }: Props) {
                 <div className="space-y-3">
                   <Label>Banner Images{!editing ? " *" : ""}</Label>
 
-                  {displayPreviews.length > 0 && (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-                      {displayPreviews.map((src, i) => (
-                        <div
-                          key={i}
-                          className="group relative aspect-video rounded-lg overflow-hidden border border-gray-200 bg-gray-50 cursor-pointer"
-                          onClick={() => openViewer(i)}
-                        >
-                          <Image
-                            src={src}
-                            alt={`Banner ${i + 1}`}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, 16vw"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
-                            <Eye className="size-5 text-white drop-shadow-md" />
-                          </div>
-                          {i < files.length && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeFile(i);
-                              }}
-                              className="absolute top-1.5 right-1.5 size-6 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/70 transition"
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
+                      <Library className="size-4" />
+                      Library
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                      <Upload className="size-4" />
+                      Add Images
+                    </Button>
+                  </div>
+
+                  {allUrls.length > 0 && (
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <div className="grid grid-cols-[48px_1fr_minmax(0,1fr)_auto] gap-3 px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-600">
+                        <span>Preview</span>
+                        <span>File</span>
+                        <span>Alt Text</span>
+                        <span className="text-right">Actions</span>
+                      </div>
+                      {allUrls.map((src, i) => {
+                        const isExisting = i < existingUrls.length;
+                        const isPicked = !isExisting && i < existingUrls.length + pickedUrls.length;
+                        const deleteLabel = isExisting
+                          ? "Delete"
+                          : isPicked
+                            ? "Remove from selection"
+                            : "Remove from upload";
+                        const defaultAlt = isExisting
+                          ? (existingImages[i].alt || "")
+                          : altFromUrl(src);
+                        const altValue = altOverrides[src] !== undefined ? altOverrides[src] : defaultAlt;
+                        return (
+                          <div
+                            key={i}
+                            className="grid grid-cols-[48px_1fr_minmax(0,1fr)_auto] gap-3 px-4 py-2 border-b border-gray-100 last:border-b-0 items-center hover:bg-gray-50 transition"
+                          >
+                            <div
+                              className="size-10 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 cursor-pointer relative"
+                              onClick={() => openViewer(i)}
                             >
-                              <X className="size-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="aspect-video rounded-lg border-2 border-dashed border-gray-200 hover:border-sidebar-primary/30 hover:bg-gray-50 transition flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-sidebar-primary"
-                      >
-                        <Upload className="size-5" />
-                        <span className="text-xs font-medium">Add more</span>
-                      </button>
+                              <Image src={src} alt="" fill className="object-cover" sizes="40px" />
+                            </div>
+                            <span className="text-xs text-gray-700 truncate">
+                              {src.split('/').pop() || `Image ${i + 1}`}
+                            </span>
+                            <input
+                              value={altValue}
+                              onChange={(e) => setAltOverrides(prev => ({ ...prev, [src]: e.target.value }))}
+                              placeholder="Describe this image"
+                              className="h-7 text-xs rounded border border-gray-200 px-2 bg-white focus:outline-none focus:border-sidebar-primary w-full min-w-0"
+                            />
+                            <ActionButtons
+                              onEdit={() => openViewer(i)}
+                              onDelete={() => {
+                                if (isExisting) {
+                                  const img = existingImages[i];
+                                  if (img) setDeletedImageIds(prev => [...prev, img.id]);
+                                } else if (isPicked) {
+                                  const pickIdx = i - existingUrls.length;
+                                  setPickedLibraryImages(prev => prev.filter((_, idx) => idx !== pickIdx));
+                                } else {
+                                  removeFile(i - existingUrls.length - pickedUrls.length);
+                                }
+                              }}
+                              showDelete
+                              editLabel="View"
+                              deleteLabel={deleteLabel}
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 
-                  <div
-                    className={cn(
-                      "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition",
-                      dragOver
-                        ? "border-sidebar-primary bg-sidebar-primary/5"
-                        : displayPreviews.length > 0
-                          ? "border-gray-200 hover:border-sidebar-primary/30"
-                          : "border-gray-300 hover:border-sidebar-primary/30"
-                    )}
-                    onClick={() => fileInputRef.current?.click()}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setDragOver(true);
-                    }}
-                    onDragLeave={() => setDragOver(false)}
-                    onDrop={handleDrop}
-                  >
-                    <Upload className="size-8 mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm font-medium text-gray-600">
-                      {displayPreviews.length > 0
-                        ? "Drop more images here"
-                        : editing
-                          ? "Drop new images to replace"
-                          : "Drag & drop banner images here"}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      PNG, JPG, WebP up to 10MB each
-                    </p>
-                    <Button type="button" variant="outline" size="sm" className="mt-3">
-                      Browse Files
-                    </Button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={handleFileChange}
-                    />
-                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
 
                   {fileError && (
                     <p className="text-xs text-red-500">{fileError}</p>
-                  )}
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>Alt Text <span className="text-red-500">*</span></Label>
-                  <Input
-                    {...register("alt")}
-                    placeholder="Describe these banners"
-                  />
-                  {errors.alt && (
-                    <p className="text-xs text-red-500">{errors.alt.message}</p>
                   )}
                 </div>
               </FormCard>
@@ -364,7 +352,7 @@ export function BannerForm({ editing, saving, onSave, onBack }: Props) {
 
       <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
         <DialogContent className="!max-w-[90vw] !max-h-[90vh] p-0 overflow-hidden bg-black/90 border-0">
-          {displayPreviews[viewerIndex] && (
+          {allUrls[viewerIndex] && (
             <div className="relative w-full h-full flex items-center justify-center min-h-[50vh]">
               {totalItems > 1 && (
                 <>
@@ -394,7 +382,7 @@ export function BannerForm({ editing, saving, onSave, onBack }: Props) {
               )}
               <div className="relative w-full h-[80vh]">
                 <Image
-                  src={displayPreviews[viewerIndex]}
+                  src={allUrls[viewerIndex]}
                   alt={`Banner ${viewerIndex + 1}`}
                   fill
                   className="object-contain"
@@ -408,6 +396,21 @@ export function BannerForm({ editing, saving, onSave, onBack }: Props) {
           )}
         </DialogContent>
       </Dialog>
+
+      <MediaPickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        mode="image"
+        defaultCategory="Banners"
+        multiSelect
+        onMultiSelect={(items) => {
+          setPickedLibraryImages(prev => {
+            const existing = new Set(prev.map(i => i.id));
+            const newItems = items.filter(i => !existing.has(i.id));
+            return [...prev, ...newItems];
+          });
+        }}
+      />
     </div>
   );
 }

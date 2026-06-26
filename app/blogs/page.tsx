@@ -5,9 +5,12 @@ import { Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useBlogUiStore } from "@/api/zustand/use-blog-store";
 import { useBlogList, useBlogMutations } from "@/api/hooks/use-blog-query";
+import { BlogAdmin } from "@/api/services/blog.service";
+import { stripHtml } from "@/lib/html-content";
 import { ProjectAdmin } from "@/api/services/project.service";
 import { StaffAdmin as StaffC } from "@/api/services/staff.service";
 import { CategoryAdmin } from "@/api/services/category.service";
+import type { BlogPost } from "@/api/types/blog.types";
 import type { Project } from "@/api/types/project.types";
 import type { StaffMember } from "@/api/types/staff.types";
 import type { Category } from "@/api/types/category.types";
@@ -60,37 +63,44 @@ export default function AdminBlogsPage() {
 
   const handleSave = async () => {
     if (!validateForm()) return;
+    const primaryBanner = bannerImages.find((b) => b.isPrimary) ?? bannerImages[0];
+    const teamAuthor = form.authorMode === "team" && form.authorTeamId
+      ? teamMembers.find((m) => m.id === form.authorTeamId)
+      : null;
     const payload = {
       title: form.title,
-      title_np: form.title,
       slug: form.slug,
-      excerpt: form.content?.slice(0, 200) ?? "",
-      excerpt_np: form.content?.slice(0, 200) ?? "",
-      image: "",
-      date: form.publishDate || new Date().toISOString(),
-      author_role: "",
-      author: form.authorMode === "team" ? "" : form.authorName,
-      author_image: form.authorMode === "manual" ? form.authorImage : "",
-      content: [],
-      content_np: [],
+      image: primaryBanner?.url ?? "",
+      date: form.publishDate || "",
+      author: teamAuthor?.name || form.authorName,
+      author_image: teamAuthor?.photo || form.authorImage,
+      author_role: teamAuthor?.designation_label ?? "",
+      content: form.content,
       category_id: form.categoryId,
       project_id: form.projectId,
-      meta_title: form.metaTitle,
-      meta_description: form.metaDescription,
-      meta_keywords: form.metaKeywords,
+      meta_title: stripHtml(form.metaTitle),
+      meta_description: stripHtml(form.metaDescription),
+      meta_keywords: stripHtml(form.metaKeywords),
       is_active: form.isActive,
       is_published: form.isPublished,
       publish_date: form.publishDate,
       model_3d_block: form.model3dBlock,
       video_block_url: form.videoBlockUrl,
       video_embed_url: form.videoEmbedUrl,
-      youtube_embed_url: form.videoEmbedUrl,
       banner_images: bannerImages,
       reel_blocks: reelBlocks,
-      content_html: form.content,
     };
     await saveMutation.mutateAsync({ slug: editingSlug, payload });
     back();
+  };
+
+  const handleEdit = async (item: BlogPost) => {
+    try {
+      const full = await BlogAdmin.adminGet(item.slug);
+      openEdit(full);
+    } catch {
+      toast.error("Failed to load blog details");
+    }
   };
 
   const handleDelete = async (slug: string) => {
@@ -148,7 +158,7 @@ export default function AdminBlogsPage() {
 
       <BlogTable
         blogs={paginatedBlogs}
-        onEdit={openEdit}
+        onEdit={handleEdit}
         onDelete={handleDelete}
         page={currentPage}
         totalPages={totalPages}

@@ -33,7 +33,7 @@ export interface Page {
   author_name?: string;
   author_image?: string;
   author_team_id?: string;
-  banner_images?: { id: string; url: string; name: string }[];
+  banner_images?: { id: string; url: string; name: string; isPrimary?: boolean }[];
   sections: PageSection[];
   created_at: string;
   updated_at: string;

@@ -21,6 +21,9 @@ export const MediaService = {
   listBannerGroups: (params?: Record<string, unknown>) =>
     apiPrivate.get<PaginatedResponse<BannerGroup>>('/admin/media/banner-groups', { params }),
 
+  get: (id: string) =>
+    apiPrivate.get<MediaItem>(`/admin/media/detail/${id}`),
+
   create: (data: MediaItemCreate) =>
     apiPrivate.post<MediaItem>('/admin/media', data),
 

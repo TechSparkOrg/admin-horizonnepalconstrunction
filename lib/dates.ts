@@ -4,6 +4,9 @@ const dateFormat = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
-export function formatDate(iso: string): string {
-  return dateFormat.format(new Date(iso));
+export function formatDate(iso: string | undefined | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—";
+  return dateFormat.format(d);
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { ImagePlus, Eye, Pencil, Trash2, Box, X } from "lucide-react";
+import { ImagePlus, Eye, Pencil, Trash2, Box, X, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,9 +20,9 @@ interface BlogMediaTabProps {
   model3dBlock: string;
   videoBlockUrl: string;
   videoEmbedUrl: string;
-  bannerImages: { id: string; url: string; name: string }[];
+  bannerImages: { id: string; url: string; name: string; isPrimary?: boolean }[];
   reelBlocks: { url: string }[];
-  onBannerImagesChange: (images: { id: string; url: string; name: string }[]) => void;
+  onBannerImagesChange: (images: { id: string; url: string; name: string; isPrimary?: boolean }[]) => void;
   onReelBlocksChange: (blocks: { url: string }[]) => void;
   onChange: (key: string, value: string | boolean) => void;
 }
@@ -75,20 +75,42 @@ export function BlogMediaTab({
     if (editingBannerId) {
       onBannerImagesChange(
         bannerImages.map((img) =>
-          img.id === editingBannerId ? { ...img, name: altText || img.name } : img
+          img.id === editingBannerId
+            ? { ...img, url: newItem.url, name: altText || newItem.name }
+            : img
         )
       );
       setEditingBannerId(null);
     } else {
-      onBannerImagesChange([...bannerImages, { ...newItem, name: altText || newItem.name }]);
+      const isFirst = bannerImages.length === 0;
+      onBannerImagesChange([
+        ...bannerImages,
+        { ...newItem, name: altText || newItem.name, isPrimary: isFirst || undefined },
+      ]);
     }
   };
 
+  const togglePrimary = (id: string) => {
+    onBannerImagesChange(
+      bannerImages.map((img) => ({
+        ...img,
+        isPrimary: img.id === id ? true : undefined,
+      }))
+    );
+  };
+
   const removeBannerImage = (id: string) => {
-    onBannerImagesChange(bannerImages.filter((img) => img.id !== id));
+    const remaining = bannerImages.filter((img) => img.id !== id);
+    const needsPromotion = remaining.length > 0 && !remaining.some((img) => img.isPrimary);
+    onBannerImagesChange(
+      needsPromotion
+        ? remaining.map((img, idx) => idx === 0 ? { ...img, isPrimary: true } : img)
+        : remaining
+    );
   };
 
   const handleMediaSelect = async (item: PickerMediaItem, altText: string, file?: File) => {
+    if (item.url.startsWith("blob:")) return;
     if (mediaPickerMode === "model3d") {
       onChange("model3dBlock", item.url);
     } else if (mediaPickerMode === "video") {
@@ -142,6 +164,7 @@ export function BlogMediaTab({
             <Table>
               <TableHeader>
                 <TableRow className="border-gray-200 hover:bg-transparent">
+                  <TableHead className="w-10" />
                   <TableHead className="text-gray-900 font-semibold">Image</TableHead>
                   <TableHead className="text-gray-900 font-semibold">Name</TableHead>
                   <TableHead className="text-gray-900 font-semibold text-right">Actions</TableHead>
@@ -151,11 +174,31 @@ export function BlogMediaTab({
                 {paginatedBanners.map((img) => (
                   <TableRow key={img.id} className="border-gray-200 hover:bg-gray-50">
                     <TableCell>
+                      <button
+                        type="button"
+                        onClick={() => togglePrimary(img.id)}
+                        title={img.isPrimary ? "Primary thumbnail" : "Set as primary thumbnail"}
+                      >
+                        <Star
+                          className={`size-4 ${img.isPrimary ? "fill-yellow-400 text-yellow-400" : "text-gray-300 hover:text-yellow-400"}`}
+                        />
+                      </button>
+                    </TableCell>
+                    <TableCell>
                       <div className="size-10 rounded-md overflow-hidden bg-gray-100 relative">
                         <Image src={img.url} alt={img.name} fill className="object-cover" />
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-gray-900 truncate max-w-[280px]">{img.name}</TableCell>
+                    <TableCell className="text-sm text-gray-900 truncate max-w-[220px]">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate">{img.name}</span>
+                        {img.isPrimary && (
+                          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-yellow-600 bg-yellow-50 border border-yellow-200 px-1.5 py-0.5 rounded">
+                            Primary
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-2">
                         <Button variant="outline" size="sm" className="text-gray-500 border-gray-200 hover:bg-gray-100" onClick={() => setPreviewUrl(img.url)}>
@@ -216,7 +259,7 @@ export function BlogMediaTab({
         {model3dBlock ? (
           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
             <div className="size-14 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 shrink-0 flex items-center justify-center">
-              <ModelViewer src={model3dBlock} className="w-full h-full" />
+              <ModelViewer src={model3dBlock} autoRotate={false} cameraControls={false} className="w-full h-full" />
             </div>
             <span className="text-sm text-gray-700 truncate flex-1">{model3dBlock.split("/").pop()}</span>
             <div className="flex items-center gap-1.5 shrink-0">
@@ -344,19 +387,21 @@ export function BlogMediaTab({
         )}
       </div>
 
-      <MediaPickerDialog
-        open={mediaPickerOpen}
-        onOpenChange={(o) => { setMediaPickerOpen(o); if (!o) setEditingBannerId(null); }}
-        mode={mediaPickerMode === "model3d" ? "model" : "image"}
-        title={
-          mediaPickerMode === "model3d" ? "Select 3D Model"
-          : mediaPickerMode === "video" ? "Select Video"
-          : editingBannerId ? "Update Banner Image"
-          : "Select Banner Image"
-        }
-        defaultCategory={mediaPickerMode === "model3d" ? "3D Models" : mediaPickerMode === "video" ? "Videos" : undefined}
-        onSelect={handleMediaSelect}
-      />
+      {mediaPickerOpen && (
+        <MediaPickerDialog
+          open={mediaPickerOpen}
+          onOpenChange={(o) => { setMediaPickerOpen(o); if (!o) setEditingBannerId(null); }}
+          mode={mediaPickerMode === "model3d" ? "model" : "image"}
+          title={
+            mediaPickerMode === "model3d" ? "Select 3D Model"
+            : mediaPickerMode === "video" ? "Select Video"
+            : editingBannerId ? "Update Banner Image"
+            : "Select Banner Image"
+          }
+          defaultCategory={mediaPickerMode === "model3d" ? "3D Models" : mediaPickerMode === "video" ? "Videos" : undefined}
+          onSelect={handleMediaSelect}
+        />
+      )}
 
       {modelViewerPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setModelViewerPreview(null)}>
@@ -380,7 +425,7 @@ export function BlogMediaTab({
         </div>
       )}
 
-      <ImagePreviewDialog url={previewUrl} onClose={() => setPreviewUrl(null)} />
+      {previewUrl && <ImagePreviewDialog url={previewUrl} onClose={() => setPreviewUrl(null)} />}
     </div>
   );
 }

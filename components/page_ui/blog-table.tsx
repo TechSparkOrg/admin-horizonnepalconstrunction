@@ -1,6 +1,7 @@
 "use client";
 
 import { FileText } from "lucide-react";
+import Image from "next/image";
 import type { BlogPost } from "@/api/types/blog.types";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
 import { StatusBadge, PUBLISH_STATUS } from "@/components/global_ui/status-badge";
@@ -22,8 +23,14 @@ export function BlogTable({ blogs, onEdit, onDelete, page, totalPages, totalCoun
       header: "Title",
       render: (item) => (
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
-            <FileText className="w-4 h-4 text-gray-400" />
+          <div className="size-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
+            {item.image ? (
+              <Image src={item.image} alt={item.title} width={40} height={40} className="object-cover size-full" />
+            ) : item.banner_images?.[0]?.url ? (
+              <Image src={item.banner_images[0].url} alt={item.title} width={40} height={40} className="object-cover size-full" />
+            ) : (
+              <FileText className="size-4 text-gray-400" />
+            )}
           </div>
           <span className="text-sm text-gray-900">{item.title}</span>
         </div>

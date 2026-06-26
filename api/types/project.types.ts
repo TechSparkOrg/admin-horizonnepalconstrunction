@@ -57,6 +57,7 @@ export interface Project {
   completed_date: string | null;
   description: string;
   thumbnail: string;
+  banner_images?: { id: string; url: string; name: string; isPrimary?: boolean }[];
   location: string;
   social_links: ProjectSocialLink[];
   clients: Client[];

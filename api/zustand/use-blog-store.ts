@@ -4,6 +4,7 @@ import { toSlug } from "@/lib/slug";
 import { blogSchema } from "@/api/validation/blog";
 import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
 import { toast } from "sonner";
+import { stripHtml } from "@/lib/html-content";
 import type { MediaItem } from "@/api/types/media.types";
 import type { BlogPost } from "@/api/types/blog.types";
 
@@ -41,19 +42,19 @@ function apiToForm(p: BlogPost): BlogFormData {
   return {
     title: p.title,
     slug: p.slug,
-    content: p.content_html ?? "",
-    metaTitle: p.meta_title ?? "",
-    metaDescription: p.meta_description ?? "",
-    metaKeywords: p.meta_keywords ?? "",
+    content: p.content ?? "",
+    metaTitle: stripHtml(p.meta_title ?? ""),
+    metaDescription: stripHtml(p.meta_description ?? ""),
+    metaKeywords: stripHtml(p.meta_keywords ?? ""),
     isActive: p.is_active ?? true,
     isPublished: p.is_published ?? false,
     publishDate: p.publish_date ?? "",
-    projectId: p.project_id ?? "",
+    projectId: p.project?.id ?? "",
     authorMode: "manual",
     authorName: p.author ?? "",
     authorImage: p.author_image ?? "",
     authorTeamId: "",
-    categoryId: p.category_id ?? "",
+    categoryId: p.category?.id ?? "",
     model3dBlock: p.model_3d_block ?? "",
     videoBlockUrl: p.video_block_url ?? "",
     videoEmbedUrl: p.video_embed_url ?? "",
@@ -66,7 +67,7 @@ interface BlogUiStore {
   view: View;
   editingSlug: string | null;
   form: BlogFormData;
-  bannerImages: { id: string; url: string; name: string }[];
+  bannerImages: { id: string; url: string; name: string; isPrimary?: boolean }[];
   reelBlocks: { url: string }[];
   saving: boolean;
   search: string;
@@ -76,7 +77,7 @@ interface BlogUiStore {
   openEdit: (item: BlogPost) => void;
   back: () => void;
   setFormField: (key: string, value: string | boolean) => void;
-  setBannerImages: (images: { id: string; url: string; name: string }[]) => void;
+  setBannerImages: (images: { id: string; url: string; name: string; isPrimary?: boolean }[]) => void;
   setReelBlocks: (blocks: { url: string }[]) => void;
   setSearch: (search: string) => void;
   setPage: (page: number) => void;
@@ -118,6 +119,7 @@ export const useBlogUiStore = create<BlogUiStore>((set, get) => ({
   back: () => {
     set({
       form: { ...EMPTY_FORM },
+      bannerImages: [],
       reelBlocks: [],
       view: "list",
     });

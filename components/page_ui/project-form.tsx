@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2, ImagePlus, Eye, Upload, X, Box } from "lucide-react";
+import { Plus, Trash2, ImagePlus, Eye, Upload, X, Box, Star } from "lucide-react";
 import { FormHeader } from "@/components/global_ui/form-header";
 import Image from "next/image";
 import { RichEditor } from "@/components/page_ui/rich-editor";
@@ -56,8 +56,8 @@ interface Props {
   onClientChange: (client: Client) => void;
   milestones: Milestone[];
   onMilestonesChange: (milestones: Milestone[]) => void;
-  thumbnail: string;
-  onThumbnailChange: (url: string) => void;
+  bannerImages: { id: string; url: string; name: string; isPrimary?: boolean }[];
+  onBannerImagesChange: (images: { id: string; url: string; name: string; isPrimary?: boolean }[]) => void;
   spendingRecords: SpendingRecord[];
   onSpendingRecordsChange: (records: SpendingRecord[]) => void;
   staffMembers: StaffMember[];
@@ -101,13 +101,14 @@ export function ProjectForm({
   form, editingSlug, saving, categories,
   client, onClientChange,
   milestones, onMilestonesChange,
-  thumbnail, onThumbnailChange,
+  bannerImages, onBannerImagesChange,
   spendingRecords, onSpendingRecordsChange,
   staffMembers, materials, documents,
   onChange, onSave, onBack,
 }: Props) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [bannerPage, setBannerPage] = useState(1);
   const [milestonePickerOpen, setMilestonePickerOpen] = useState(false);
   const [milestonePickerMode, setMilestonePickerMode] = useState<"image" | "model" | "video">("image");
   const [milestonePickerTarget, setMilestonePickerTarget] = useState<string | null>(null);
@@ -160,6 +161,44 @@ export function ProjectForm({
         ? { ...ms, video_embed_urls: ms.video_embed_urls.filter(e => e.id !== embedId) }
         : ms
     ));
+  };
+
+  const BANNER_PER_PAGE = 5;
+  const totalBannerPages = Math.ceil(bannerImages.length / BANNER_PER_PAGE);
+  const paginatedBanners = bannerImages.slice(
+    (bannerPage - 1) * BANNER_PER_PAGE,
+    bannerPage * BANNER_PER_PAGE
+  );
+
+  const handleBannerSelect = (item: PickerMediaItem, altText: string, _file?: File) => {
+    const isFirst = bannerImages.length === 0;
+    onBannerImagesChange([
+      ...bannerImages,
+      { id: item.id, url: item.url, name: altText || item.name, isPrimary: isFirst || undefined },
+    ]);
+  };
+
+  const togglePrimary = (id: string) => {
+    onBannerImagesChange(
+      bannerImages.map((img) => ({
+        ...img,
+        isPrimary: img.id === id ? true : undefined,
+      }))
+    );
+  };
+
+  const removeBannerImage = (id: string) => {
+    const remaining = bannerImages.filter((img) => img.id !== id);
+    const needsPromotion = remaining.length > 0 && !remaining.some((img) => img.isPrimary);
+    onBannerImagesChange(
+      needsPromotion
+        ? remaining.map((img, idx) => idx === 0 ? { ...img, isPrimary: true } : img)
+        : remaining
+    );
+  };
+
+  const openBannerPicker = () => {
+    setMediaPickerOpen(true);
   };
 
   return (
@@ -227,30 +266,100 @@ export function ProjectForm({
               </FormCard>
 
             <FormCard>
-                <p className="text-sm font-semibold text-gray-900">Main Thumbnail / Banner</p>
-                {thumbnail ? (
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="size-14 rounded-md overflow-hidden bg-gray-100 border border-gray-200 shrink-0 relative">
-                      <Image src={thumbnail} alt="Thumbnail" fill className="object-cover" />
-                    </div>
-                    <span className="text-sm text-gray-700 truncate flex-1">{thumbnail.split("/").pop()}</span>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <Button type="button" variant="outline" size="sm" className="text-gray-500 border-gray-200 hover:bg-gray-100" onClick={() => setPreviewUrl(thumbnail)}>
-                        <Eye className="size-3.5" />
-                      </Button>
-                      <Button type="button" variant="outline" size="sm" className="text-red-500 border-red-200 hover:bg-red-50" onClick={() => onThumbnailChange("")}>
-                        <Trash2 className="size-3.5" />
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm font-semibold text-gray-900">Banner Images</p>
+                  <Button type="button" variant="outline" size="sm" onClick={openBannerPicker}>
+                    <ImagePlus className="size-4" />
+                    Add Banner
+                  </Button>
+                </div>
+
+                {bannerImages.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-gray-200 py-10 flex flex-col items-center justify-center gap-2 text-gray-500">
                     <ImagePlus className="size-6" />
-                    <span className="text-sm">No thumbnail selected</span>
-                    <Button type="button" variant="outline" size="sm" onClick={() => setMediaPickerOpen(true)}>
-                      Select Thumbnail
-                    </Button>
+                    <span className="text-sm">No banner images added yet</span>
+                  </div>
+                ) : (
+                  <div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-gray-200 hover:bg-transparent">
+                          <TableHead className="w-10" />
+                          <TableHead className="text-gray-900 font-semibold">Image</TableHead>
+                          <TableHead className="text-gray-900 font-semibold">Name</TableHead>
+                          <TableHead className="text-gray-900 font-semibold text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedBanners.map((img) => (
+                          <TableRow key={img.id} className="border-gray-200 hover:bg-gray-50">
+                            <TableCell>
+                              <button
+                                type="button"
+                                onClick={() => togglePrimary(img.id)}
+                                title={img.isPrimary ? "Primary banner image" : "Set as primary banner image"}
+                              >
+                                <Star
+                                  className={`size-4 ${img.isPrimary ? "fill-yellow-400 text-yellow-400" : "text-gray-300 hover:text-yellow-400"}`}
+                                />
+                              </button>
+                            </TableCell>
+                            <TableCell>
+                              <div className="size-10 rounded-md overflow-hidden bg-gray-100 relative">
+                                <Image src={img.url} alt={img.name} fill className="object-cover" />
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm text-gray-900 truncate max-w-[220px]">
+                              <div className="flex items-center gap-2">
+                                <span className="truncate">{img.name}</span>
+                                {img.isPrimary && (
+                                  <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-yellow-600 bg-yellow-50 border border-yellow-200 px-1.5 py-0.5 rounded">
+                                    Primary
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center justify-end gap-2">
+                                <Button variant="outline" size="sm" className="text-gray-500 border-gray-200 hover:bg-gray-100" onClick={() => setPreviewUrl(img.url)}>
+                                  <Eye className="size-3.5" />
+                                </Button>
+                                <Button variant="outline" size="sm" className="text-red-500 border-red-200 hover:bg-red-50" onClick={() => removeBannerImage(img.id)}>
+                                  <Trash2 className="size-3.5" />
+                                  Delete
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+
+                    {totalBannerPages > 1 && (
+                      <div className="mt-3">
+                        <Pagination>
+                          <PaginationContent>
+                            <PaginationItem>
+                              <PaginationPrevious
+                                onClick={() => setBannerPage((p) => Math.max(1, p - 1))}
+                                className={bannerPage === 1 ? "pointer-events-none opacity-40" : "cursor-pointer"}
+                              />
+                            </PaginationItem>
+                            {Array.from({ length: totalBannerPages }, (_, i) => i + 1).map((page) => (
+                              <PaginationItem key={page}>
+                                <PaginationLink isActive={page === bannerPage} onClick={() => setBannerPage(page)} className="cursor-pointer">{page}</PaginationLink>
+                              </PaginationItem>
+                            ))}
+                            <PaginationItem>
+                              <PaginationNext
+                                onClick={() => setBannerPage((p) => Math.min(totalBannerPages, p + 1))}
+                                className={bannerPage === totalBannerPages ? "pointer-events-none opacity-40" : "cursor-pointer"}
+                              />
+                            </PaginationItem>
+                          </PaginationContent>
+                        </Pagination>
+                      </div>
+                    )}
                   </div>
                 )}
               </FormCard>
@@ -754,8 +863,8 @@ export function ProjectForm({
         open={mediaPickerOpen}
         onOpenChange={(o) => setMediaPickerOpen(o)}
         mode="image"
-        title="Select Thumbnail"
-        onSelect={(item) => { onThumbnailChange(item.url); setMediaPickerOpen(false); }}
+        title="Select Banner Image"
+        onSelect={(item, altText, file) => { handleBannerSelect(item, altText, file); setMediaPickerOpen(false); }}
       />
 
       <MediaPickerDialog

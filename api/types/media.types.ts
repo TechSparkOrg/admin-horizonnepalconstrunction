@@ -19,6 +19,9 @@ export interface MediaItem {
 export interface BannerImage {
   id: string;
   url: string;
+  alt?: string;
+  created_at: string;
+  group_title: string;
 }
 
 export interface BannerGroup {
@@ -29,6 +32,9 @@ export interface BannerGroup {
   meta_description: string;
   keywords: string;
   is_active: boolean;
+  created_at: string;
+  group_title: string;
+  url: string;
   image_count: number;
   images: BannerImage[];
 }

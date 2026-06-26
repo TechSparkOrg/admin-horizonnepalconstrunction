@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ImagePlus, Eye } from "lucide-react";
+import { ImagePlus, Eye, Star } from "lucide-react";
 import { FormHeader } from "@/components/global_ui/form-header";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,6 +32,7 @@ import type { PickerMediaItem } from "@/components/global_ui/media-handler-picke
 import { CategoryAdmin } from "@/api/services/category.service";
 import type { Category } from "@/api/types/category.types";
 import { toSlug } from "@/lib/slug";
+import { stripHtml } from "@/lib/html-content";
 
 interface Props {
   editing: Category | null;
@@ -108,9 +109,9 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
         type: editing.type,
         image: editing.image || "",
         parent_id: editing.parent_id,
-        metaTitle: editing.meta_title || "",
-        metaDescription: editing.meta_description || "",
-        metaKeywords: editing.meta_keywords || "",
+        metaTitle: stripHtml(editing.meta_title || ""),
+        metaDescription: stripHtml(editing.meta_description || ""),
+        metaKeywords: stripHtml(editing.meta_keywords || ""),
         isActive: editing.is_active ?? true,
         bannerImages: editing.banner_images || [],
       });
@@ -148,23 +149,38 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
         "bannerImages",
         bannerImages.map((img) =>
           img.id === editingBannerId
-            ? { ...img, name: altText || img.name }
+            ? { ...img, url: newItem.url, name: altText || newItem.name }
             : img
         )
       );
       setEditingBannerId(null);
     } else {
+      const isFirst = bannerImages.length === 0;
       setValue("bannerImages", [
         ...bannerImages,
-        { ...newItem, name: altText || newItem.name },
+        { ...newItem, name: altText || newItem.name, isPrimary: isFirst || undefined },
       ]);
     }
   };
 
-  const removeBannerImage = (id: string) => {
+  const togglePrimary = (id: string) => {
     setValue(
       "bannerImages",
-      bannerImages.filter((img) => img.id !== id)
+      bannerImages.map((img) => ({
+        ...img,
+        isPrimary: img.id === id ? true : undefined,
+      }))
+    );
+  };
+
+  const removeBannerImage = (id: string) => {
+    const remaining = bannerImages.filter((img) => img.id !== id);
+    const needsPromotion = remaining.length > 0 && !remaining.some((img) => img.isPrimary);
+    setValue(
+      "bannerImages",
+      needsPromotion
+        ? remaining.map((img, idx) => idx === 0 ? { ...img, isPrimary: true } : img)
+        : remaining
     );
   };
 
@@ -305,6 +321,7 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
                   <div>
                     <Table>
                       <TableHeaderRow columns={[
+                        { label: "", className: "w-10" },
                         { label: "Image" },
                         { label: "Name" },
                         { label: "Actions", className: "text-right" },
@@ -313,12 +330,30 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
                         {paginatedBanners.map((img) => (
                           <TableRow key={img.id} className="border-gray-200 hover:bg-gray-50">
                             <TableCell>
+                              <button
+                                type="button"
+                                onClick={() => togglePrimary(img.id)}
+                                title={img.isPrimary ? "Primary thumbnail" : "Set as primary thumbnail"}
+                              >
+                                <Star
+                                  className={`size-4 ${img.isPrimary ? "fill-yellow-400 text-yellow-400" : "text-gray-300 hover:text-yellow-400"}`}
+                                />
+                              </button>
+                            </TableCell>
+                            <TableCell>
                               <div className="size-10 rounded-md overflow-hidden bg-gray-100">
                                 <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
                               </div>
                             </TableCell>
-                            <TableCell className="text-sm text-gray-900 truncate max-w-[280px]">
-                              {img.name}
+                            <TableCell className="text-sm text-gray-900 truncate max-w-[220px]">
+                              <div className="flex items-center gap-2">
+                                <span className="truncate">{img.name}</span>
+                                {img.isPrimary && (
+                                  <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-yellow-600 bg-yellow-50 border border-yellow-200 px-1.5 py-0.5 rounded">
+                                    Primary
+                                  </span>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center justify-end gap-2">

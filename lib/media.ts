@@ -3,12 +3,14 @@ import type { MediaFormData } from "@/components/page_ui/media-form";
 const VIDEO_EXTS = [".mp4", ".webm", ".mov", ".avi", ".mkv", ".m4v"];
 const MODEL_EXTS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".usdz", ".usd", ".ply", ".dae", ".3ds", ".blend", ".max"];
 
-export function isVideoUrl(url: string): boolean {
+export function isVideoUrl(url: string | undefined): boolean {
+  if (!url) return false;
   const ext = url.toLowerCase().split(".").pop();
   return ext ? VIDEO_EXTS.includes(`.${ext}`) : false;
 }
 
-export function isModelUrl(url: string): boolean {
+export function isModelUrl(url: string | undefined): boolean {
+  if (!url) return false;
   const ext = url.toLowerCase().split(".").pop();
   return ext ? MODEL_EXTS.includes(`.${ext}`) : false;
 }

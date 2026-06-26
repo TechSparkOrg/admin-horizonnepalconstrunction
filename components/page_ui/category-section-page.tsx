@@ -11,6 +11,7 @@ import { CategoryForm } from "@/components/page_ui/category-form";
 import type { CategoryFormData } from "@/api/validation/category";
 import { DeleteDialog } from "@/components/global_ui/delete-dialog";
 import { buildTree } from "@/lib/category";
+import { stripHtml } from "@/lib/html-content";
 
 const PAGE_SIZE = 10;
 
@@ -54,17 +55,18 @@ export function CategorySectionPage({ heading, breadcrumb, services, queryType, 
 
   const saveMutation = useMutation({
     mutationFn: async (formData: CategoryFormData) => {
+      const primary = formData.bannerImages?.find((b) => b.isPrimary) ?? formData.bannerImages?.[0];
       const payload: CategoryCreate = {
         name: formData.name,
         slug: formData.slug,
         description: formData.description || "",
-        image: formData.image || "",
+        image: primary?.url || formData.image || "",
         type: formData.type,
         is_active: formData.isActive,
         parent_id: formData.parent_id || null,
-        meta_title: formData.metaTitle || "",
-        meta_description: formData.metaDescription || "",
-        meta_keywords: formData.metaKeywords || "",
+        meta_title: stripHtml(formData.metaTitle || ""),
+        meta_description: stripHtml(formData.metaDescription || ""),
+        meta_keywords: stripHtml(formData.metaKeywords || ""),
         banner_images: formData.bannerImages || [],
       };
       if (editing) {

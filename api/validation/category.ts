@@ -11,7 +11,7 @@ export const categorySchema = z.object({
   isActive: z.boolean(),
   image: z.string().optional(),
   parent_id: z.string().nullable().optional(),
-  bannerImages: z.array(z.object({ id: z.string(), url: z.string(), name: z.string() })),
+  bannerImages: z.array(z.object({ id: z.string(), url: z.string(), name: z.string(), isPrimary: z.boolean().optional() })),
 });
 
 export type CategoryFormData = z.infer<typeof categorySchema>;

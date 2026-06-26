@@ -64,8 +64,8 @@ interface Props {
   saving: boolean;
   errors?: Record<string, string>;
   teamMembers?: StaffMember[];
-  bannerImages: { id: string; url: string; name: string }[];
-  onBannerImagesChange: (images: { id: string; url: string; name: string }[]) => void;
+  bannerImages: { id: string; url: string; name: string; isPrimary?: boolean }[];
+  onBannerImagesChange: (images: { id: string; url: string; name: string; isPrimary?: boolean }[]) => void;
   onChange: (key: string, value: string | boolean) => void;
   onSave: () => void;
   onBack: () => void;
