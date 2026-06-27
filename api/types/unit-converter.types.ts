@@ -3,16 +3,29 @@ export interface ConversionRule {
   factor: number;
 }
 
+export interface BannerImage {
+  id: string;
+  url: string;
+  name: string;
+  isPrimary?: boolean;
+}
+
 export interface UnitConversionItem {
   id: string;
   title: string;
   slug: string;
+  description: string;
   attribute_id: string | null;
   field_label: string;
   base_unit: string;
   conversions: ConversionRule[];
   is_active: boolean;
-  blog_id: string;
+  meta_title: string | null;
+  meta_description: string | null;
+  meta_keywords: string | null;
+  banner_url?: string;
+  banner_images: BannerImage[];
+  video_url: string | null;
   created_at: string;
   updated_at: string;
 }

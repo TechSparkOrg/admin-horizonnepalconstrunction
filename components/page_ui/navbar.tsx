@@ -3,44 +3,9 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import {
-  LayoutDashboard,
-  FolderKanban,
-  Tags,
-  MessageCircle,
-  ImageIcon,
-  Newspaper,
-  FileText,
-  Activity,
-  Star,
-  Box,
-  Calculator,
-  PhoneCall,
-  Sun,
-  Users,
-  Building2,
-  Settings,
-  LogOut,
-  ChevronDown,
-  VideoIcon,
-  Landmark,
-} from "lucide-react";
+import {  LayoutDashboard,  FolderKanban,  Tags,  MessageCircle,  ImageIcon,  Newspaper,  FileText,  Activity,  Star,  Box,  Calculator,  PhoneCall,  Sun,  Users,  Building2,  Settings,  LogOut,  ChevronDown,  VideoIcon,  Landmark} from "lucide-react";
 import { useAuthStore } from "@/app/store/auth-store";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
-  SidebarRail,
-} from "@/components/ui/sidebar";
+import {  Sidebar,  SidebarContent,  SidebarFooter,  SidebarGroup,  SidebarGroupContent,  SidebarHeader,  SidebarMenu,  SidebarMenuItem,  SidebarMenuButton,  SidebarMenuSub,  SidebarMenuSubItem,  SidebarMenuSubButton,  SidebarRail} from "@/components/ui/sidebar";
 
 type NavLink = {
   label: string;
@@ -113,7 +78,7 @@ const navLinks: NavLink[] = [
       { label: "Material list", href: "/material-list" },
       { label: "Cost Estimation", href: "/cost-estimation" },
         //  { label: "Team Allocation", href: "/resource-allocation/team" },
-        //      { label: "Material Allocation", href: "/resource-allocation/material" },
+             { label: "Vendor", href: "/vendor" },
 
                { label: "Unit Converter", href: "/material-list/unit-converter" }
     ],

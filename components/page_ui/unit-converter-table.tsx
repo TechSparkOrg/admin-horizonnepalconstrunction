@@ -1,15 +1,30 @@
 "use client";
 
+import Image from "next/image";
 import { ArrowLeftRight } from "lucide-react";
-import type { UnitConversionItem } from "@/api/types/unit-converter.types";
+import type { UnitConversionItem, BannerImage } from "@/api/types/unit-converter.types";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
 import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
+import { stripHtml } from "@/lib/html-content";
+
+function getPrimaryUrl(item: UnitConversionItem): string {
+  if (item.banner_url) return item.banner_url;
+  const images: BannerImage[] = item.banner_images ?? [];
+  if (!images.length) return "";
+  const primary = images.find((img) => img.isPrimary) ?? images[0];
+  return primary.url;
+}
+
+function truncate(text: string, max: number): string {
+  if (text.length <= max) return text;
+  return text.slice(0, max) + "...";
+}
 
 interface Props {
   items: UnitConversionItem[];
   onEdit: (item: UnitConversionItem) => void;
-  onDelete: (id: string) => void;
+  onDelete: (slug: string) => void;
   page: number;
   totalPages: number;
   totalCount: number;
@@ -19,11 +34,25 @@ interface Props {
 export function UnitConverterTable({ items, onEdit, onDelete, page, totalPages, totalCount, onPageChange }: Props) {
   const columns: ColumnDef<UnitConversionItem>[] = [
     {
-      header: "Title",
+      header: "Image",
+      render: (item) => {
+        const url = getPrimaryUrl(item);
+        if (!url) return <div className="size-10 rounded-md bg-gray-100" />;
+        return (
+          <div className="size-10 rounded-md overflow-hidden bg-gray-100 relative">
+            <Image src={url} alt={item.title} fill className="object-cover" sizes="40px" />
+          </div>
+        );
+      },
+    },
+    {
+      header: "Name",
       render: (item) => (
-        <div className="flex flex-col">
-          <span className="text-sm text-gray-900 font-medium">{item.title}</span>
-          <span className="text-xs text-gray-500">{item.field_label}</span>
+        <div className="flex flex-col max-w-[220px]">
+          <span className="text-sm text-gray-900 font-medium truncate">{item.title}</span>
+          {item.description && (
+            <span className="text-xs text-gray-500 truncate">{truncate(stripHtml(item.description), 60)}</span>
+          )}
         </div>
       ),
     },
@@ -51,19 +80,19 @@ export function UnitConverterTable({ items, onEdit, onDelete, page, totalPages, 
       columns={columns}
       onEdit={onEdit}
       onDelete={onDelete}
-      getIdentifier={(item) => item.id}
+      getIdentifier={(item) => item.slug}
       page={page}
       totalPages={totalPages}
       totalCount={totalCount}
       onPageChange={onPageChange}
       emptyState={{ icon: ArrowLeftRight, title: "No conversions yet", description: "Create a unit conversion rule to get started." }}
       deleteDialog={{
-        title: (id) => {
-          const item = items.find((m) => m.id === id);
+        title: (slug) => {
+          const item = items.find((m) => m.slug === slug);
           return `Delete "${item?.title || "this conversion"}"?`;
         },
-        description: (id) => {
-          const item = items.find((m) => m.id === id);
+        description: (slug) => {
+          const item = items.find((m) => m.slug === slug);
           return `Delete "${item?.title || "this conversion"}"? This cannot be undone.`;
         },
       }}

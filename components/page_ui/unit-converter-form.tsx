@@ -5,8 +5,6 @@ import { FormCard } from "@/components/global_ui/form-card";
 import { FormTabs } from "@/components/global_ui/form-tabs";
 import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
 import { SearchableSelect } from "@/components/global_ui/searchable-select";
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -18,26 +16,34 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useAttributeOptions } from "@/api/hooks/use-attribute-query";
-import { BlogAdmin } from "@/api/services/blog.service";
-import type { ConversionRule } from "@/api/types/unit-converter.types";
-import type { BlogPost } from "@/api/types/blog.types";
+import { RichEditor } from "@/components/page_ui/rich-editor";
+import { UnitConverterSeoTab } from "@/components/page_ui/unit-converter-seo-tab";
+import { UnitConverterMediaTab } from "@/components/page_ui/unit-converter-media-tab";
+import type { ConversionRule, BannerImage } from "@/api/types/unit-converter.types";
 import { toSlug } from "@/lib/slug";
 
 interface UnitConverterFormData {
   title: string;
   slug: string;
+  description: string;
   attributeId: string | null;
   fieldLabel: string;
   baseUnit: string;
   conversions: ConversionRule[];
   isActive: boolean;
-  blogId: string;
+  metaTitle: string;
+  metaDescription: string;
+  metaKeywords: string;
+  bannerImages: BannerImage[];
+  videoUrl: string;
 }
 
 interface Props {
   form: UnitConverterFormData;
   editingId: string | null;
   saving: boolean;
+  bannerImages: BannerImage[];
+  onBannerImagesChange: (images: BannerImage[]) => void;
   onChange: (key: string, value: string | boolean | number | ConversionRule[] | null) => void;
   onSave: () => void;
   onBack: () => void;
@@ -46,12 +52,17 @@ interface Props {
 const EMPTY: UnitConverterFormData = {
   title: "",
   slug: "",
+  description: "",
   attributeId: null,
   fieldLabel: "",
   baseUnit: "",
   conversions: [],
   isActive: true,
-  blogId: "",
+  metaTitle: "",
+  metaDescription: "",
+  metaKeywords: "",
+  bannerImages: [],
+  videoUrl: "",
 };
 
 export { EMPTY };
@@ -61,18 +72,13 @@ export function UnitConverterForm({
   form,
   editingId,
   saving,
+  bannerImages,
+  onBannerImagesChange,
   onChange,
   onSave,
   onBack,
 }: Props) {
   const { data: attributes = [] } = useAttributeOptions();
-  const [blogs, setBlogs] = useState<BlogPost[]>([]);
-
-  useEffect(() => {
-    BlogAdmin.list()
-      .then((res) => setBlogs(res.results ?? []))
-      .catch(() => {});
-  }, []);
 
   const selectedAttribute = attributes.find((a) => a.id === form.attributeId);
 
@@ -132,7 +138,7 @@ export function UnitConverterForm({
 
       <Tabs defaultValue="overview" className="w-full flex flex-col">
         <div>
-          <FormTabs tabs={[{"value":"overview","label":"Overview"},{"value":"content","label":"Content"},{"value":"settings","label":"Settings"}]} />
+          <FormTabs tabs={[{"value":"overview","label":"Overview"},{"value":"content","label":"Content"},{"value":"seo","label":"SEO"},{"value":"media","label":"Media"},{"value":"settings","label":"Settings"}]} />
         </div>
 
         <div>
@@ -164,6 +170,11 @@ export function UnitConverterForm({
                     />
                   </div>
                 </div>
+              </div>
+
+              <div className="mt-5 space-y-1.5">
+                <Label>Description</Label>
+                <RichEditor value={form.description} onChange={(html) => onChange("description", html)} minHeight={200} />
               </div>
             </FormCard>
           </TabsContent>
@@ -258,6 +269,26 @@ export function UnitConverterForm({
             </FormCard>
           </TabsContent>
 
+          <TabsContent value="seo" className="mt-4">
+            <FormCard>
+              <UnitConverterSeoTab
+                metaTitle={form.metaTitle}
+                metaDescription={form.metaDescription}
+                metaKeywords={form.metaKeywords}
+                onChange={onChange}
+              />
+            </FormCard>
+          </TabsContent>
+
+          <TabsContent value="media" className="mt-4">
+            <UnitConverterMediaTab
+              bannerImages={bannerImages}
+              videoUrl={form.videoUrl}
+              onBannerImagesChange={onBannerImagesChange}
+              onChange={onChange}
+            />
+          </TabsContent>
+
           <TabsContent value="settings" className="mt-4">
             <FormCard>
               <div className="space-y-1.5">
@@ -270,24 +301,6 @@ export function UnitConverterForm({
                     { value: false, label: "Inactive" },
                   ]}
                 />
-              </div>
-
-              <div className="border-t border-gray-200 pt-4">
-                <p className="text-sm font-semibold text-gray-900 mb-3">Linked Blog</p>
-                <div className="space-y-1.5 max-w-md">
-                  <Label>Blog Post</Label>
-                  <SearchableSelect
-                    options={[
-                      { value: "", label: "None" },
-                      ...blogs.map((b) => ({ value: b.id, label: b.title })),
-                    ]}
-                    value={form.blogId}
-                    onChange={(v) => onChange("blogId", v)}
-                    placeholder="None"
-                    searchPlaceholder="Search blog posts..."
-                  />
-                  <p className="text-xs text-gray-400">Link this conversion to a blog post for public rendering.</p>
-                </div>
               </div>
             </FormCard>
           </TabsContent>

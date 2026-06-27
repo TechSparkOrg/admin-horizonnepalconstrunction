@@ -1,33 +1,25 @@
+const resource = <T extends string>(name: T) => ({
+  all: [name] as const,
+  list: (params?: Record<string, unknown>) => [name, "list", params] as const,
+  detail: (slug: string) => [name, "detail", slug] as const,
+});
+
 export const queryKeys = {
-  blogs: {
-    all: ["blogs"] as const,
-    list: (params?: Record<string, unknown>) => ["blogs", "list", params] as const,
-    detail: (slug: string) => ["blogs", "detail", slug] as const,
-  },
-  projects: {
-    all: ["projects"] as const,
-    list: (params?: Record<string, unknown>) => ["projects", "list", params] as const,
-    detail: (slug: string) => ["projects", "detail", slug] as const,
-  },
-  media: {
-    all: ["media"] as const,
-    list: (params?: Record<string, unknown>) => ["media", "list", params] as const,
-  },
+  blogs: resource("blogs"),
+  projects: resource("projects"),
+  media: resource("media"),
   categories: {
     all: ["categories"] as const,
     list: (type: string) => ["categories", "list", type] as const,
   },
-  attributes: {
-    all: ["attributes"] as const,
-    list: (params?: Record<string, unknown>) => ["attributes", "list", params] as const,
-  },
-  staff: {
-    all: ["staff"] as const,
-    list: (params?: Record<string, unknown>) => ["staff", "list", params] as const,
-  },
+  attributes: resource("attributes"),
+  staff: resource("staff"),
+  vendors: resource("vendors"),
   settings: {
     all: ["settings"] as const,
   },
+  unitConverters: resource("unit-converters"),
+  materialList: resource("material-list"),
   referenceData: {
     projects: ["reference", "projects"] as const,
     staff: ["reference", "staff"] as const,

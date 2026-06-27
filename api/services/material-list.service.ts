@@ -3,18 +3,18 @@ import type { MaterialItem, CreateMaterial, UpdateMaterial } from '../types/mate
 import type { PaginatedResponse } from '../types/consultation.types';
 
 export const MaterialListAdmin = {
-  search: (params: { search?: string; unit_type?: string; page?: number; page_size?: number }) =>
+  search: (params: Record<string, unknown>) =>
     apiPrivate.get<PaginatedResponse<MaterialItem>>('/admin/material-list', { params }),
 
-  adminGet: (id: string) =>
-    apiPrivate.get<MaterialItem>(`/admin/material-list/${id}`),
+  adminGet: (slug: string) =>
+    apiPrivate.get<MaterialItem>(`/admin/material-list/${slug}`),
 
   create: (data: CreateMaterial) =>
     apiPrivate.post<MaterialItem>('/admin/material-list', data),
 
-  update: (id: string, data: UpdateMaterial) =>
-    apiPrivate.patch<MaterialItem>(`/admin/material-list/${id}`, data),
+  update: (slug: string, data: UpdateMaterial) =>
+    apiPrivate.patch<MaterialItem>(`/admin/material-list/${slug}`, data),
 
-  delete: (id: string) =>
-    apiPrivate.delete<{ ok: boolean }>(`/admin/material-list/${id}`),
+  delete: (slug: string) =>
+    apiPrivate.delete<{ ok: boolean }>(`/admin/material-list/${slug}`),
 };

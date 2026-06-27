@@ -1,17 +1,19 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Plus, Search } from "lucide-react";
 import Link from "next/link";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { UnitConversionAdmin } from "@/api/services/unit-converter.service";
+import { queryKeys } from "@/api/query-keys";
+import { useUnitConverterList } from "@/api/hooks/use-unit-converter-query";
 import type { UnitConversionItem } from "@/api/types/unit-converter.types";
 import { unitConverterSchema } from "@/api/validation/unit-converter";
 import { UnitConverterTable } from "@/components/page_ui/unit-converter-table";
 import { UnitConverterForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/unit-converter-form";
 import type { UnitConverterFormData } from "@/components/page_ui/unit-converter-form";
-import type { ConversionRule } from "@/api/types/unit-converter.types";
+import type { ConversionRule, BannerImage } from "@/api/types/unit-converter.types";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -27,12 +29,17 @@ function itemToForm(item: UnitConversionItem): UnitConverterFormData {
   return {
     title: item.title,
     slug: item.slug,
+    description: item.description || "",
     attributeId: item.attribute_id,
     fieldLabel: item.field_label,
     baseUnit: item.base_unit,
     conversions: item.conversions,
     isActive: item.is_active,
-    blogId: item.blog_id,
+    metaTitle: item.meta_title || "",
+    metaDescription: item.meta_description || "",
+    metaKeywords: item.meta_keywords || "",
+    bannerImages: item.banner_images ?? [],
+    videoUrl: item.video_url || "",
   };
 }
 
@@ -40,61 +47,76 @@ function formToPayload(form: UnitConverterFormData) {
   return {
     title: form.title,
     slug: form.slug,
+    description: form.description,
     attribute_id: form.attributeId,
     field_label: form.fieldLabel,
     base_unit: form.baseUnit,
     conversions: form.conversions,
     is_active: form.isActive,
-    blog_id: form.blogId,
+    meta_title: form.metaTitle,
+    meta_description: form.metaDescription,
+    meta_keywords: form.metaKeywords,
+    banner_images: form.bannerImages,
+    video_url: form.videoUrl,
   };
 }
 
 export default function AdminUnitConverterPage() {
-  const [items, setItems] = useState<UnitConversionItem[]>([]);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
   const [view, setView] = useState<View>("list");
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [form, setForm] = useState<UnitConverterFormData>(EMPTY_FORM);
+  const [bannerImages, setBannerImages] = useState<BannerImage[]>([]);
+
+  const handleBannerImagesChange = (images: BannerImage[]) => {
+    setBannerImages(images);
+    setForm((prev) => ({ ...prev, bannerImages: images }));
+  };
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const searchParams = useMemo(() => ({
-    search: search || undefined,
+    ...(debouncedSearch ? { search: debouncedSearch } : {}),
     page: currentPage,
     page_size: ITEMS_PER_PAGE,
-  }), [search, currentPage]);
+  }), [debouncedSearch, currentPage]);
 
-  useEffect(() => {
-    UnitConversionAdmin.search(searchParams)
-      .then((res) => {
-        setItems(res.results ?? []);
-        setTotal(res.count ?? 0);
-      })
-      .catch(() => toast.error("Failed to load data"));
-  }, [searchParams]);
-
-  const refetch = () =>
-    UnitConversionAdmin.search(searchParams)
-      .then((res) => {
-        setItems(res.results ?? []);
-        setTotal(res.count ?? 0);
-      })
-      .catch(() => toast.error("Failed to load conversions"));
+  const { data } = useUnitConverterList(searchParams);
+  const items = data?.results ?? [];
+  const total = data?.count ?? 0;
 
   const openNew = () => {
     setForm(EMPTY_FORM);
-    setEditingId(null);
+    setBannerImages([]);
+    setEditingSlug(null);
     setView("form");
   };
 
-  const openEdit = (item: UnitConversionItem) => {
-    setForm(itemToForm(item));
-    setEditingId(item.id);
-    setView("form");
+  const openEdit = async (item: UnitConversionItem) => {
+    try {
+      const full = await queryClient.fetchQuery({
+        queryKey: queryKeys.unitConverters.detail(item.slug),
+        queryFn: () => UnitConversionAdmin.adminGet(item.slug),
+      });
+      const mapped = itemToForm(full);
+      setForm(mapped);
+      setBannerImages(mapped.bannerImages);
+      setEditingSlug(item.slug);
+      setView("form");
+    } catch {
+      toast.error("Failed to load conversion details");
+    }
   };
 
   const back = () => {
     setForm(EMPTY_FORM);
+    setBannerImages([]);
     setView("list");
   };
 
@@ -105,17 +127,19 @@ export default function AdminUnitConverterPage() {
     }));
   };
 
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.unitConverters.all, refetchType: 'active' });
+
   const createMutation = useMutation({
     mutationFn: (payload: Parameters<typeof UnitConversionAdmin.create>[0]) =>
       UnitConversionAdmin.create(payload),
-    onSuccess: () => { toast.success("Conversion created"); refetch(); back(); },
+    onSuccess: () => { toast.success("Conversion created"); invalidate(); back(); },
     onError: () => toast.error("Failed to create conversion"),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: Parameters<typeof UnitConversionAdmin.update>[1] }) =>
-      UnitConversionAdmin.update(id, payload),
-    onSuccess: () => { toast.success("Conversion updated"); refetch(); back(); },
+    mutationFn: ({ slug, payload }: { slug: string; payload: Parameters<typeof UnitConversionAdmin.update>[1] }) =>
+      UnitConversionAdmin.update(slug, payload),
+    onSuccess: () => { toast.success("Conversion updated"); invalidate(); back(); },
     onError: () => toast.error("Failed to update conversion"),
   });
 
@@ -126,18 +150,17 @@ export default function AdminUnitConverterPage() {
       return;
     }
     const payload = formToPayload(form);
-    if (editingId) {
-      updateMutation.mutate({ id: editingId, payload });
+    if (editingSlug) {
+      updateMutation.mutate({ slug: editingSlug, payload });
     } else {
       createMutation.mutate(payload);
     }
   };
 
-  const confirmDelete = async (id: string) => {
+  const confirmDelete = async (slug: string) => {
     try {
-      await UnitConversionAdmin.delete(id);
-      setItems((prev) => prev.filter((g) => g.id !== id));
-      setTotal((prev) => prev - 1);
+      await UnitConversionAdmin.delete(slug);
+      invalidate();
       toast.success("Conversion deleted");
     } catch {
       toast.error("Failed to delete");
@@ -205,8 +228,10 @@ export default function AdminUnitConverterPage() {
         <div className="px-4">
           <UnitConverterForm
             form={form}
-            editingId={editingId}
+            editingId={editingSlug}
             saving={createMutation.isPending || updateMutation.isPending}
+            bannerImages={bannerImages}
+            onBannerImagesChange={handleBannerImagesChange}
             onChange={handleChange}
             onSave={save}
             onBack={back}

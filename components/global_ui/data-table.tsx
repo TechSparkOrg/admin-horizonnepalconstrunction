@@ -62,10 +62,14 @@ export function DataTable<T>({
 
   const dialogTitle = deleteIdentifier && typeof deleteDialog?.title === "function"
     ? deleteDialog.title(deleteIdentifier)
-    : (deleteDialog?.title ?? "Delete this item?") as string | undefined;
+    : typeof deleteDialog?.title === "function"
+      ? "Delete this item?"
+      : (deleteDialog?.title ?? "Delete this item?") as string;
   const dialogDesc = deleteIdentifier && typeof deleteDialog?.description === "function"
     ? deleteDialog.description(deleteIdentifier)
-    : (deleteDialog?.description ?? "This cannot be undone.") as string | undefined;
+    : typeof deleteDialog?.description === "function"
+      ? "This cannot be undone."
+      : (deleteDialog?.description ?? "This cannot be undone.") as string;
 
   if (data.length === 0) return <EmptyState {...emptyState} />;
 
