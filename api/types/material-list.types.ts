@@ -23,6 +23,7 @@ export interface MaterialItem {
   logo: string;
   service_category_id: string | null;
   faq_category_id: string | null;
+  faq_group_slug: string;
   variants: VariantItem[];
   is_active: boolean;
   meta_title: string;

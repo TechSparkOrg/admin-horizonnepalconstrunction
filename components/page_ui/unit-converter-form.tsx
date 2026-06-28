@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useAttributeOptions } from "@/api/hooks/use-attribute-query";
+import { useCategoryOptions } from "@/api/hooks/use-category-query";
 import { RichEditor } from "@/components/page_ui/rich-editor";
 import { UnitConverterSeoTab } from "@/components/page_ui/unit-converter-seo-tab";
 import { UnitConverterMediaTab } from "@/components/page_ui/unit-converter-media-tab";
@@ -30,6 +31,8 @@ interface UnitConverterFormData {
   fieldLabel: string;
   baseUnit: string;
   conversions: ConversionRule[];
+  faqCategoryId: string | null;
+  faqGroupSlug: string;
   isActive: boolean;
   metaTitle: string;
   metaDescription: string;
@@ -57,6 +60,8 @@ const EMPTY: UnitConverterFormData = {
   fieldLabel: "",
   baseUnit: "",
   conversions: [],
+  faqCategoryId: null,
+  faqGroupSlug: "",
   isActive: true,
   metaTitle: "",
   metaDescription: "",
@@ -79,6 +84,7 @@ export function UnitConverterForm({
   onBack,
 }: Props) {
   const { data: attributes = [] } = useAttributeOptions();
+  const { data: faqCategories = [] } = useCategoryOptions("faq");
 
   const selectedAttribute = attributes.find((a) => a.id === form.attributeId);
 
@@ -301,6 +307,40 @@ export function UnitConverterForm({
                     { value: false, label: "Inactive" },
                   ]}
                 />
+              </div>
+
+              <div className="border-t border-gray-200 pt-5 mt-5">
+                <h4 className="text-xs font-bold uppercase tracking-[0.08em] text-gray-600 mb-4">
+                  FAQ Settings
+                </h4>
+
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label>FAQ Category</Label>
+                    <SearchableSelect
+                      options={[
+                        { value: "", label: "None" },
+                        ...faqCategories,
+                      ]}
+                      value={form.faqCategoryId ?? ""}
+                      onChange={(v) => onChange("faqCategoryId", v || null)}
+                      placeholder="None"
+                      searchPlaceholder="Search FAQ categories..."
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>FAQ Title / Slug</Label>
+                    <Input
+                      value={form.faqGroupSlug}
+                      onChange={(e) => onChange("faqGroupSlug", e.target.value)}
+                      placeholder="e.g. cement-faq"
+                    />
+                    <p className="text-[11px] text-amber-600 leading-relaxed mt-1">
+                      Slug must be exactly as you type in Faq section with selected category to get specific Q&amp;A
+                    </p>
+                  </div>
+                </div>
               </div>
             </FormCard>
           </TabsContent>

@@ -25,6 +25,7 @@ import { useMediaList, useMediaMutations } from "@/api/hooks/use-media-query";
 import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
 import { EmptyState } from "@/components/global_ui/empty-state";
 import { FormTabs } from "@/components/global_ui/form-tabs";
+import { isModelUrl } from "@/lib/media";
 
 export type PickerMediaItem = {
   id: string;
@@ -77,14 +78,19 @@ export function MediaPickerDialog({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const items = data?.items ?? [];
-  const pickerItems = items.map((apiItem) => ({
-    id: apiItem.id,
-    name: apiItem.alt || apiItem.title || "",
-    url: apiItem.url,
-    thumbnail: apiItem.url,
-    category: apiItem.group_title || "General",
-    type: undefined as string | undefined,
-  }));
+  const pickerItems = items
+    .filter((apiItem) => {
+      if (isModel) return true;
+      return !isModelUrl(apiItem.url);
+    })
+    .map((apiItem) => ({
+      id: apiItem.id,
+      name: apiItem.alt || apiItem.title || "",
+      url: apiItem.url,
+      thumbnail: apiItem.url,
+      category: apiItem.group_title || "General",
+      type: apiItem.url.split(".").pop()?.toLowerCase(),
+    }));
 
   useEffect(() => {
     if (open && tab === "existing") {
@@ -252,13 +258,19 @@ export function MediaPickerDialog({
                               : "border-gray-200 hover:border-gray-300"
                           )}
                         >
-                          <Image
-                            src={thumb}
-                            alt={item.name}
-                            fill
-                            sizes="120px"
-                            className="object-cover"
-                          />
+                          {isModelUrl(thumb) ? (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                              <Box className="size-6 text-gray-400" />
+                            </div>
+                          ) : (
+                            <Image
+                              src={thumb}
+                              alt={item.name}
+                              fill
+                              sizes="120px"
+                              className="object-cover"
+                            />
+                          )}
 
                           {/* selection overlay */}
                           <div
@@ -304,13 +316,19 @@ export function MediaPickerDialog({
                       </p>
                     </div>
                   ) : selected ? (
-                    <Image
-                      src={selected.thumbnail ?? selected.url}
-                      alt={selected.name}
-                      fill
-                      sizes="260px"
-                      className="object-cover"
-                    />
+                    isModelUrl(selected.thumbnail ?? selected.url) ? (
+                      <div className="w-full h-full flex items-center justify-center bg-white">
+                        <Box className="size-10 text-gray-400" />
+                      </div>
+                    ) : (
+                      <Image
+                        src={selected.thumbnail ?? selected.url}
+                        alt={selected.name}
+                        fill
+                        sizes="260px"
+                        className="object-cover"
+                      />
+                    )
                   ) : (
                     <div className="text-center text-gray-400 px-3">
                       {isModel ? (

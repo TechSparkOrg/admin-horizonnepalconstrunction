@@ -13,6 +13,8 @@ export const unitConverterSchema = z.object({
   fieldLabel: z.string().optional(),
   baseUnit: z.string().optional(),
   conversions: z.array(conversionRuleSchema),
+  faqCategoryId: z.string().nullable().optional(),
+  faqGroupSlug: z.string().optional(),
   isActive: z.boolean(),
   metaTitle: z.string().optional(),
   metaDescription: z.string().optional(),

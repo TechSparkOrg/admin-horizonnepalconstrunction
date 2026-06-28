@@ -19,7 +19,13 @@ export interface MediaItem {
 export interface BannerImage {
   id: string;
   url: string;
+  title: string;
   alt?: string;
+  slug: string;
+  meta_title: string;
+  meta_description: string;
+  keywords: string;
+  is_active: boolean;
   created_at: string;
   group_title: string;
 }

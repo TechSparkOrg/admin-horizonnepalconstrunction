@@ -17,6 +17,7 @@ export const materialSchema = z.object({
   logo: z.string().optional(),
   serviceCategoryId: z.string().nullable().optional(),
   faqCategoryId: z.string().nullable().optional(),
+  faqGroupSlug: z.string().optional(),
   variants: z.array(variantItemSchema).optional(),
   isActive: z.boolean(),
   metaTitle: z.string().optional(),

@@ -20,6 +20,7 @@ export const queryKeys = {
   },
   unitConverters: resource("unit-converters"),
   materialList: resource("material-list"),
+  enquiries: resource("enquiries"),
   referenceData: {
     projects: ["reference", "projects"] as const,
     staff: ["reference", "staff"] as const,

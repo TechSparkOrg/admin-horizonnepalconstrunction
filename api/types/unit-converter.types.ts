@@ -20,6 +20,8 @@ export interface UnitConversionItem {
   base_unit: string;
   conversions: ConversionRule[];
   is_active: boolean;
+  faq_category_id: string | null;
+  faq_group_slug: string;
   meta_title: string | null;
   meta_description: string | null;
   meta_keywords: string | null;

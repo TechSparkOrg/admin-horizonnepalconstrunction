@@ -21,6 +21,9 @@ export interface ConsultationSubmission {
   service: string;
   description: string;
   preferred_date: string;
+  landmark: string;
+  site_photos: string[];
+  is_read: boolean;
   created_at: string;
 }
 

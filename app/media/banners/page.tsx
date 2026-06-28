@@ -35,6 +35,7 @@ export default function BannersPage() {
       slug,
       alt: formData.alt || formData.title || "",
     });
+    const fallbackAlt = String(payload.alt || "");
 
     let hasError = false;
 
@@ -47,9 +48,9 @@ export default function BannersPage() {
 
     // 2. Update banner metadata (editing only)
     if (editing) {
-      const imageId = editing.group.images[0]?.id;
-      if (imageId) {
-        try { await updateMutation.mutateAsync({ id: imageId, data: payload }); } catch { hasError = true; }
+      for (const image of editing.group.images) {
+        if (deletedImageIds?.includes(image.id)) continue;
+        try { await updateMutation.mutateAsync({ id: image.id, data: payload }); } catch { hasError = true; }
       }
     }
 
@@ -67,7 +68,7 @@ export default function BannersPage() {
         for (let i = 0; i < pickedImageIds.length; i++) {
           await updateMutation.mutateAsync({
             id: pickedImageIds[i],
-            data: { slug, group_title: "Banners", banner: true, alt: pickedAlts?.[i] || "" },
+            data: { ...payload, slug, group_title: "Banners", banner: true, alt: pickedAlts?.[i] || fallbackAlt },
           });
         }
       } catch { hasError = true; }

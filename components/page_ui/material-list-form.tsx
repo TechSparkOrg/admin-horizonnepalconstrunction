@@ -12,6 +12,7 @@ import { MaterialListOverviewTab } from "@/components/page_ui/material-list-over
 import { MaterialListVariantsTab } from "@/components/page_ui/material-list-variants-tab";
 import { MaterialListMediaTab } from "@/components/page_ui/material-list-media-tab";
 import { MaterialListSeoTab } from "@/components/page_ui/material-list-seo-tab";
+import { Input } from "@/components/ui/input";
 import type { BannerImage, VariantItem } from "@/api/types/material-list.types";
 
 interface MaterialListFormData {
@@ -24,6 +25,7 @@ interface MaterialListFormData {
   logo: string;
   serviceCategoryId: string | null;
   faqCategoryId: string | null;
+  faqGroupSlug: string;
   variants: VariantItem[];
   isActive: boolean;
   metaTitle: string;
@@ -54,6 +56,7 @@ const EMPTY: MaterialListFormData = {
   logo: "",
   serviceCategoryId: null,
   faqCategoryId: null,
+  faqGroupSlug: "",
   variants: [],
   isActive: true,
   metaTitle: "",
@@ -191,6 +194,18 @@ export function MaterialListForm({
                     placeholder="None"
                     searchPlaceholder="Search FAQ categories..."
                   />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>FAQ Title / Slug</Label>
+                  <Input
+                    value={form.faqGroupSlug}
+                    onChange={(e) => onChange("faqGroupSlug", e.target.value)}
+                    placeholder="e.g. cement-faq"
+                  />
+                  <p className="text-[11px] text-amber-600 leading-relaxed mt-1">
+                    Slug must be exactly as you type in Faq section with selected category to get specific Q&amp;A
+                  </p>
                 </div>
               </div>
             </FormCard>
