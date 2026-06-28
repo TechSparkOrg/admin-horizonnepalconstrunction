@@ -3,6 +3,7 @@ export const USED_IN_OPTIONS = [
   { value: "services", label: "Services" },
   { value: "blog", label: "Blog" },
   { value: "project", label: "Project" },
+  { value: "staff", label: "Staff" },
 ] as const;
 
 export type UsedIn = (typeof USED_IN_OPTIONS)[number]["value"];

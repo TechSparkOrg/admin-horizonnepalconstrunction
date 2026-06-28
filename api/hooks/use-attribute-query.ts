@@ -11,7 +11,7 @@ export function useAttributeOptions() {
   return useQuery({
     queryKey: queryKeys.attributes.all,
     queryFn: async () => {
-      const res = await AttributeAdmin.search({ page_size: 100, used_in: "all" });
+      const res = await AttributeAdmin.search({ page_size: 100, used_in: "all,staff" });
       return res.results ?? [];
     },
     staleTime: Infinity,

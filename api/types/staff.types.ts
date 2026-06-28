@@ -35,6 +35,7 @@ export interface StaffMember {
   is_currently_working: boolean;
   photo: string;
   social_links: StaffSocialLink[];
+  salary_amount: string | null;
   is_active: boolean;
   show_on_public: boolean;
   created_at: string;

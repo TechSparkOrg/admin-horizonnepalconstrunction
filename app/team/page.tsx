@@ -41,6 +41,7 @@ function itemToForm(item: StaffMember): StaffFormData {
     email: item.email,
     phone: item.phone,
     socialLinks: item.social_links,
+    salaryAmount: item.salary_amount ?? "",
     isActive: item.is_active,
     showOnPublic: item.show_on_public,
   };
@@ -63,6 +64,7 @@ function formToPayload(form: StaffFormData) {
     email: form.email,
     phone: form.phone,
     social_links: form.socialLinks,
+    salary_amount: form.salaryAmount ? parseFloat(form.salaryAmount) : null,
     is_active: form.isActive,
     show_on_public: form.showOnPublic,
   };

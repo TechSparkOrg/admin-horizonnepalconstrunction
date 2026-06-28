@@ -38,6 +38,7 @@ interface StaffFormData {
   email: string;
   phone: string;
   socialLinks: StaffSocialLink[];
+  salaryAmount: string;
   isActive: boolean;
   showOnPublic: boolean;
 }
@@ -67,6 +68,7 @@ const EMPTY: StaffFormData = {
   email: "",
   phone: "",
   socialLinks: [],
+  salaryAmount: "",
   isActive: true,
   showOnPublic: false,
 };
@@ -93,6 +95,9 @@ export function StaffForm({
 
   const availableDesigLabels = fieldLabels.filter((l) => l !== form.departmentLabel);
   const availableDeptLabels = fieldLabels.filter((l) => l !== form.designationLabel);
+
+  const normalizePlatform = (p: string) =>
+    SOCIAL_PLATFORMS.find((sp) => sp.toLowerCase() === p.toLowerCase()) ?? p;
 
   const handleAttributeChange = (v: string) => {
     const id = v === "none" ? null : v;
@@ -314,6 +319,22 @@ export function StaffForm({
                   </div>
                 )}
 
+                <div className="space-y-1.5 max-w-xs">
+                  <Label>Salary Amount (NPR)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">Rs.</span>
+                    <Input
+                      type="number"
+                      value={form.salaryAmount}
+                      onChange={(e) => onChange("salaryAmount", e.target.value)}
+                      placeholder="0.00"
+                      className="pl-10"
+                      min={0}
+                      step="0.01"
+                    />
+                  </div>
+                </div>
+
               <div className="space-y-1.5">
   <Label>Photo</Label>
   <div className="flex items-center gap-4">
@@ -400,7 +421,7 @@ export function StaffForm({
                       {form.socialLinks.map((link, i) => (
                         <div key={i} className="flex items-center gap-2">
                           <Select
-                            value={link.platform}
+                            value={normalizePlatform(link.platform)}
                             onValueChange={(v) => updateSocialLink(i, "platform", v)}
                           >
                             <SelectTrigger className="w-32 h-9 text-sm">

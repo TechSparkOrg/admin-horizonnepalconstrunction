@@ -17,6 +17,7 @@ const USED_IN_LABELS: Record<UsedIn, string> = {
   services: "Services",
   blog: "Blog",
   project: "Project",
+  staff: "Staff",
 };
 
 interface Props {
