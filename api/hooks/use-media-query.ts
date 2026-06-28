@@ -5,7 +5,7 @@ import { MediaService } from "@/api/services/media.service";
 import { queryKeys } from "@/api/query-keys";
 import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
 import { toast } from "sonner";
-import type { MediaItem, MediaItemUpdate } from "@/api/types/media.types";
+import type { MediaItem, MediaItemCreate, MediaItemUpdate } from "@/api/types/media.types";
 
 export function useMediaList(params?: Record<string, unknown>) {
   return useQuery({
@@ -67,5 +67,19 @@ export function useMediaMutations() {
     },
   });
 
-  return { deleteMutation, updateMutation, uploadMutation };
+  const createMutation = useMutation({
+    mutationFn: async (data: MediaItemCreate) => {
+      return await MediaService.createBanner(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.media.all });
+      toast.success("Banner image added");
+    },
+    onError: (err) => {
+      const parsed = ErrorHandler.parse(err);
+      ErrorHandler.toast(parsed.message);
+    },
+  });
+
+  return { createMutation, deleteMutation, updateMutation, uploadMutation };
 }

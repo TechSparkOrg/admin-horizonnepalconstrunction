@@ -42,7 +42,7 @@ export type BannerFormData = z.infer<typeof bannerSchema>;
 interface Props {
   editing: { group: BannerGroup } | null;
   saving: boolean;
-  onSave: (data: BannerFormData, files: File[], pickedImageIds?: string[], pickedAlts?: string[], deletedImageIds?: string[]) => Promise<void>;
+  onSave: (data: BannerFormData, files: File[], pickedLibraryItems?: { id: string; url: string; alt: string }[], deletedImageIds?: string[]) => Promise<void>;
   onBack: () => void;
 }
 
@@ -155,11 +155,12 @@ export function BannerForm({ editing, saving, onSave, onBack }: Props) {
       return;
     }
     setFileError(null);
-    const ids = pickedLibraryImages.map(i => i.id);
-    const pickedAlts = pickedLibraryImages.map(item =>
-      altOverrides[item.url] ?? altFromUrl(item.url)
-    );
-    await onSave(data, files, ids, pickedAlts, deletedImageIds);
+    const pickedLibraryItems = pickedLibraryImages.map(item => ({
+      id: item.id,
+      url: item.url,
+      alt: altOverrides[item.url] ?? altFromUrl(item.url),
+    }));
+    await onSave(data, files, pickedLibraryItems, deletedImageIds);
   };
 
   const existingUrls = existingImages.map(i => i.url);

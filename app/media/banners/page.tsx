@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useMediaList, useMediaMutations } from "@/api/hooks/use-media-query";
-import type { MediaItem, BannerGroup } from "@/api/types/media.types";
+import type { MediaItem, BannerGroup, MediaItemCreate } from "@/api/types/media.types";
 import { BannerMediaTable } from "@/components/page_ui/banner-media-table";
 import { BannerForm, type BannerFormData } from "@/components/page_ui/banner-form";
 import { PageHeader } from "@/components/global_ui/page-header";
@@ -16,7 +16,7 @@ const PAGE_SIZE = 10;
 export default function BannersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const { data } = useMediaList({ page: currentPage, page_size: PAGE_SIZE, group_title: "Banners" });
-  const { deleteMutation, updateMutation, uploadMutation } = useMediaMutations();
+  const { createMutation, deleteMutation, updateMutation, uploadMutation } = useMediaMutations();
 
   const [editing, setEditing] = useState<{ group: BannerGroup } | null>(null);
   const [view, setView] = useState<"list" | "form">("list");
@@ -26,7 +26,7 @@ export default function BannersPage() {
   const items = data?.items ?? [];
   const totalCount = data?.totalCount ?? 0;
 
-  const handleSave = async (formData: BannerFormData, files: File[], pickedImageIds?: string[], pickedAlts?: string[], deletedImageIds?: string[]) => {
+  const handleSave = async (formData: BannerFormData, files: File[], pickedLibraryItems?: { id: string; url: string; alt: string }[], deletedImageIds?: string[]) => {
     setSaving(true);
 
     const slug = formData.slug || toSlug(formData.title);
@@ -35,7 +35,6 @@ export default function BannersPage() {
       slug,
       alt: formData.alt || formData.title || "",
     });
-    const fallbackAlt = String(payload.alt || "");
 
     let hasError = false;
 
@@ -62,16 +61,27 @@ export default function BannersPage() {
       } catch { hasError = true; }
     }
 
-    // 4. Update library picks
-    if (pickedImageIds?.length) {
-      try {
-        for (let i = 0; i < pickedImageIds.length; i++) {
-          await updateMutation.mutateAsync({
-            id: pickedImageIds[i],
-            data: { ...payload, slug, group_title: "Banners", banner: true, alt: pickedAlts?.[i] || fallbackAlt },
-          });
-        }
-      } catch { hasError = true; }
+    // 4. Copy library picks as new banner records (don't move originals)
+    if (pickedLibraryItems?.length) {
+      for (const item of pickedLibraryItems) {
+        try {
+          const createPayload: MediaItemCreate = {
+            url: item.url,
+            alt: item.alt,
+            title: formData.title,
+            slug,
+            meta_title: formData.meta_title || "",
+            meta_description: formData.meta_description || "",
+            keywords: formData.keywords || "",
+            project_link: "",
+            banner: true,
+            is_active: formData.is_active,
+            group_title: "Banners",
+            custom_fields: [],
+          };
+          await createMutation.mutateAsync(createPayload);
+        } catch { hasError = true; }
+      }
     }
 
     if (hasError) {
