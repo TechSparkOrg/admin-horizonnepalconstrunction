@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/global_ui/page-header";
 import { queryKeys } from "@/api/query-keys";
+import { CategoryAdmin } from "@/api/services/category.service";
 import type { Category, CategoryCreate } from "@/api/types/category.types";
 import { CategoryTable } from "@/components/page_ui/category-table";
 import { CategoryForm } from "@/components/page_ui/category-form";
@@ -47,6 +48,14 @@ export function CategorySectionPage({ heading, breadcrumb, services, queryType, 
     },
   });
 
+  const hasServiceField = queryType === "project" || queryType === "blog";
+  const { data: serviceCats } = useQuery({
+    queryKey: queryKeys.categories.list("services"),
+    queryFn: () => CategoryAdmin.listServices({ page_size: 100 }),
+    enabled: hasServiceField,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const flatCats = data?.items ?? [];
   const totalCount = data?.totalCount ?? 0;
   const treeCats = useMemo(() => buildTree(flatCats), [flatCats]);
@@ -64,6 +73,8 @@ export function CategorySectionPage({ heading, breadcrumb, services, queryType, 
         type: formData.type,
         is_active: formData.isActive,
         parent_id: formData.parent_id || null,
+        faq_group_slug: formData.faq_group_slug || "",
+        service_id: formData.service_id || null,
         meta_title: stripHtml(formData.metaTitle || ""),
         meta_description: stripHtml(formData.metaDescription || ""),
         meta_keywords: stripHtml(formData.metaKeywords || ""),
@@ -130,14 +141,15 @@ export function CategorySectionPage({ heading, breadcrumb, services, queryType, 
 
   if (view === "form") {
     return (
-      <CategoryForm
-        editing={editing}
-        saving={saving}
-        onSave={handleSave}
-        onBack={() => { setView("list"); setEditing(null); }}
-        parentCats={flatCats}
-        showTypeField={showTypeField}
-      />
+        <CategoryForm
+          editing={editing}
+          saving={saving}
+          onSave={handleSave}
+          onBack={() => { setView("list"); setEditing(null); }}
+          parentCats={flatCats}
+          showTypeField={showTypeField}
+          serviceCategories={hasServiceField ? (serviceCats?.results ?? []) : undefined}
+        />
     );
   }
 

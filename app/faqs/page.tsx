@@ -5,7 +5,6 @@ import { Search } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { FaqAdmin } from "@/api/services/faq.service";
-import { CategoryAdmin } from "@/api/services/category.service";
 import type { FaqGroup, FaqGroupCreate, FaqItemData } from "@/api/types/faq.types";
 import { FaqTable } from "@/components/page_ui/faq-table";
 import { FaqForm } from "@/components/page_ui/faq-form";
@@ -18,13 +17,10 @@ import {
 } from "@/components/ui/input-group";
 
 const ITEMS_PER_PAGE = 10;
-const QUERY_KEY = "faq-admin";
 
 interface FaqFormData {
   title: string;
   slug: string;
-  categoryId: string;
-  categoryName: string;
   order: number;
   isActive: boolean;
   items: FaqItemData[];
@@ -33,8 +29,6 @@ interface FaqFormData {
 const EMPTY: FaqFormData = {
   title: "",
   slug: "",
-  categoryId: "",
-  categoryName: "",
   order: 0,
   isActive: true,
   items: [],
@@ -51,20 +45,14 @@ export default function AdminFaqsPage() {
   const queryClient = useQueryClient();
 
   const { data: faqRes } = useQuery({
-    queryKey: [QUERY_KEY, "list"],
+    queryKey: ["faqs"],
     queryFn: () => FaqAdmin.list(),
   });
 
-  const { data: catRes } = useQuery({
-    queryKey: [QUERY_KEY, "categories"],
-    queryFn: () => CategoryAdmin.listFaq(),
-  });
-
   const groups = faqRes?.results ?? [];
-  const categories = catRes?.results ?? [];
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+    queryClient.invalidateQueries({ queryKey: ["faqs"] });
   };
 
   const createMutation = useMutation({
@@ -95,8 +83,6 @@ export default function AdminFaqsPage() {
     setForm({
       title: item.title,
       slug: item.slug,
-      categoryId: item.category_id,
-      categoryName: item.category_name,
       order: item.order,
       isActive: item.is_active,
       items: item.items.map((it) => ({ ...it })),
@@ -127,8 +113,6 @@ export default function AdminFaqsPage() {
     const payload = {
       title: form.title,
       slug: form.slug,
-      category_id: form.categoryId,
-      category_name: form.categoryName,
       order: form.order,
       is_active: form.isActive,
       items: form.items.map((it, i) => ({
@@ -202,7 +186,6 @@ export default function AdminFaqsPage() {
             form={form}
             editingId={editingId}
             saving={createMutation.isPending || updateMutation.isPending}
-            categories={categories}
             onChange={handleChange}
             onItemsChange={handleItemsChange}
             onSave={save}

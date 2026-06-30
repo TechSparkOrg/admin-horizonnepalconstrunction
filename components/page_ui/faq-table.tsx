@@ -34,10 +34,6 @@ export function FaqTable({ groups, onEdit, onDelete, page, totalPages, totalCoun
       render: (item) => <span className="text-sm text-gray-500 font-mono">/{item.slug}</span>,
     },
     {
-      header: "Category",
-      render: (item) => <span className="text-sm text-gray-500">{item.category_name || "—"}</span>,
-    },
-    {
       header: "Items",
       render: (item) => (
         <Badge variant="outline" className="font-normal border-gray-200 bg-gray-50 text-gray-600">

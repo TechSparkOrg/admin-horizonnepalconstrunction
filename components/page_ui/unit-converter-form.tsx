@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useAttributeOptions } from "@/api/hooks/use-attribute-query";
-import { useCategoryOptions } from "@/api/hooks/use-category-query";
 import { RichEditor } from "@/components/page_ui/rich-editor";
 import { UnitConverterSeoTab } from "@/components/page_ui/unit-converter-seo-tab";
 import { UnitConverterMediaTab } from "@/components/page_ui/unit-converter-media-tab";
@@ -84,7 +83,6 @@ export function UnitConverterForm({
   onBack,
 }: Props) {
   const { data: attributes = [] } = useAttributeOptions();
-  const { data: faqCategories = [] } = useCategoryOptions("faq");
 
   const selectedAttribute = attributes.find((a) => a.id === form.attributeId);
 
@@ -315,20 +313,6 @@ export function UnitConverterForm({
                 </h4>
 
                 <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <Label>FAQ Category</Label>
-                    <SearchableSelect
-                      options={[
-                        { value: "", label: "None" },
-                        ...faqCategories,
-                      ]}
-                      value={form.faqCategoryId ?? ""}
-                      onChange={(v) => onChange("faqCategoryId", v || null)}
-                      placeholder="None"
-                      searchPlaceholder="Search FAQ categories..."
-                    />
-                  </div>
-
                   <div className="space-y-1.5">
                     <Label>FAQ Title / Slug</Label>
                     <Input

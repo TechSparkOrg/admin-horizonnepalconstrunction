@@ -104,7 +104,7 @@ export function BlogSettingsTab({
               <Label>Author Image</Label>
               {authorImage ? (
                 <div className="relative size-16 rounded-full border border-gray-200 overflow-hidden group cursor-pointer" onClick={() => setAuthorPickerOpen(true)}>
-                  <Image src={authorImage} alt="Author" fill className="object-cover" />
+                  <Image src={authorImage} alt="Author"  width={40} height={40} className="object-cover size-full" />
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); onChange("authorImage", ""); }}

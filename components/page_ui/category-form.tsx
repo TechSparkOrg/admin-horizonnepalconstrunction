@@ -42,9 +42,10 @@ interface Props {
   onBack: () => void;
   parentCats?: Category[];
   showTypeField?: boolean;
+  serviceCategories?: { id: string; name: string }[];
 }
 
-export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, parentCats: propParentCats, showTypeField = true }: Props) {
+export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, parentCats: propParentCats, showTypeField = true, serviceCategories }: Props) {
   const slugEdited = useRef(false);
 
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
@@ -66,20 +67,22 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
     formState: { errors, isSubmitting },
   } = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
-    defaultValues: {
-      name: "",
-      slug: "",
-      type: "public",
-      description: "",
-      metaTitle: "",
-      metaDescription: "",
-      metaKeywords: "",
-      isActive: true,
-      image: "",
-      parent_id: null,
-      bannerImages: [],
-      ...defaultValues,
-    },
+      defaultValues: {
+        name: "",
+        slug: "",
+        type: "public",
+        description: "",
+        metaTitle: "",
+        metaDescription: "",
+        metaKeywords: "",
+        isActive: true,
+        image: "",
+        parent_id: null,
+        faq_group_slug: "",
+        service_id: null,
+        bannerImages: [],
+        ...defaultValues,
+      },
   });
 
   const nameValue = watch("name");
@@ -109,6 +112,8 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
         type: editing.type,
         image: editing.image || "",
         parent_id: editing.parent_id,
+        faq_group_slug: editing.faq_group_slug || "",
+        service_id: editing.service_id ?? null,
         metaTitle: stripHtml(editing.meta_title || ""),
         metaDescription: stripHtml(editing.meta_description || ""),
         metaKeywords: stripHtml(editing.meta_keywords || ""),
@@ -128,6 +133,7 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
         isActive: true,
         image: "",
         parent_id: null,
+        service_id: null,
         bannerImages: [],
         ...defaultValues,
       });
@@ -267,27 +273,6 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label>Parent Category</Label>
-                  <Select
-                    value={parentIdValue ?? "__none__"}
-                    onValueChange={(v) => setValue("parent_id", v === "__none__" ? null : v)}
-                  >
-                    <SelectTrigger className="max-w-sm">
-                      <SelectValue placeholder="Select a parent category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">None (top-level)</SelectItem>
-                      {parentCats
-                        .filter((c) => c.id !== editing?.id)
-                        .map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </FormCard>
             </TabsContent>
 
@@ -400,6 +385,62 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
                     { value: false, label: "Inactive" },
                   ]}
                 />
+
+                <div className="space-y-1.5 mt-5">
+                  <Label>FAQ Title / Slug</Label>
+                  <Input
+                    value={watch("faq_group_slug") || ""}
+                    onChange={(e) => setValue("faq_group_slug", e.target.value)}
+                    placeholder="e.g. cement-faq"
+                  />
+                  <p className="text-[11px] text-amber-600 leading-relaxed mt-1">
+                    Slug must be exactly as typed in the FAQ section to display related Q&amp;A
+                  </p>
+                </div>
+
+                <div className="space-y-1.5 mt-5">
+                  <Label>Parent Category</Label>
+                  <Select
+                    value={parentIdValue ?? "__none__"}
+                    onValueChange={(v) => setValue("parent_id", v === "__none__" ? null : v)}
+                  >
+                    <SelectTrigger className="max-w-sm">
+                      <SelectValue placeholder="Select a parent category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">None (top-level)</SelectItem>
+                      {parentCats
+                        .filter((c) => c.id !== editing?.id)
+                        .map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {serviceCategories && (
+                  <div className="space-y-1.5 mt-5">
+                    <Label>Belongs to Service</Label>
+                    <Select
+                      value={watch("service_id") ?? "__none__"}
+                      onValueChange={(v) => setValue("service_id", v === "__none__" ? null : v)}
+                    >
+                      <SelectTrigger className="max-w-sm">
+                        <SelectValue placeholder="Select a service" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">None (standalone)</SelectItem>
+                        {serviceCategories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </FormCard>
             </TabsContent>
           </div>

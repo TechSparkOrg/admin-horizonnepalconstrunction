@@ -21,7 +21,7 @@ const navLinks: NavLink[] = [
     children: [
       { label: "Services Category", href: "/categories" },
       { label: "Blog Category", href: "/categories/blogs" },
-      { label: "FAQ Category", href: "/categories/faqs" },
+      // { label: "FAQ Category", href: "/categories/faqs" },
       { label: "Project Category", href: "/categories/projects" },
             { label: "Attribute Categories", href: "/categories/attributes" },
     ],

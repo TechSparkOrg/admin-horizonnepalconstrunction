@@ -80,7 +80,6 @@ export function MaterialListForm({
   onBack,
 }: Props) {
   const { data: serviceCategories = [] } = useCategoryOptions("services");
-  const { data: faqCategories = [] } = useCategoryOptions("faq");
 
   return (
     <div>
@@ -179,20 +178,6 @@ export function MaterialListForm({
                     onChange={(v) => onChange("serviceCategoryId", v || null)}
                     placeholder="All Services"
                     searchPlaceholder="Search categories..."
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>FAQ Category</Label>
-                  <SearchableSelect
-                    options={[
-                      { value: "", label: "None" },
-                      ...faqCategories,
-                    ]}
-                    value={form.faqCategoryId ?? ""}
-                    onChange={(v) => onChange("faqCategoryId", v || null)}
-                    placeholder="None"
-                    searchPlaceholder="Search FAQ categories..."
                   />
                 </div>
 

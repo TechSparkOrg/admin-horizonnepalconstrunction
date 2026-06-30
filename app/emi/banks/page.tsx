@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Plus, Search, Loader2, Upload } from "lucide-react";
+import { Plus, Search, Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { EmiBankAdmin } from "@/api/services/emi.service";
 import type { Bank, BankCreate } from "@/api/types/emi.types";
@@ -11,6 +11,11 @@ import { toSlug } from "@/lib/slug";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@/components/ui/toggle-group";
 import {
   Dialog,
   DialogContent,
@@ -29,14 +34,18 @@ import type { PickerMediaItem } from "@/components/global_ui/media-handler-picke
 
 const ITEMS_PER_PAGE = 10;
 
+const COMMON_TENURES = [6, 12, 18, 24, 36, 48, 60];
+
 interface BankFormData {
   name: string;
   slug: string;
   logo: string;
   code: string;
+  isActive: boolean;
+  tenureOptions: number[];
 }
 
-const EMPTY: BankFormData = { name: "", slug: "", logo: "", code: "" };
+const EMPTY: BankFormData = { name: "", slug: "", logo: "", code: "", isActive: true, tenureOptions: [] };
 
 export default function AdminBanksPage() {
   const [banks, setBanks] = useState<Bank[]>([]);
@@ -49,6 +58,41 @@ export default function AdminBanksPage() {
   const [saving, setSaving] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [deleteItem, setDeleteItem] = useState<Bank | null>(null);
+  const [customTenure, setCustomTenure] = useState("");
+
+  const toggleTenure = (months: number) => {
+    setForm((prev) => ({
+      ...prev,
+      tenureOptions: prev.tenureOptions.includes(months)
+        ? prev.tenureOptions.filter((m) => m !== months)
+        : [...prev.tenureOptions, months].sort((a, b) => a - b),
+    }));
+  };
+
+  const removeTenure = (months: number) => {
+    setForm((prev) => ({
+      ...prev,
+      tenureOptions: prev.tenureOptions.filter((m) => m !== months),
+    }));
+  };
+
+  const addCustomTenure = () => {
+    const v = parseInt(customTenure, 10);
+    if (!isNaN(v) && v > 0 && !form.tenureOptions.includes(v)) {
+      setForm((prev) => ({
+        ...prev,
+        tenureOptions: [...prev.tenureOptions, v].sort((a, b) => a - b),
+      }));
+    }
+    setCustomTenure("");
+  };
+
+  const handleTenureKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addCustomTenure();
+    }
+  };
 
   const slugEdited = useRef(false);
 
@@ -75,7 +119,7 @@ export default function AdminBanksPage() {
   };
 
   const openEdit = (item: Bank) => {
-    setForm({ name: item.name, slug: item.slug, logo: item.logo, code: item.code });
+    setForm({ name: item.name, slug: item.slug, logo: item.logo, code: item.code, isActive: item.is_active, tenureOptions: item.tenure_options });
     setEditingId(item.id);
     slugEdited.current = true;
     setDialogOpen(true);
@@ -105,6 +149,8 @@ export default function AdminBanksPage() {
         slug: form.slug || toSlug(form.name),
         logo: form.logo,
         code: form.code,
+        is_active: form.isActive,
+        tenure_options: form.tenureOptions,
       };
       if (editingId) {
         await EmiBankAdmin.update(editingId, payload);
@@ -182,84 +228,169 @@ export default function AdminBanksPage() {
         onPageChange={setCurrentPage}
       />
 
-      <Dialog open={dialogOpen} onOpenChange={(o) => !o && closeDialog()}>
-        <DialogContent className="!max-w-3xl w-full">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-gray-900">
-              {editingId ? "Edit Bank" : "Add Bank"}
-            </DialogTitle>
-          </DialogHeader>
+<Dialog open={dialogOpen} onOpenChange={(o) => !o && closeDialog()}>
+  <DialogContent className="!max-w-2xl w-full">
+    <DialogHeader className="pb-2 border-b border-gray-100">
+      <DialogTitle className="text-base font-semibold text-gray-900">
+        {editingId ? "Edit Bank" : "Add Bank"}
+      </DialogTitle>
+    </DialogHeader>
 
-          <form id="bank-form" onSubmit={(e) => { e.preventDefault(); save(); }} className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label>Name <span className="text-red-500">*</span></Label>
-              <Input
-                value={form.name}
-                onChange={(e) => handleFormChange("name", e.target.value)}
-                placeholder="e.g. State Bank of India"
-              />
-            </div>
+    <form id="bank-form" onSubmit={(e) => { e.preventDefault(); save(); }} className="py-4 space-y-5">
 
-            <div className="space-y-1.5">
-              <Label>Slug</Label>
-              <Input
-                value={form.slug}
-                onChange={(e) => { slugEdited.current = true; handleFormChange("slug", e.target.value); }}
-                placeholder="auto-generated"
-              />
-            </div>
+      {/* Name + Code — side by side */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium text-gray-600">
+            Name <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            value={form.name}
+            onChange={(e) => handleFormChange("name", e.target.value)}
+            placeholder="e.g. State Bank of India"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium text-gray-600">
+            Code <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            value={form.code}
+            onChange={(e) => handleFormChange("code", e.target.value)}
+            placeholder="e.g. SBI123"
+          />
+        </div>
+      </div>
 
-            <div className="space-y-1.5">
-              <Label>Logo</Label>
-              <div className="flex items-center gap-3">
-                <div
-                  className="size-14 rounded-lg overflow-hidden bg-gray-100 relative shrink-0 cursor-pointer border border-dashed border-gray-300 hover:border-gray-400 transition flex items-center justify-center"
-                  onClick={() => setPickerOpen(true)}
-                >
-                  {form.logo ? (
-                    <Image src={form.logo} alt="Logo" fill className="object-cover" />
-                  ) : (
-                    <Upload className="size-5 text-gray-400" />
-                  )}
-                </div>
-                <div className="text-xs text-gray-500">
-                  Click to upload a bank logo
-                </div>
-              </div>
-            </div>
+      {/* Slug */}
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium text-gray-600">Slug</Label>
+        <Input
+          value={form.slug}
+          onChange={(e) => { slugEdited.current = true; handleFormChange("slug", e.target.value); }}
+          placeholder="auto-generated from name"
+          className="text-gray-500"
+        />
+      </div>
 
-            <div className="space-y-1.5">
-              <Label>Code <span className="text-red-500">*</span></Label>
-              <Input
-                value={form.code}
-                onChange={(e) => handleFormChange("code", e.target.value)}
-                placeholder="e.g. SBI123"
-              />
-            </div>
-          </form>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={closeDialog}>Cancel</Button>
-            <Button
-              type="submit"
-              form="bank-form"
-              disabled={!form.name.trim() || !form.code.trim() || saving}
-              className="bg-sidebar-primary hover:bg-sidebar-primary/90 text-white"
+      {/* Logo + Status — side by side */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium text-gray-600">Logo</Label>
+          <div className="flex items-center gap-3">
+            <div
+              className="size-12 rounded-lg overflow-hidden bg-gray-50 border border-dashed border-gray-300 hover:border-gray-400 transition flex items-center justify-center cursor-pointer shrink-0"
+              onClick={() => setPickerOpen(true)}
             >
-              {saving && <Loader2 className="size-4 animate-spin" />}
-              {saving ? "Saving\u2026" : editingId ? "Update" : "Create"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              {form.logo ? (
+                <Image src={form.logo} alt="Logo" width={40} height={40} className="object-cover size-full" />
+              ) : (
+                <Upload className="size-4 text-gray-400" />
+              )}
+            </div>
+            <span className="text-xs text-gray-400 leading-snug">Click to upload</span>
+          </div>
+        </div>
 
-      <MediaPickerDialog
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium text-gray-600">Status</Label>
+          <ToggleGroup
+            type="single"
+            value={form.isActive ? "active" : "inactive"}
+            onValueChange={(v) => v && setForm((prev) => ({ ...prev, isActive: v === "active" }))}
+            variant="outline"
+            size="sm"
+            className="justify-start"
+          >
+            <ToggleGroupItem value="active">Active</ToggleGroupItem>
+            <ToggleGroupItem value="inactive">Inactive</ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+      </div>
+
+      {/* Tenure Plans */}
+      <div className="space-y-2">
+        <Label className="text-xs font-medium text-gray-600">Tenure Plans <span className="text-gray-400 font-normal">(months)</span></Label>
+
+        {/* Quick-select chips */}
+        <div className="flex flex-wrap gap-1.5">
+          {COMMON_TENURES.map((m) => {
+            const selected = form.tenureOptions.includes(m);
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={() => toggleTenure(m)}
+                className={
+                  selected
+                    ? "h-7 px-3 rounded-md bg-sidebar-primary text-white text-xs font-semibold transition-colors"
+                    : "h-7 px-3 rounded-md border border-gray-200 bg-white text-gray-600 text-xs font-medium hover:border-sidebar-primary hover:text-sidebar-primary transition-colors"
+                }
+              >
+                {m}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Custom input */}
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            min={1}
+            value={customTenure}
+            onChange={(e) => setCustomTenure(e.target.value)}
+            onKeyDown={handleTenureKeyDown}
+            placeholder="Custom months"
+            className="h-8 w-36 text-xs"
+          />
+          <Button type="button" variant="outline" size="sm" onClick={addCustomTenure} disabled={!customTenure}>
+            Add
+          </Button>
+        </div>
+
+        {/* Selected badges */}
+        {form.tenureOptions.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-0.5">
+            {form.tenureOptions.map((m) => (
+              <Badge key={m} variant="secondary" className="gap-1 pr-1 text-xs">
+                {m}m
+                <button
+                  type="button"
+                  onClick={() => removeTenure(m)}
+                  className="size-3.5 rounded-full hover:bg-gray-300/60 flex items-center justify-center"
+                >
+                  <X className="size-2.5" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+    </form>
+
+    <DialogFooter className="pt-2 border-t border-gray-100">
+      <Button type="button" variant="outline" onClick={closeDialog}>Cancel</Button>
+      <Button
+        type="submit"
+        form="bank-form"
+        disabled={!form.name.trim() || !form.code.trim() || saving}
+        className="bg-sidebar-primary hover:bg-sidebar-primary/90 text-white"
+      >
+        {saving && <Loader2 className="size-4 animate-spin" />}
+        {saving ? "Saving…" : editingId ? "Update" : "Create"}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
+{   pickerOpen &&   <MediaPickerDialog
         open={pickerOpen}
         onOpenChange={(o) => { setPickerOpen(o); }}
         mode="image"
         title="Select Logo"
         onSelect={handleMediaSelect}
-      />
+      />}
 
       <DeleteDialog
         open={!!deleteItem}

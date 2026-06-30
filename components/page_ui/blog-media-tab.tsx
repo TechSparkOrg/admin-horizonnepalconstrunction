@@ -186,7 +186,7 @@ export function BlogMediaTab({
                     </TableCell>
                     <TableCell>
                       <div className="size-10 rounded-md overflow-hidden bg-gray-100 relative">
-                        <Image src={img.url} alt={img.name} fill className="object-cover" />
+                        <Image src={img.url} alt={img.name}  width={40} height={40} className="object-cover size-full" />
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-gray-900 truncate max-w-[220px]">

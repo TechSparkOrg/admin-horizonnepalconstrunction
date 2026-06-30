@@ -9,21 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import type { Category } from "@/api/types/category.types";
 import type { FaqGroup, FaqItemData } from "@/api/types/faq.types";
 
 interface FaqFormData {
   title: string;
   slug: string;
-  categoryId: string;
-  categoryName: string;
   order: number;
   isActive: boolean;
   items: FaqItemData[];
@@ -33,7 +23,6 @@ interface Props {
   form: FaqFormData;
   editingId: string | null;
   saving: boolean;
-  categories: Category[];
   onChange: (key: string, value: string | boolean | number) => void;
   onItemsChange: (items: FaqItemData[]) => void;
   onSave: () => void;
@@ -50,7 +39,6 @@ export function FaqForm({
   form,
   editingId,
   saving,
-  categories,
   onChange,
   onItemsChange,
   onSave,
@@ -126,28 +114,7 @@ export function FaqForm({
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label>Category</Label>
-                  <Select
-                    value={form.categoryId}
-                    onValueChange={(v) => {
-                      onChange("categoryId", v);
-                      const cat = categories.find((c) => c.id === v);
-                      if (cat) onChange("categoryName", cat.name);
-                    }}
-                  >
-                    <SelectTrigger className="max-w-sm">
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+
               </CardContent>
             </Card>
           </TabsContent>
