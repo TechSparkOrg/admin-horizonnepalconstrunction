@@ -1,14 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
-import { ImageIcon, Box } from "lucide-react";
+import { ImageIcon, Box, Eye } from "lucide-react";
 import type { MediaItem } from "@/api/types/media.types";
-import { isVideoUrl, isModelUrl } from "@/lib/media";
+import { isVideoUrl, isModelUrl, isImageUrl } from "@/lib/media";
 import { ModelViewer } from "@/components/global_ui/ModelViewer";
 import { formatDate } from "@/lib/dates";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
-import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
+import { UsageDetailPanel } from "@/components/page_ui/usage-detail-panel";
+import { ImagePreviewDialog } from "@/components/global_ui/image-preview-dialog";
 
 interface Props {
   items: MediaItem[];
@@ -16,8 +19,8 @@ interface Props {
   totalPages: number;
   totalCount: number;
   onPageChange: (page: number) => void;
-  onEdit: (item: MediaItem) => void;
-  onDelete: (id: string) => void;
+  onEdit?: (item: MediaItem) => void;
+  onDelete?: (id: string) => void;
   groupLabel: string;
 }
 
@@ -36,14 +39,15 @@ function GroupBadge({ group }: { group: string }) {
 }
 
 export function MediaTable({ items, page, totalPages, totalCount, onPageChange, onEdit, onDelete, groupLabel }: Props) {
+  const [viewUrl, setViewUrl] = useState<string | null>(null);
+
   const columns: ColumnDef<MediaItem>[] = [
     {
       header: "Preview",
-      className: "w-12",
       render: (item) => (
-        <div className="size-10 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center">
-          {item.url.match(/\.(jpe?g|png|webp|gif|svg|bmp|ico|tiff?)/i) ? (
-            <Image src={item.url} alt={item.alt} width={40} height={40} className="w-full h-full object-cover" />
+        <div className="size-11 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center">
+          {isImageUrl(item.url) ? (
+            <Image src={item.url} alt={item.alt} width={44} height={44} className="w-full h-full object-cover" />
           ) : isVideoUrl(item.url) ? (
             <video src={item.url} className="w-full h-full object-cover" muted />
           ) : isModelUrl(item.url) ? (
@@ -55,44 +59,57 @@ export function MediaTable({ items, page, totalPages, totalCount, onPageChange, 
       ),
     },
     {
-      header: "Name",
-      render: (item) => (
-        <span className="text-sm text-gray-900 max-w-[240px] truncate block">
-          {item.title || item.alt || item.url.split("/").pop() || "Untitled"}
-        </span>
-      ),
-    },
-    {
       header: "Group",
       render: (item) => <GroupBadge group={item.group_title} />,
     },
     {
-      header: "Status",
-      render: (item) => <StatusBadge value={item.is_active} map={ACTIVE_STATUS} />,
+      header: "Used In",
+      render: (item) => (
+        <UsageDetailPanel
+          mediaId={item.id}
+          usageTags={item.usage_tags}
+        />
+      ),
     },
     {
       header: "Created",
       render: (item) => <span className="text-sm text-gray-500">{formatDate(item.created_at)}</span>,
     },
+    {
+      header: "",
+      className: "text-right",
+      render: (item) => (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={(e) => { e.stopPropagation(); setViewUrl(item.url); }}
+          className="text-sidebar-primary border-sidebar-primary/20 hover:bg-sidebar-primary/5 gap-1.5"
+        >
+          <Eye className="size-3.5" />
+          View
+        </Button>
+      ),
+    },
   ];
 
   return (
-    <DataTable
-      data={items}
-      columns={columns}
-      onEdit={onEdit}
-      onDelete={onDelete}
-      getIdentifier={(item) => item.id}
-      page={page}
-      totalPages={totalPages}
-      onPageChange={onPageChange}
-      totalCount={totalCount}
-      hideDeleteDialog
-      emptyState={{
-        icon: ImageIcon,
-        title: `No ${groupLabel.toLowerCase()} yet`,
-        description: `Click "Add ${groupLabel === "Images" ? "Image" : groupLabel === "Videos" ? "Video" : groupLabel === "Banners" ? "Banner" : "Model"}" to upload your first one.`,
-      }}
-    />
+    <>
+      <DataTable
+        data={items}
+        columns={columns}
+        getIdentifier={(item) => item.id}
+        page={page}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+        totalCount={totalCount}
+        emptyState={{
+          icon: ImageIcon,
+          title: `No ${groupLabel.toLowerCase()} yet`,
+          description: `Click "Add ${groupLabel === "Images" ? "Image" : groupLabel === "Videos" ? "Video" : groupLabel === "Banners" ? "Banner" : "Model"}" to upload your first one.`,
+        }}
+      />
+      <ImagePreviewDialog url={viewUrl} onClose={() => setViewUrl(null)} />
+    </>
   );
 }

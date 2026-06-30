@@ -1,3 +1,8 @@
+export interface UsageTag {
+  type: string;
+  count: number;
+}
+
 export interface MediaItem {
   id: string;
   url: string;
@@ -12,6 +17,7 @@ export interface MediaItem {
   is_active: boolean;
   group_title: string;
   custom_fields: { key: string; value: string }[];
+  usage_tags?: UsageTag[];
   created_at: string;
   updated_at: string;
 }

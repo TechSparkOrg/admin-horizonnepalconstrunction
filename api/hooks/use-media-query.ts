@@ -52,11 +52,13 @@ export function useMediaMutations() {
     mutationFn: async ({
       file,
       metadata,
+      onProgress,
     }: {
       file: File;
       metadata?: Record<string, unknown>;
+      onProgress?: (pct: number) => void;
     }) => {
-      return await MediaService.uploadImage(file, metadata);
+      return await MediaService.uploadImage(file, metadata, onProgress);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.media.all });
@@ -81,5 +83,44 @@ export function useMediaMutations() {
     },
   });
 
-  return { createMutation, deleteMutation, updateMutation, uploadMutation };
+  const duplicateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await MediaService.duplicate(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.media.all });
+      toast.success("Media duplicated");
+    },
+    onError: (err) => {
+      const parsed = ErrorHandler.parse(err);
+      ErrorHandler.toast(parsed.message);
+    },
+  });
+
+  const scanUsageMutation = useMutation({
+    mutationFn: async () => {
+      return await MediaService.scanUsage();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.media.all });
+      toast.success(`Usage scan complete: ${data.created} tags created`);
+    },
+    onError: (err) => {
+      const parsed = ErrorHandler.parse(err);
+      ErrorHandler.toast(parsed.message);
+    },
+  });
+
+  return { createMutation, deleteMutation, updateMutation, uploadMutation, duplicateMutation, scanUsageMutation };
+}
+
+export function useUsageTypes() {
+  return useQuery({
+    queryKey: ["media", "usage-types"],
+    queryFn: async () => {
+      const res = await MediaService.getUsageTypes();
+      return res ?? [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
 }

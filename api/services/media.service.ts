@@ -52,13 +52,36 @@ export const MediaService = {
     );
   },
 
-  uploadToWorker: (uploadUrl: string, file: File) =>
-    fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': 'application/octet-stream' } }),
+  uploadToWorker: (uploadUrl: string, file: File, onProgress?: (pct: number) => void) =>
+    new Promise<Response>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', uploadUrl);
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress?.(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = () => resolve(new Response(null, { status: xhr.status }));
+      xhr.onerror = () => reject(new Error('Upload to Worker failed'));
+      xhr.send(file);
+    }),
 
-  uploadImage: async (file: File, metadata?: Partial<MediaItemCreate>) => {
+  uploadImage: async (file: File, metadata?: Partial<MediaItemCreate>, onProgress?: (pct: number) => void) => {
     const { upload_url, media } = await MediaService.requestUpload(file.name, metadata);
-    const res = await MediaService.uploadToWorker(upload_url, file);
+    const res = await MediaService.uploadToWorker(upload_url, file, onProgress);
     if (!res.ok) throw new Error(`Upload to Worker failed: ${res.status}`);
     return media;
   },
+
+  duplicate: (id: string) =>
+    apiPrivate.post<MediaItem>(`/admin/media/${id}/duplicate`),
+
+  scanUsage: () =>
+    apiPrivate.post<{ deleted: number; created: number; models_scanned: number }>('/admin/media/scan-usage'),
+
+  getUsageTypes: () =>
+    apiPrivate.get<string[]>('/admin/media/usage-types'),
+
+  getUsageDetail: (id: string) =>
+    apiPrivate.get<{ total: number; groups: { type: string; label: string; items: { id: string; label: string; field: string }[] }[] }>(`/admin/media/${id}/usage-detail`),
+
 };

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { Upload, ChevronLeft, ChevronRight, Library } from "lucide-react";
+import { ChevronLeft, ChevronRight, Library } from "lucide-react";
 import { ActionButtons } from "@/components/global_ui/action-buttons";
 import { FormHeader } from "@/components/global_ui/form-header";
 import { useForm } from "react-hook-form";
@@ -42,14 +42,11 @@ export type BannerFormData = z.infer<typeof bannerSchema>;
 interface Props {
   editing: { group: BannerGroup } | null;
   saving: boolean;
-  onSave: (data: BannerFormData, files: File[], pickedLibraryItems?: { id: string; url: string; alt: string }[], deletedImageIds?: string[]) => Promise<void>;
+  onSave: (data: BannerFormData, pickedLibraryItems?: { id: string; url: string; alt: string }[], deletedImageIds?: string[]) => Promise<void>;
   onBack: () => void;
 }
 
 export function BannerForm({ editing, saving, onSave, onBack }: Props) {
-  const [files, setFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
-  const [fileError, setFileError] = useState<string | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("overview");
@@ -57,7 +54,6 @@ export function BannerForm({ editing, saving, onSave, onBack }: Props) {
   const [pickedLibraryImages, setPickedLibraryImages] = useState<PickerMediaItem[]>([]);
   const [altOverrides, setAltOverrides] = useState<Record<string, string>>({});
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const slugManuallyEdited = useRef(!!editing?.group?.slug);
   const existingImages = (editing?.group?.images ?? []).filter(img => !deletedImageIds.includes(img.id));
 
@@ -80,14 +76,6 @@ export function BannerForm({ editing, saving, onSave, onBack }: Props) {
     },
   });
 
-  useEffect(() => {
-    return () => {
-      previews.forEach((p) => {
-        if (p.startsWith("blob:")) URL.revokeObjectURL(p);
-      });
-    };
-  }, [previews]);
-
   const watchTitle = watch("title");
   const watchIsActive = watch("is_active");
   const watchMetaTitle = watch("meta_title");
@@ -100,49 +88,6 @@ export function BannerForm({ editing, saving, onSave, onBack }: Props) {
     }
   }, [watchTitle, setValue]);
 
-  const rebuildPreviews = useCallback((selected: File[]) => {
-    previews.forEach((p) => {
-      if (p.startsWith("blob:")) URL.revokeObjectURL(p);
-    });
-    const urls = selected.map((f) => URL.createObjectURL(f));
-    setPreviews(urls);
-  }, []);
-
-  const handleFiles = useCallback(
-    (selected: File[]) => {
-      if (!selected.length) return;
-      const images = Array.from(selected).filter((f) =>
-        f.type.startsWith("image/")
-      );
-      if (images.length !== selected.length) {
-        setFileError("Only image files are accepted for banners.");
-        return;
-      }
-      setFileError(null);
-      const updated = [...files, ...images];
-      setFiles(updated);
-      rebuildPreviews(updated);
-    },
-    [files, rebuildPreviews]
-  );
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleFiles(Array.from(e.target.files || []));
-  };
-
-  const removeFile = (index: number) => {
-    const updated = files.filter((_, i) => i !== index);
-    setFiles(updated);
-    const removedPreview = previews[index];
-    if (removedPreview?.startsWith("blob:"))
-      URL.revokeObjectURL(removedPreview);
-    const updatedPreviews = previews.filter((_, i) => i !== index);
-    setPreviews(updatedPreviews);
-    if (viewerIndex >= updated.length && viewerIndex > 0) {
-      setViewerIndex(viewerIndex - 1);
-    }
-  };
-
   const openViewer = (index: number) => {
     if (!allUrls[index]) return;
     setViewerIndex(index);
@@ -150,23 +95,21 @@ export function BannerForm({ editing, saving, onSave, onBack }: Props) {
   };
 
   const onSubmit = async (data: BannerFormData) => {
-    if (!editing && files.length === 0 && pickedLibraryImages.length === 0) {
-      setFileError("Please select at least one banner image.");
+    if (!editing && pickedLibraryImages.length === 0) {
       return;
     }
-    setFileError(null);
     const pickedLibraryItems = pickedLibraryImages.map(item => ({
       id: item.id,
       url: item.url,
       alt: altOverrides[item.url] ?? altFromUrl(item.url),
     }));
-    await onSave(data, files, pickedLibraryItems, deletedImageIds);
+    await onSave(data, pickedLibraryItems, deletedImageIds);
   };
 
   const existingUrls = existingImages.map(i => i.url);
   const pickedUrls = pickedLibraryImages.map(i => i.url);
-  const allUrls = [...existingUrls, ...pickedUrls, ...previews];
-  const totalItems = existingUrls.length + pickedUrls.length + files.length;
+  const allUrls = [...existingUrls, ...pickedUrls];
+  const totalItems = existingUrls.length + pickedUrls.length;
 
   return (
     <div>
@@ -177,13 +120,7 @@ export function BannerForm({ editing, saving, onSave, onBack }: Props) {
         onSave={handleSubmit(onSubmit)}
         saving={isSubmitting || saving}
         saveDisabled={isSubmitting || saving}
-        saveLabel={
-          editing
-            ? "Update"
-            : files.length > 1
-              ? `Upload ${files.length} banners`
-              : "Upload"
-        }
+        saveLabel={editing ? "Update" : "Save"}
         saveForm="banner-form"
       />
 
@@ -247,16 +184,10 @@ export function BannerForm({ editing, saving, onSave, onBack }: Props) {
                 <div className="space-y-3">
                   <Label>Banner Images{!editing ? " *" : ""}</Label>
 
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-                      <Library className="size-4" />
-                      Library
-                    </Button>
-                    <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                      <Upload className="size-4" />
-                      Add Images
-                    </Button>
-                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
+                    <Library className="size-4" />
+                    Library
+                  </Button>
 
                   {allUrls.length > 0 && (
                     <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -268,12 +199,9 @@ export function BannerForm({ editing, saving, onSave, onBack }: Props) {
                       </div>
                       {allUrls.map((src, i) => {
                         const isExisting = i < existingUrls.length;
-                        const isPicked = !isExisting && i < existingUrls.length + pickedUrls.length;
                         const deleteLabel = isExisting
                           ? "Delete"
-                          : isPicked
-                            ? "Remove from selection"
-                            : "Remove from upload";
+                          : "Remove from selection";
                         const defaultAlt = isExisting
                           ? (existingImages[i].alt || "")
                           : altFromUrl(src);
@@ -304,11 +232,9 @@ export function BannerForm({ editing, saving, onSave, onBack }: Props) {
                                 if (isExisting) {
                                   const img = existingImages[i];
                                   if (img) setDeletedImageIds(prev => [...prev, img.id]);
-                                } else if (isPicked) {
+                                } else {
                                   const pickIdx = i - existingUrls.length;
                                   setPickedLibraryImages(prev => prev.filter((_, idx) => idx !== pickIdx));
-                                } else {
-                                  removeFile(i - existingUrls.length - pickedUrls.length);
                                 }
                               }}
                               showDelete
@@ -321,18 +247,7 @@ export function BannerForm({ editing, saving, onSave, onBack }: Props) {
                     </div>
                   )}
 
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
 
-                  {fileError && (
-                    <p className="text-xs text-red-500">{fileError}</p>
-                  )}
                 </div>
               </FormCard>
             </TabsContent>

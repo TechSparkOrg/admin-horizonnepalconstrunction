@@ -1,14 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { ImageIcon, Box } from "lucide-react";
+import { ImageIcon } from "lucide-react";
 import type { MediaItem } from "@/api/types/media.types";
-import { isVideoUrl, isModelUrl } from "@/lib/media";
-import { ModelViewer } from "@/components/global_ui/ModelViewer";
 import { formatDate } from "@/lib/dates";
-import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
 import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
+
 interface Props {
   items: MediaItem[];
   page: number;
@@ -20,35 +18,16 @@ interface Props {
   groupLabel: string;
 }
 
-function GroupBadge({ group }: { group: string }) {
-  const colors: Record<string, string> = {
-    Images: "bg-blue-50 text-blue-600",
-    Videos: "bg-purple-50 text-purple-600",
-    "3D Models": "bg-green-50 text-green-600",
-  };
-  const cls = colors[group] || "bg-gray-50 text-gray-600";
-  return (
-    <Badge variant="outline" className={`rounded-md font-medium border-0 ${cls}`}>
-      {group || "—"}
-    </Badge>
-  );
-}
-
 export function BannerMediaTable({ items, page, totalPages, totalCount, onPageChange, onEdit, onDelete, groupLabel }: Props) {
   const columns: ColumnDef<MediaItem>[] = [
     {
       header: "Preview",
-      className: "w-12",
       render: (item) => (
         <div className="size-10 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center">
-          {item.url?.match(/\.(jpe?g|png|webp|gif|svg|bmp|ico|tiff?)/i) ? (
+          {item.url ? (
             <Image src={item.url} alt={item.alt} width={40} height={40} className="w-full h-full object-cover" />
-          ) : isVideoUrl(item.url) ? (
-            <video src={item.url} className="w-full h-full object-cover" muted />
-          ) : isModelUrl(item.url) ? (
-            <ModelViewer src={item.url} className="w-full h-full" cameraControls={false} autoRotate={false} />
           ) : (
-            <Box className="w-5 h-5 text-gray-400" />
+            <ImageIcon className="size-4 text-gray-400" />
           )}
         </div>
       ),
@@ -60,10 +39,6 @@ export function BannerMediaTable({ items, page, totalPages, totalCount, onPageCh
           {item.title || item.alt || item.url?.split("/").pop() || "Untitled"}
         </span>
       ),
-    },
-    {
-      header: "Group",
-      render: (item) => <GroupBadge group={item.group_title} />,
     },
     {
       header: "Status",

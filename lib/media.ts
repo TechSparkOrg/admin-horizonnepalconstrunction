@@ -1,7 +1,14 @@
 import type { MediaFormData } from "@/components/page_ui/media-form";
 
+const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".bmp", ".ico", ".tiff", ".tif", ".avif"];
 const VIDEO_EXTS = [".mp4", ".webm", ".mov", ".avi", ".mkv", ".m4v"];
 const MODEL_EXTS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".usdz", ".usd", ".ply", ".dae", ".3ds", ".blend", ".max"];
+
+export function isImageUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  const ext = url.toLowerCase().split(".").pop();
+  return ext ? IMAGE_EXTS.includes(`.${ext}`) : false;
+}
 
 export function isVideoUrl(url: string | undefined): boolean {
   if (!url) return false;

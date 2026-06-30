@@ -8,6 +8,7 @@ import {
   Search,
   Box,
   Check,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -21,11 +22,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useMediaList, useMediaMutations } from "@/api/hooks/use-media-query";
-import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
+import { useMediaMutations, useUsageTypes } from "@/api/hooks/use-media-query";
+import { MediaService } from "@/api/services/media.service";
 import { EmptyState } from "@/components/global_ui/empty-state";
 import { FormTabs } from "@/components/global_ui/form-tabs";
-import { isModelUrl } from "@/lib/media";
+import { isImageUrl, isVideoUrl, isModelUrl } from "@/lib/media";
+
+import "@google/model-viewer";
+
+function ModelThumbnail({ src, lazy = true }: { src: string; lazy?: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = document.createElement("model-viewer") as any;
+    el.src = src;
+    el.loading = lazy ? "lazy" : "eager";
+    el.cameraControls = false;
+    el.autoRotate = false;
+    el.reveal = "auto";
+    el.style.width = "100%";
+    el.style.height = "100%";
+    ref.current?.appendChild(el);
+    return () => el.remove();
+  }, [src, lazy]);
+
+  return <div ref={ref} className="w-full h-full" />;
+}
 
 export type PickerMediaItem = {
   id: string;
@@ -61,41 +83,112 @@ export function MediaPickerDialog({
 }: MediaPickerDialogProps) {
   const isModel = mode === "model";
   const acceptTypes = isModel ? ".glb,.gltf,.obj" : "image/*";
-
-  const [listParams, setListParams] = useState<Record<string, unknown>>({ page_size: 10 });
-  const { data, isLoading } = useMediaList(listParams);
-  const { updateMutation, uploadMutation } = useMediaMutations();
+  const { data: usageTypes } = useUsageTypes();
+  const { updateMutation, uploadMutation, duplicateMutation } = useMediaMutations();
 
   const [tab, setTab] = useState<"existing" | "upload">("existing");
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>(defaultCategory || "all");
+  const [usageFilter, setUsageFilter] = useState<string | undefined>(undefined);
   const [selected, setSelected] = useState<PickerMediaItem | null>(null);
   const [multiSelected, setMultiSelected] = useState<PickerMediaItem[]>([]);
   const [altText, setAltText] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
+  const [duplicating, setDuplicating] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+
+  const [allItems, setAllItems] = useState<PickerMediaItem[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [filterVersion, setFilterVersion] = useState(0);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const filtersRef = useRef({ search: "", usageFilter: undefined as string | undefined, defaultCategory, isModel });
+  const fetchingRef = useRef(false);
+  const hasMoreRef = useRef(true);
 
-  const items = data?.items ?? [];
-  const pickerItems = items
-    .filter((apiItem) => {
-      if (isModel) return true;
-      return !isModelUrl(apiItem.url);
-    })
-    .map((apiItem) => ({
-      id: apiItem.id,
-      name: apiItem.alt || apiItem.title || "",
-      url: apiItem.url,
-      thumbnail: apiItem.url,
-      category: apiItem.group_title || "General",
-      type: apiItem.url.split(".").pop()?.toLowerCase(),
-    }));
+  useEffect(() => {
+    filtersRef.current = { search, usageFilter, defaultCategory, isModel };
+  }, [search, usageFilter, defaultCategory, isModel]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const { search, usageFilter, defaultCategory, isModel } = filtersRef.current;
+    const isAppend = page > 1;
+
+    fetchingRef.current = true;
+    if (isAppend) setIsLoadingMore(true);
+    else setIsLoading(true);
+
+    const params: Record<string, unknown> = { page, page_size: 10 };
+    if (search) params.search = search;
+    if (defaultCategory) params.group_title = defaultCategory;
+    if (usageFilter) params.usage_filter = usageFilter;
+
+    MediaService.list(params)
+      .then((res) => {
+        if (cancelled) return;
+        const mapped = (res.results ?? [])
+          .filter((apiItem) => {
+            if (isModel) return true;
+            return !isModelUrl(apiItem.url);
+          })
+          .map((apiItem) => ({
+            id: apiItem.id,
+            name: apiItem.alt || apiItem.title || "",
+            url: apiItem.url,
+            thumbnail: apiItem.url,
+            category: apiItem.group_title || "General",
+            type: apiItem.url.split(".").pop()?.toLowerCase(),
+          }));
+        setAllItems((prev) => (isAppend ? [...prev, ...mapped] : mapped));
+        setTotalCount(res.count ?? 0);
+        hasMoreRef.current = res.next !== null;
+      })
+      .catch(() => {
+        if (!cancelled) toast.error("Failed to load media");
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+          fetchingRef.current = false;
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [page, filterVersion]);
+
+  const hasMore = allItems.length < totalCount;
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    const root = scrollContainerRef.current;
+    if (!el || !root || !hasMoreRef.current || fetchingRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !fetchingRef.current && hasMoreRef.current) {
+          fetchingRef.current = true;
+          setPage((p) => p + 1);
+        }
+      },
+      { root, threshold: 0.1 },
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, isLoadingMore]);
 
   useEffect(() => {
     if (open && tab === "existing") {
-      setCategoryFilter("all");
-      setListParams({ page_size: 10 });
+      setUsageFilter(undefined);
     }
   }, [open, tab]);
 
@@ -103,23 +196,18 @@ export function MediaPickerDialog({
     setSearch(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      const group = categoryFilter === "all" ? "" : categoryFilter;
-      setListParams({ search: value || undefined, group_title: group || undefined, page_size: 10 });
+      setPage(1);
+      setAllItems([]);
+      setFilterVersion((v) => v + 1);
     }, 300);
-  };
-
-  const handleCategoryChange = (cat: string) => {
-    setCategoryFilter(cat);
-    setSelected(null);
-    setListParams({ group_title: cat === "all" ? undefined : cat, page: 1, page_size: 10 });
   };
 
   const handleSelectExisting = (item: PickerMediaItem) => {
     if (multiSelect) {
-      setMultiSelected(prev =>
-        prev.some(i => i.id === item.id)
-          ? prev.filter(i => i.id !== item.id)
-          : [...prev, item]
+      setMultiSelected((prev) =>
+        prev.some((i) => i.id === item.id)
+          ? prev.filter((i) => i.id !== item.id)
+          : [...prev, item],
       );
     } else {
       setSelected(item);
@@ -131,85 +219,138 @@ export function MediaPickerDialog({
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadFile(file);
+    setUploadPreview(URL.createObjectURL(file));
     setAltText(file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " "));
-    if (!isModel) {
-      setUploadPreview(URL.createObjectURL(file));
-    } else {
-      setUploadPreview(null);
-    }
   };
 
   const reset = () => {
     setTab("existing");
     setSearch("");
-    setCategoryFilter("all");
+    setUsageFilter(undefined);
     setSelected(null);
     setMultiSelected([]);
     setAltText("");
     setUploadFile(null);
     setUploadPreview(null);
+    setPage(1);
+    setAllItems([]);
+    setFilterVersion((v) => v + 1);
+    setUploadProgress(null);
     if (debounceRef.current) clearTimeout(debounceRef.current);
+  };
+
+  const handleUpload = async (file: File, alt: string) => {
+    setUploadProgress(0);
+    try {
+      const media = await uploadMutation.mutateAsync({
+        file,
+        metadata: { alt },
+        onProgress: setUploadProgress,
+      });
+      return media;
+    } catch {
+      setUploadProgress(null);
+      throw new Error("Upload failed");
+    }
   };
 
   const handleConfirm = async () => {
     if (multiSelect) {
-      onMultiSelect?.(multiSelected);
+      if (tab === "upload" && uploadFile) {
+        const media = await handleUpload(uploadFile, altText);
+        if (media) {
+          const item: PickerMediaItem = {
+            id: media.id,
+            name: media.alt || media.title || uploadFile.name,
+            url: media.url,
+            thumbnail: media.url,
+            category: media.group_title || "General",
+            type: isModel ? uploadFile.name.split(".").pop() : undefined,
+          };
+          onMultiSelect?.([...multiSelected, item]);
+        }
+      } else {
+        onMultiSelect?.(multiSelected);
+      }
       reset();
       onOpenChange(false);
       return;
     }
     if (tab === "existing" && selected) {
-      if (altText !== selected.name) {
-        await updateMutation.mutateAsync({ id: selected.id, data: { alt: altText } });
+      setDuplicating(true);
+      try {
+        const copy = await duplicateMutation.mutateAsync(selected.id);
+        onSelect?.(
+          {
+            id: copy.id,
+            name: copy.alt || copy.title || selected.name,
+            url: copy.url,
+            thumbnail: copy.url,
+            category: copy.group_title || selected.category,
+            type: selected.type,
+          },
+          altText || selected.name,
+        );
+      } finally {
+        setDuplicating(false);
       }
-      onSelect?.(selected, altText);
     } else if (tab === "upload" && uploadFile) {
-      const media = await uploadMutation.mutateAsync({ file: uploadFile, metadata: { alt: altText } });
-      if (!media) {
-        toast.error("Failed to upload media");
-        return;
+      const media = await handleUpload(uploadFile, altText);
+      if (media) {
+        const persisted: PickerMediaItem = {
+          id: media.id,
+          name: media.alt || media.title || uploadFile.name,
+          url: media.url,
+          thumbnail: media.url,
+          category: media.group_title || "General",
+          type: isModel ? uploadFile.name.split(".").pop() : undefined,
+        };
+        onSelect?.(persisted, altText);
       }
-      const persisted: PickerMediaItem = {
-        id: media.id,
-        name: media.alt || media.title || uploadFile.name,
-        url: media.url,
-        thumbnail: media.url,
-        category: media.group_title || "General",
-        type: isModel ? uploadFile.name.split(".").pop() : undefined,
-      };
-      onSelect?.(persisted, altText);
     }
     reset();
     onOpenChange(false);
   };
 
-  const canConfirm = multiSelect ? multiSelected.length > 0 : (tab === "existing" ? !!selected : !!uploadFile);
+  const canConfirm = multiSelect
+    ? tab === "upload"
+      ? !!uploadFile
+      : multiSelected.length > 0
+    : tab === "existing"
+      ? !!selected
+      : !!uploadFile;
 
   return (
     <Dialog
       open={open}
       onOpenChange={(o) => {
+        if (!o && uploadProgress !== null) return;
         if (!o) reset();
         onOpenChange(o);
       }}
     >
-      <DialogContent className="!max-w-4xl p-0 gap-0 overflow-hidden">
+      <DialogContent
+        className="!max-w-4xl p-0 gap-0 overflow-hidden"
+        showCloseButton={uploadProgress === null}
+        onInteractOutside={(e: Event) => { if (uploadProgress !== null) e.preventDefault(); }}
+        onEscapeKeyDown={(e: KeyboardEvent) => { if (uploadProgress !== null) e.preventDefault(); }}
+      >
         <DialogHeader className="px-4 py-3 border-b border-gray-200">
           <DialogTitle className="text-sm font-semibold text-gray-900">
             {title ?? (isModel ? "Add 3D Model" : "Add Image")}
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as "existing" | "upload")} className="w-full flex flex-col">
+        <Tabs value={tab} onValueChange={(v) => { if (uploadProgress === null) setTab(v as "existing" | "upload"); }} className="w-full flex flex-col">
           <div className="px-4 pt-3">
             <FormTabs tabs={[{ value: "existing", label: "Library" }, { value: "upload", label: "Upload" }]} />
           </div>
 
           <TabsContent value="existing" className="m-0">
             <div className="grid grid-cols-1 md:grid-cols-[1fr_260px] divide-x divide-gray-200">
-              <div className="p-3 max-h-[55vh] overflow-y-auto">
-                <div className="space-y-2 mb-3">
-                  <div className="relative">
+              <div ref={scrollContainerRef} className="p-3 h-[55vh] overflow-y-auto">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="relative flex-1">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
                     <Input
                       value={search}
@@ -218,22 +359,27 @@ export function MediaPickerDialog({
                       className="pl-8 h-8 text-xs rounded-lg border-gray-200"
                     />
                   </div>
-                  <SegmentedToggle
-                    value={categoryFilter}
-                    onChange={handleCategoryChange}
-                    options={[
-                      { value: "all", label: "All" },
-                      { value: "Images", label: "Single Image" },
-                      { value: "Banners", label: "Banners" },
-                      { value: "Videos", label: "Videos" },
-                      { value: "3D Models", label: "3D Models" },
-                    ]}
-                  />
+                  <select
+                    value={usageFilter ?? ""}
+                    onChange={(e) => { setUsageFilter(e.target.value || undefined); setPage(1); setAllItems([]); setFilterVersion((v) => v + 1); }}
+                    className="h-8 rounded-lg border border-gray-200 text-xs px-2 bg-white text-gray-600 max-w-[140px] shrink-0"
+                  >
+                    <option value="">All</option>
+                    <option value="used">Used</option>
+                    <option value="unused">Unused</option>
+                    {(usageTypes ?? []).map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
                 </div>
 
                 {isLoading ? (
-                  <div className="py-10 text-center text-xs text-gray-400">Loading…</div>
-                ) : pickerItems.length === 0 ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {Array.from({ length: 10 }).map((_, i) => (
+                      <div key={i} className="aspect-square w-full rounded-lg bg-gray-100 animate-pulse" />
+                    ))}
+                  </div>
+                ) : allItems.length === 0 ? (
                   <EmptyState
                     icon={isModel ? Box : ImageIcon}
                     title="No media found"
@@ -241,10 +387,10 @@ export function MediaPickerDialog({
                   />
                 ) : (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {pickerItems.map((item) => {
+                    {allItems.map((item) => {
                       const thumb = item.thumbnail ?? item.url;
                       const active = multiSelect
-                        ? multiSelected.some(i => i.id === item.id)
+                        ? multiSelected.some((i) => i.id === item.id)
                         : selected?.id === item.id;
                       return (
                         <button
@@ -255,28 +401,34 @@ export function MediaPickerDialog({
                             "group relative aspect-square w-full overflow-hidden rounded-lg border bg-gray-50 text-left transition-colors",
                             active
                               ? "border-sidebar-primary"
-                              : "border-gray-200 hover:border-gray-300"
+                              : "border-gray-200 hover:border-gray-300",
                           )}
                         >
-                          {isModelUrl(thumb) ? (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                              <Box className="size-6 text-gray-400" />
-                            </div>
-                          ) : (
+                          {isImageUrl(thumb) ? (
                             <Image
                               src={thumb}
                               alt={item.name}
                               fill
                               sizes="120px"
                               className="object-cover"
+                              loading="lazy"
                             />
+                          ) : isVideoUrl(thumb) ? (
+                            <video
+                              src={thumb}
+                              preload="metadata"
+                              muted
+                              playsInline
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <ModelThumbnail src={thumb} />
                           )}
 
-                          {/* selection overlay */}
                           <div
                             className={cn(
                               "absolute inset-0 transition-colors",
-                              active ? "bg-sidebar-primary/15" : "bg-black/0 group-hover:bg-black/10"
+                              active ? "bg-sidebar-primary/15" : "bg-black/0 group-hover:bg-black/10",
                             )}
                           />
 
@@ -302,6 +454,14 @@ export function MediaPickerDialog({
                     })}
                   </div>
                 )}
+
+                {isLoadingMore && (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="size-4 animate-spin text-gray-400" />
+                  </div>
+                )}
+
+                <div ref={sentinelRef} className="h-4" />
               </div>
 
               <div className="p-3 flex flex-col bg-gray-50/60">
@@ -316,18 +476,25 @@ export function MediaPickerDialog({
                       </p>
                     </div>
                   ) : selected ? (
-                    isModelUrl(selected.thumbnail ?? selected.url) ? (
-                      <div className="w-full h-full flex items-center justify-center bg-white">
-                        <Box className="size-10 text-gray-400" />
-                      </div>
-                    ) : (
+                    isImageUrl(selected.thumbnail ?? selected.url) ? (
                       <Image
                         src={selected.thumbnail ?? selected.url}
                         alt={selected.name}
                         fill
                         sizes="260px"
                         className="object-cover"
+                        loading="lazy"
                       />
+                    ) : isVideoUrl(selected.thumbnail ?? selected.url) ? (
+                      <video
+                        src={selected.thumbnail ?? selected.url}
+                        preload="metadata"
+                        muted
+                        playsInline
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <ModelThumbnail src={selected.thumbnail ?? selected.url} lazy={false} />
                     )
                   ) : (
                     <div className="text-center text-gray-400 px-3">
@@ -364,17 +531,35 @@ export function MediaPickerDialog({
                   htmlFor="media-upload-input"
                   className="flex flex-col items-center justify-center gap-1.5 h-48 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:bg-gray-50 hover:border-gray-400 transition-colors cursor-pointer"
                 >
-                  {uploadPreview ? (
-                    <Image src={uploadPreview} alt="Preview" width={400} height={300} className="max-h-full max-w-full object-contain rounded-md" />
-                  ) : (
-                    <>
-                      <UploadCloud className="size-6" />
-                      <span className="text-xs text-gray-600">{uploadFile ? uploadFile.name : "Click to upload"}</span>
-                      <span className="text-[10px] text-gray-400">
-                        {isModel ? ".glb, .gltf, .obj" : "PNG, JPG, WEBP up to 5MB"}
-                      </span>
-                    </>
-                  )}
+                  {(() => {
+                    if (!uploadFile || !uploadPreview) {
+                      return (
+                        <>
+                          <UploadCloud className="size-6" />
+                          <span className="text-xs text-gray-600">{uploadFile ? uploadFile.name : "Click to upload"}</span>
+                          <span className="text-[10px] text-gray-400">
+                            {isModel ? ".glb, .gltf, .obj" : "PNG, JPG, WEBP up to 5MB"}
+                          </span>
+                        </>
+                      );
+                    }
+                    const ext = uploadFile.name.split(".").pop()?.toLowerCase();
+                    if (uploadFile.type.startsWith("image/")) {
+                      return <Image src={uploadPreview} alt="Preview" width={400} height={300} className="max-h-full max-w-full object-contain rounded-md" unoptimized />;
+                    }
+                    if (uploadFile.type.startsWith("video/")) {
+                      return <video src={uploadPreview} muted controls className="max-h-full max-w-full object-contain rounded-md" />;
+                    }
+                    if (["glb","gltf","fbx","obj","stl","usdz","ply"].includes(ext ?? "")) {
+                      return <ModelThumbnail src={uploadPreview} lazy={false} />;
+                    }
+                    return (
+                      <>
+                        <UploadCloud className="size-6" />
+                        <span className="text-xs text-gray-600">{uploadFile.name}</span>
+                      </>
+                    );
+                  })()}
                 </Label>
                 <input
                   id="media-upload-input"
@@ -402,18 +587,22 @@ export function MediaPickerDialog({
         <div className="flex items-center justify-between px-4 py-2.5 border-t border-gray-200">
           <p className="text-[11px] text-gray-400">
             {tab === "existing"
-              ? `${pickerItems.length} ${isModel ? "models" : "images"}`
+              ? `${allItems.length} of ${totalCount} ${isModel ? "models" : "images"}`
               : "Uploads are saved on confirm"}
           </p>
           <Button
             onClick={handleConfirm}
-            disabled={!canConfirm}
+            disabled={!canConfirm || duplicating || uploadProgress !== null}
             size="sm"
             className="h-8 text-xs px-4 rounded-lg bg-sidebar-primary hover:bg-sidebar-primary/90 disabled:opacity-50"
           >
-            {multiSelect
-              ? `Select (${multiSelected.length})`
-              : tab === "existing" ? "Select" : "Upload"}
+            {uploadProgress !== null
+              ? `Uploading ${uploadProgress}%`
+              : duplicating
+                ? "Duplicating..."
+                : multiSelect
+                  ? tab === "upload" ? "Upload & Select" : `Select (${multiSelected.length})`
+                  : tab === "existing" ? "Select" : "Upload"}
           </Button>
         </div>
       </DialogContent>
