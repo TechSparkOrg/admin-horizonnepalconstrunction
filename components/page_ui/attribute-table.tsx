@@ -6,19 +6,10 @@ import {
 } from "@/components/ui/table";
 import { TableHeaderRow } from "@/components/global_ui/table-header-row";
 import { ActionButtons } from "@/components/global_ui/action-buttons";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 import { PaginationBar } from "@/components/global_ui/pagination-bar";
-import type { AttributeItem, UsedIn } from "@/api/types/attribute.types";
-
-const USED_IN_LABELS: Record<UsedIn, string> = {
-  all: "All",
-  services: "Services",
-  blog: "Blog",
-  project: "Project",
-  staff: "Staff",
-};
+import type { AttributeItem } from "@/api/types/attribute.types";
 
 interface Props {
   items: AttributeItem[];
@@ -49,49 +40,44 @@ export function AttributeTable({ items, onEdit, onDelete, page, totalPages, onPa
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <Table>
           <TableHeaderRow columns={[
-            { label: "Title" },
-            { label: "Slug" },
-            { label: "Used In" },
-            { label: "Fields" },
+            { label: "Name" },
+            { label: "Values" },
             { label: "Status" },
             { label: "Actions", className: "text-right" },
           ]} />
           <TableBody>
-            {items.map((item) => (
-              <TableRow
-                key={item.id}
-                className="border-gray-200 cursor-pointer hover:bg-gray-50"
-                onClick={() => onEdit(item)}
-              >
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                      <FileText className="w-4 h-4 text-gray-400" />
+            {items.map((item) => {
+              const allValues = item.values.flatMap((v) => v.values).filter(Boolean);
+              return (
+                <TableRow
+                  key={item.id}
+                  className="border-gray-200 cursor-pointer hover:bg-gray-50"
+                  onClick={() => onEdit(item)}
+                >
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                        <FileText className="w-4 h-4 text-gray-400" />
+                      </div>
+                      <span className="text-sm text-gray-900">{item.title}</span>
                     </div>
-                    <span className="text-sm text-gray-900">{item.title}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <code className="text-xs text-gray-500">{item.slug}</code>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="font-normal border-gray-200 bg-gray-50 text-gray-600">
-                    {USED_IN_LABELS[item.used_in]}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="font-normal border-gray-200 bg-gray-50 text-gray-600">
-                    {item.values.length}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <StatusBadge value={item.is_active} map={ACTIVE_STATUS} />
-                </TableCell>
-                <TableCell>
-                  <ActionButtons onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm text-gray-600 truncate max-w-[300px] block">
+                      {allValues.length > 0
+                        ? allValues.slice(0, 4).join(", ") + (allValues.length > 4 ? ` +${allValues.length - 4} more` : "")
+                        : "—"}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge value={item.is_active} map={ACTIVE_STATUS} />
+                  </TableCell>
+                  <TableCell>
+                    <ActionButtons onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

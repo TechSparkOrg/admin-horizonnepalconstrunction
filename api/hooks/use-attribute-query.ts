@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { AttributeAdmin } from "@/api/services/attribute.service";
 import { queryKeys } from "@/api/query-keys";
 import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
@@ -23,10 +23,12 @@ export function useAttributeList(params?: Record<string, unknown>) {
     queryKey: queryKeys.attributes.list(params),
     queryFn: async () => {
       const res = await AttributeAdmin.search(
-        (params ?? {}) as { search?: string; used_in?: string; page?: number; page_size?: number }
+        (params ?? {}) as { search?: string; page?: number; page_size?: number }
       );
       return { items: res.results ?? [], totalCount: res.count ?? 0 };
     },
+    placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
   });
 }
 

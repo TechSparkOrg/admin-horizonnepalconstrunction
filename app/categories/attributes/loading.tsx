@@ -15,7 +15,7 @@ export default function Loading() {
       <div className="bg-white rounded-xl border border-gray-200">
         <div className="border-b border-gray-200 px-6 py-3 bg-gray-50/50">
           <div className="flex gap-6">
-            {[140, 100, 60, 60, 60, 60].map((w, i) => (
+            {[140, 200, 60, 60].map((w, i) => (
               <div key={i} className="h-3 bg-gray-200 rounded" style={{ width: w }} />
             ))}
           </div>
@@ -23,7 +23,7 @@ export default function Loading() {
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="border-b border-gray-100 px-6 py-4 last:border-0">
             <div className="flex gap-6">
-              {[160, 120, 60, 60, 80, 80].map((w, j) => (
+              {[160, 200, 60, 80].map((w, j) => (
                 <div key={j} className="h-4 bg-gray-100 rounded" style={{ width: w }} />
               ))}
             </div>
