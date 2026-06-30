@@ -29,7 +29,7 @@ export interface Page {
   featured_image?: string;
   is_active?: boolean;
   is_published?: boolean;
-  publish_date?: string;
+  faq_group_slug?: string;
   author_name?: string;
   author_image?: string;
   author_team_id?: string;

@@ -51,7 +51,7 @@ interface PageFormData {
   featuredImage: string;
   isActive: boolean;
   isPublished: boolean;
-  publishDate: string;
+  faqGroupSlug: string;
   authorMode: "manual" | "team";
   authorName: string;
   authorImage: string;
@@ -330,7 +330,7 @@ export function PagesForm({
           <TabsContent value="settings" className="mt-4 space-y-5">
             <div className="bg-white rounded-xl border border-gray-200 p-5 w-full">
               <p className="text-sm font-semibold text-gray-900 mb-4">Status</p>
-              <div className="flex items-end gap-6 flex-wrap">
+              <div className="flex flex-col gap-6 flex-wrap">
                 <div className="space-y-1.5">
                   <Label>Published</Label>
                   <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
@@ -358,14 +358,16 @@ export function PagesForm({
                     </button>
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <Label>Publish Date</Label>
+                <div className="space-y-1.5 mt-5">
+                  <Label>FAQ Title / Slug</Label>
                   <Input
-                    type="date"
-                    value={form.publishDate}
-                    onChange={(e) => onChange("publishDate", e.target.value)}
-                    className="w-40"
+                    value={form.faqGroupSlug}
+                    onChange={(e) => onChange("faqGroupSlug", e.target.value)}
+                    placeholder="e.g. cement-faq"
                   />
+                  <p className="text-[11px] text-amber-600 leading-relaxed mt-1">
+                    Slug must be exactly as typed in the FAQ section to display related Q&amp;A
+                  </p>
                 </div>
               </div>
             </div>
@@ -456,27 +458,31 @@ export function PagesForm({
         </div>
       </Tabs>
 
-      <MediaPickerDialog
-        open={mediaPickerOpen}
-        onOpenChange={(o) => {
-          setMediaPickerOpen(o);
-          if (!o) setEditingBannerId(null);
-        }}
-        mode="image"
-        title={editingBannerId ? "Update Banner Image" : "Select Banner Image"}
-        onSelect={handleBannerSelect}
-      />
+      {mediaPickerOpen && (
+        <MediaPickerDialog
+          open={mediaPickerOpen}
+          onOpenChange={(o) => {
+            setMediaPickerOpen(o);
+            if (!o) setEditingBannerId(null);
+          }}
+          mode="image"
+          title={editingBannerId ? "Update Banner Image" : "Select Banner Image"}
+          onSelect={handleBannerSelect}
+        />
+      )}
 
-      <MediaPickerDialog
-        open={authorPickerOpen}
-        onOpenChange={setAuthorPickerOpen}
-        mode="image"
-        title="Select Author Image"
-        onSelect={(item) => {
-          onChange("authorImage", item.url);
-          setAuthorPickerOpen(false);
-        }}
-      />
+      {authorPickerOpen && (
+        <MediaPickerDialog
+          open={authorPickerOpen}
+          onOpenChange={setAuthorPickerOpen}
+          mode="image"
+          title="Select Author Image"
+          onSelect={(item) => {
+            onChange("authorImage", item.url);
+            setAuthorPickerOpen(false);
+          }}
+        />
+      )}
 
       <ImagePreviewDialog url={previewUrl} onClose={() => setPreviewUrl(null)} />
     </div>

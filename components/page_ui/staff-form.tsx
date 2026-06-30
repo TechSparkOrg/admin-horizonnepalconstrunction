@@ -492,11 +492,13 @@ export function StaffForm({
         </div>
       </Tabs>
 
-      <MediaPickerDialog
-        open={mediaPickerOpen}
-        onOpenChange={(o) => { setMediaPickerOpen(o); }}
-        onSelect={(item) => handleMediaSelect(item)}
-      />
+      {mediaPickerOpen && (
+        <MediaPickerDialog
+          open={mediaPickerOpen}
+          onOpenChange={(o) => { setMediaPickerOpen(o); }}
+          onSelect={(item) => handleMediaSelect(item)}
+        />
+      )}
     </div>
   );
 }

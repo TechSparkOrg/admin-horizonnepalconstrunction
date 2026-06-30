@@ -3,8 +3,8 @@ import type { Page, PageCreate, PageUpdate } from '../types/page.types';
 import type { PaginatedResponse } from '../types/consultation.types';
 
 export const PageAdmin = {
-  list: () =>
-    apiPrivate.get<PaginatedResponse<Page>>('/admin/pages'),
+  list: (params?: Record<string, unknown>) =>
+    apiPrivate.get<PaginatedResponse<Page>>('/admin/pages', { params }),
   adminGet: (slug: string) =>
     apiPrivate.get<Page>(`/admin/pages/${slug}`),
   create: (data: PageCreate) =>
