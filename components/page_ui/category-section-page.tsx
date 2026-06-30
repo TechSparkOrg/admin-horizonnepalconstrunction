@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/global_ui/page-header";
 import { queryKeys } from "@/api/query-keys";
@@ -42,22 +42,20 @@ export function CategorySectionPage({ heading, breadcrumb, services, queryType, 
 
   const { data } = useQuery({
     queryKey: [...queryKeys.categories.list(queryType), page],
-    queryFn: async () => {
-      const res = await services.list({ page });
-      return { items: res.results ?? [], totalCount: res.count ?? 0 };
-    },
+    queryFn: () => services.list({ page }),
+    placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
   });
 
   const hasServiceField = queryType === "project" || queryType === "blog";
   const { data: serviceCats } = useQuery({
     queryKey: queryKeys.categories.list("services"),
-    queryFn: () => CategoryAdmin.listServices({ page_size: 100 }),
+    queryFn: () => CategoryAdmin.listServices({ page_size: 10 }),
     enabled: hasServiceField,
-    staleTime: 5 * 60 * 1000,
   });
 
-  const flatCats = data?.items ?? [];
-  const totalCount = data?.totalCount ?? 0;
+  const flatCats = data?.results ?? [];
+  const totalCount = data?.count ?? 0;
   const treeCats = useMemo(() => buildTree(flatCats), [flatCats]);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.categories.list(queryType) });
