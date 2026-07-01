@@ -859,53 +859,61 @@ export function ProjectForm({
         </div>
       </Tabs>
 
-      <MediaPickerDialog
-        open={mediaPickerOpen}
-        onOpenChange={(o) => setMediaPickerOpen(o)}
-        mode="image"
-        title="Select Banner Image"
-        onSelect={(item, altText, file) => { handleBannerSelect(item, altText, file); setMediaPickerOpen(false); }}
-      />
+      {mediaPickerOpen && (
+        <MediaPickerDialog
+          open={mediaPickerOpen}
+          onOpenChange={(o) => setMediaPickerOpen(o)}
+          mode="image"
+          defaultCategory="Images"
+          title="Select Banner Image"
+          onSelect={(item, altText, file) => { handleBannerSelect(item, altText, file); setMediaPickerOpen(false); }}
+        />
+      )}
 
-      <MediaPickerDialog
-        open={milestonePickerOpen}
-        onOpenChange={(o) => { setMilestonePickerOpen(o); if (!o) setMilestonePickerTarget(null); }}
-        mode={milestonePickerMode === "model" ? "model" : "image"}
-        title={
-          milestonePickerMode === "image" ? "Select Milestone Image" :
-          milestonePickerMode === "model" ? "Select 3D Model" :
-          "Select Video"
-        }
-        defaultCategory={milestonePickerMode === "video" ? "Videos" : milestonePickerMode === "model" ? "3D Models" : undefined}
-        onSelect={(item) => {
-          if (!milestonePickerTarget) return;
-          if (milestonePickerMode === "image") {
-            addMilestoneImage(milestonePickerTarget, item);
-          } else if (milestonePickerMode === "model") {
-            onMilestonesChange(milestones.map(ms =>
-              ms.id === milestonePickerTarget ? { ...ms, model_3d_url: item.url } : ms
-            ));
-          } else {
-            onMilestonesChange(milestones.map(ms =>
-              ms.id === milestonePickerTarget ? { ...ms, video_url: item.url } : ms
-            ));
+      {milestonePickerOpen && (
+        <MediaPickerDialog
+          open={milestonePickerOpen}
+          onOpenChange={(o) => { setMilestonePickerOpen(o); if (!o) setMilestonePickerTarget(null); }}
+          mode={milestonePickerMode === "model" ? "model" : "image"}
+          title={
+            milestonePickerMode === "image" ? "Select Milestone Image" :
+            milestonePickerMode === "model" ? "Select 3D Model" :
+            "Select Video"
           }
-          setMilestonePickerOpen(false);
-          setMilestonePickerTarget(null);
-        }}
-      />
+          defaultCategory={milestonePickerMode === "video" ? "Videos" : milestonePickerMode === "model" ? "3D Models" : "Images"}
+          onSelect={(item) => {
+            if (!milestonePickerTarget) return;
+            if (milestonePickerMode === "image") {
+              addMilestoneImage(milestonePickerTarget, item);
+            } else if (milestonePickerMode === "model") {
+              onMilestonesChange(milestones.map(ms =>
+                ms.id === milestonePickerTarget ? { ...ms, model_3d_url: item.url } : ms
+              ));
+            } else {
+              onMilestonesChange(milestones.map(ms =>
+                ms.id === milestonePickerTarget ? { ...ms, video_url: item.url } : ms
+              ));
+            }
+            setMilestonePickerOpen(false);
+            setMilestonePickerTarget(null);
+          }}
+        />
+      )}
 
-      <MediaPickerDialog
-        open={authorMediaPickerOpen}
-        onOpenChange={(o) => setAuthorMediaPickerOpen(o)}
-        mode="image"
-        title="Select Author Image"
-        onSelect={(item) => {
-          onChange("author_image", item.url);
-          setAuthorPreview(item.url);
-          setAuthorMediaPickerOpen(false);
-        }}
-      />
+      {authorMediaPickerOpen && (
+        <MediaPickerDialog
+          open={authorMediaPickerOpen}
+          onOpenChange={(o) => setAuthorMediaPickerOpen(o)}
+          mode="image"
+          defaultCategory="Images"
+          title="Select Author Image"
+          onSelect={(item) => {
+            onChange("author_image", item.url);
+            setAuthorPreview(item.url);
+            setAuthorMediaPickerOpen(false);
+          }}
+        />
+      )}
 
       {modelPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setModelPreview(null)}>

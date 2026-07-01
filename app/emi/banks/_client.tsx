@@ -390,13 +390,16 @@ export function _Client() {
   </DialogContent>
 </Dialog>
 
-{   pickerOpen &&   <MediaPickerDialog
-        open={pickerOpen}
-        onOpenChange={(o) => { setPickerOpen(o); }}
-        mode="image"
-        title="Select Logo"
-        onSelect={handleMediaSelect}
-      />}
+{pickerOpen && (
+  <MediaPickerDialog
+    open={pickerOpen}
+    onOpenChange={(o) => { setPickerOpen(o); }}
+    mode="image"
+    defaultCategory="Images"
+    title="Select Logo"
+    onSelect={handleMediaSelect}
+  />
+)}
 
       <DeleteDialog
         open={!!deleteItem}

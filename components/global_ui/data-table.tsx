@@ -41,6 +41,8 @@ interface DataTableProps<T> {
   getDepth?: (item: T) => number;
   totalCount?: number;
   hideDeleteDialog?: boolean;
+  hasNext?: boolean;
+  hasPrevious?: boolean;
 }
 
 export function DataTable<T>({
@@ -57,6 +59,8 @@ export function DataTable<T>({
   getDepth,
   totalCount,
   hideDeleteDialog = false,
+  hasNext,
+  hasPrevious,
 }: DataTableProps<T>) {
   const [deleteIdentifier, setDeleteIdentifier] = useState<string | null>(null);
 
@@ -76,7 +80,7 @@ export function DataTable<T>({
   const pagination = totalCount !== undefined ? (
     <div className="flex items-center justify-between px-4 py-1 border-t border-gray-200">
       <span className="text-sm text-gray-500">{totalCount} {totalCount === 1 ? "item" : "items"} total</span>
-      <PaginationBar page={page} totalPages={totalPages} onPageChange={onPageChange} />
+      <PaginationBar page={page} totalPages={totalPages} onPageChange={onPageChange} hasNext={hasNext} hasPrevious={hasPrevious} />
     </div>
   ) : null;
 
@@ -123,8 +127,8 @@ export function DataTable<T>({
         {pagination}
       </div>
 
-      {!pagination && totalPages > 1 && (
-        <div className="mt-6"><PaginationBar page={page} totalPages={totalPages} onPageChange={onPageChange} /></div>
+      {!pagination && (totalPages > 1 || hasNext || hasPrevious) && (
+        <div className="mt-6"><PaginationBar page={page} totalPages={totalPages} onPageChange={onPageChange} hasNext={hasNext} hasPrevious={hasPrevious} /></div>
       )}
 
       {!hideDeleteDialog && (

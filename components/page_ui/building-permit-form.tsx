@@ -343,11 +343,15 @@ function RequiredDocRow({ doc, index, items, onChange, onRemove }: {
           </div>
         </TableCell>
       </TableRow>
-      <MediaPickerDialog
-        open={pickerOpen}
-        onOpenChange={(o) => { if (!o) setPickerOpen(false); }}
-        onSelect={(item) => { update("imageUrl", item.url); setPickerOpen(false); }}
-      />
+      {pickerOpen && (
+        <MediaPickerDialog
+          open={pickerOpen}
+          onOpenChange={(o) => { if (!o) setPickerOpen(false); }}
+          mode="image"
+          defaultCategory="Images"
+          onSelect={(item) => { update("imageUrl", item.url); setPickerOpen(false); }}
+        />
+      )}
     </>
   );
 }
@@ -509,14 +513,18 @@ function BannerEditor({ items, onChange }: {
           </Table>
         </div>
       )}
-      <MediaPickerDialog
-        open={pickerOpen}
-        onOpenChange={(o) => { if (!o) setPickerOpen(false); }}
-        onSelect={(item) => {
-          onChange([...items, { url: item.url, name: item.name }]);
-          setPickerOpen(false);
-        }}
-      />
+      {pickerOpen && (
+        <MediaPickerDialog
+          open={pickerOpen}
+          onOpenChange={(o) => { if (!o) setPickerOpen(false); }}
+          mode="image"
+          defaultCategory="Images"
+          onSelect={(item) => {
+            onChange([...items, { url: item.url, name: item.name }]);
+            setPickerOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

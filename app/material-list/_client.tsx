@@ -11,8 +11,10 @@ import { useMaterialList } from "@/api/hooks/use-material-list-query";
 import type { MaterialItem, BannerImage, VariantItem } from "@/api/types/material-list.types";
 import { materialSchema } from "@/api/validation/material";
 import { MaterialListTable } from "@/components/page_ui/material-list-table";
-import { MaterialListForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/material-list-form";
+import dynamic from "next/dynamic";
 import type { MaterialListFormData } from "@/components/page_ui/material-list-form";
+const MaterialListForm = dynamic(() => import("@/components/page_ui/material-list-form").then((m) => m.MaterialListForm), { ssr: false });
+const EMPTY_FORM: MaterialListFormData = { name: "", slug: "", description: "", pricePerUnit: "", unitValue: "", companyId: null, logo: "", serviceCategoryId: null, faqCategoryId: null, faqGroupSlug: "", variants: [], isActive: true, metaTitle: "", metaDescription: "", metaKeywords: "", bannerImages: [], videoUrl: "" };
 import { PageHeader } from "@/components/global_ui/page-header";
 import {
   InputGroup,

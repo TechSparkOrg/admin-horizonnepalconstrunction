@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import { Plus, Search } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { PermissionAdmin } from "@/api/services/permission.service";
 import type { RoleItem, PermissionGroup } from "@/api/types/permission.types";
 import { RoleTable } from "@/components/page_ui/role-table";
-import { RoleForm } from "@/components/page_ui/role-form";
+import dynamic from "next/dynamic";
+const RoleForm = dynamic(() => import("@/components/page_ui/role-form").then((m) => m.RoleForm), { ssr: false });
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -34,7 +36,6 @@ export function _Client() {
   const [form, setForm] = useState<RoleFormData>(EMPTY_FORM);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
-  const [permissionGroups, setPermissionGroups] = useState<PermissionGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
@@ -43,14 +44,15 @@ export function _Client() {
       .then(setItems)
       .catch(() => toast.error("Failed to load roles"));
 
-  const loadPermissions = () =>
-    PermissionAdmin.listPermissions()
-      .then(setPermissionGroups)
-      .catch(() => toast.error("Failed to load permissions"));
+  const { data: permissionGroups = [] } = useQuery({
+    queryKey: ["roles", "permissions"],
+    queryFn: async () => (await PermissionAdmin.listPermissions()) ?? [],
+    enabled: view === "form",
+    staleTime: Infinity,
+  });
 
   useEffect(() => {
-    Promise.all([loadData(), loadPermissions()])
-      .finally(() => setLoading(false));
+    loadData().finally(() => setLoading(false));
   }, []);
 
   const openNew = () => {

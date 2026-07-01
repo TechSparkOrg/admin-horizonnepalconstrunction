@@ -164,6 +164,8 @@ export function MaterialListOverviewTab({
           onOpenChange={(o) => {
             setMediaPickerOpen(o);
           }}
+          mode="image"
+          defaultCategory="Images"
           onSelect={(item) => handleLogoSelect(item)}
         />
       )}

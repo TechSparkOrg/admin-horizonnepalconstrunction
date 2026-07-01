@@ -1,6 +1,8 @@
 "use client";
 
-import { CoreForm } from "@/components/page_ui/core-form";
+import dynamic from "next/dynamic";
+
+const CoreForm = dynamic(() => import("@/components/page_ui/core-form").then((m) => m.CoreForm));
 
 export function _Client() {
   return <CoreForm />;

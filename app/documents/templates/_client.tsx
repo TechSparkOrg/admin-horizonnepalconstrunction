@@ -4,16 +4,19 @@ import { useState, useEffect, useMemo } from "react";
 import { Plus, Search } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useAttributeOptions } from "@/api/hooks/use-attribute-query";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/api/query-keys";
+import { AttributeAdmin } from "@/api/services/attribute.service";
 import { TemplateAdmin } from "@/api/services/template.service";
 import type { TemplateItem } from "@/api/types/template.types";
 import { templateSchema } from "@/api/validation/template";
 import { TemplateTable } from "@/components/page_ui/template-table";
-import { TemplateForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/template-form";
+import dynamic from "next/dynamic";
 import type { TemplateFormData } from "@/components/page_ui/template-form";
+const TemplateForm = dynamic(() => import("@/components/page_ui/template-form").then((m) => m.TemplateForm), { ssr: false });
+const EMPTY_FORM: TemplateFormData = { attributeId: "", title: "", slug: "", isActive: true, backgroundImage: false, backgroundImageUrl: "", showStamp: false, stampImageUrl: "", showSignature: false, signatureImageUrl: "", content: "" };
 import { toSlug } from "@/lib/slug";
 import { Button } from "@/components/ui/button";
-import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 
 const ITEMS_PER_PAGE = 10;
@@ -21,6 +24,7 @@ type View = "list" | "form";
 
 function itemToForm(item: TemplateItem): TemplateFormData {
   return {
+    attributeId: item.attribute_id,
     title: item.title,
     slug: item.slug,
     isActive: item.is_active,
@@ -34,12 +38,12 @@ function itemToForm(item: TemplateItem): TemplateFormData {
   };
 }
 
-function formToPayload(form: TemplateFormData, attributeId: string) {
+function formToPayload(form: TemplateFormData) {
   return {
     title: form.title,
     slug: form.slug,
     is_active: form.isActive,
-    attribute: attributeId,
+    attribute: form.attributeId,
     background_image: form.backgroundImage,
     background_image_url: form.backgroundImageUrl,
     show_stamp: form.showStamp,
@@ -52,7 +56,9 @@ function formToPayload(form: TemplateFormData, attributeId: string) {
 
 export function _Client() {
   const [items, setItems] = useState<TemplateItem[]>([]);
-  const [total, setTotal] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const [nextUrl, setNextUrl] = useState<string | null>(null);
+  const [prevUrl, setPrevUrl] = useState<string | null>(null);
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<TemplateFormData>(EMPTY_FORM);
@@ -65,45 +71,40 @@ export function _Client() {
     return () => clearTimeout(t);
   }, [search]);
 
-  const { data: attributes = [] } = useAttributeOptions();
-  const [selectedAttributeId, setSelectedAttributeId] = useState<string>("");
-
-  useEffect(() => {
-    if (attributes.length > 0 && !selectedAttributeId) {
-      setSelectedAttributeId(attributes[0].id);
-    }
-  }, [attributes]);
-
-  const selectedAttribute = attributes.find((a) => a.id === selectedAttributeId);
-
-  const attributeGroups = useMemo(
-    () => selectedAttribute?.values.map((g) => ({ label: g.label, values: g.values })) ?? [],
-    [selectedAttribute]
-  );
+  const { data: attributes = [] } = useQuery({
+    queryKey: queryKeys.attributes.all,
+    queryFn: async () => {
+      const res = await AttributeAdmin.search({ page_size: 10, used_in: "all,staff" });
+      return res.results ?? [];
+    },
+    staleTime: Infinity,
+    enabled: view === "form",
+  });
 
   const searchParams = useMemo(() => ({
-    attribute_id: selectedAttributeId || undefined,
     search: debouncedSearch || undefined,
     page: currentPage,
     page_size: ITEMS_PER_PAGE,
-  }), [selectedAttributeId, debouncedSearch, currentPage]);
+  }), [debouncedSearch, currentPage]);
 
   useEffect(() => {
-    if (!selectedAttributeId) return;
     TemplateAdmin.search(searchParams)
       .then((res) => {
         setItems(res.results ?? []);
-        setTotal(res.count ?? 0);
+        setTotalCount(res.count ?? 0);
+        setNextUrl(res.next);
+        setPrevUrl(res.previous);
       })
       .catch(() => toast.error("Failed to load templates"));
-  }, [searchParams, selectedAttributeId]);
+  }, [searchParams]);
 
   const refetch = () => {
-    if (!selectedAttributeId) return;
     TemplateAdmin.search(searchParams)
       .then((res) => {
         setItems(res.results ?? []);
-        setTotal(res.count ?? 0);
+        setTotalCount(res.count ?? 0);
+        setNextUrl(res.next);
+        setPrevUrl(res.previous);
       })
       .catch(() => toast.error("Failed to load templates"));
   };
@@ -148,13 +149,16 @@ export function _Client() {
   });
 
   const save = () => {
-    if (!selectedAttributeId) return;
     const parsed = templateSchema.safeParse(form);
     if (!parsed.success) {
       toast.error(parsed.error.issues[0]?.message || "Validation failed");
       return;
     }
-    const payload = formToPayload(form, selectedAttributeId);
+    if (!form.attributeId) {
+      toast.error("Please select an attribute");
+      return;
+    }
+    const payload = formToPayload(form);
     if (editingId) {
       updateMutation.mutate({ id: editingId, payload });
     } else {
@@ -172,7 +176,7 @@ export function _Client() {
     }
   };
 
-  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
@@ -192,7 +196,6 @@ export function _Client() {
               variant="outline"
               size="sm"
               onClick={openNew}
-              disabled={!selectedAttributeId}
               className="text-sidebar-primary border-sidebar-primary/20"
             >
               <Plus className="w-4 h-4" /> Add Template
@@ -200,16 +203,6 @@ export function _Client() {
           </div>
 
           <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <div className="w-48">
-              <SearchableSelect
-                options={attributes.map((a) => ({ value: a.id, label: a.title }))}
-                value={selectedAttributeId}
-                onChange={(v) => { setSelectedAttributeId(v); setCurrentPage(1); }}
-                placeholder="Select attribute..."
-                searchPlaceholder="Search attributes..."
-
-              />
-            </div>
             <InputGroup className="flex-1 max-w-sm h-9">
               <InputGroupAddon align="inline-start">
                 <Search className="size-4 text-muted-foreground" />
@@ -221,25 +214,21 @@ export function _Client() {
               />
             </InputGroup>
             <p className="text-sm text-sidebar-primary font-medium whitespace-nowrap">
-              Total: {total} {total === 1 ? "item" : "items"} found.
+              Total: {totalCount} {totalCount === 1 ? "item" : "items"} found.
             </p>
           </div>
 
-          {!selectedAttributeId ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-16 text-center">
-              <p className="text-sm text-gray-400">Select an attribute above to view templates.</p>
-            </div>
-          ) : (
-            <TemplateTable
-              items={items}
-              onEdit={openEdit}
-              onDelete={confirmDelete}
-              page={currentPage}
-              totalPages={totalPages}
-              totalCount={total}
-              onPageChange={setCurrentPage}
-            />
-          )}
+          <TemplateTable
+            items={items}
+            onEdit={openEdit}
+            onDelete={confirmDelete}
+            page={currentPage}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            onPageChange={setCurrentPage}
+            hasNext={nextUrl !== null}
+            hasPrevious={prevUrl !== null}
+          />
         </div>
       ) : (
         <div className="px-4">
@@ -247,7 +236,7 @@ export function _Client() {
             form={form}
             editingId={editingId}
             saving={createMutation.isPending || updateMutation.isPending}
-            attributeGroups={attributeGroups}
+            attributes={attributes}
             onChange={handleChange}
             onSave={save}
             onBack={back}

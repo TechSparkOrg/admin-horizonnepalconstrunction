@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 import { useBlogList, useBlogMutations } from "@/api/hooks/use-blog-query";
 import { BlogAdmin } from "@/api/services/blog.service";
 import { stripHtml } from "@/lib/html-content";
@@ -16,7 +17,8 @@ import type { Project } from "@/api/types/project.types";
 import type { StaffMember } from "@/api/types/staff.types";
 import type { Category } from "@/api/types/category.types";
 import { BlogTable } from "@/components/page_ui/blog-table";
-import { BlogForm } from "@/components/page_ui/blog-form";
+import dynamic from "next/dynamic";
+const BlogForm = dynamic(() => import("@/components/page_ui/blog-form").then((m) => m.BlogForm), { ssr: false });
 import { PageHeader } from "@/components/global_ui/page-header";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 
@@ -99,23 +101,26 @@ export function _Client() {
   const total = data?.totalCount ?? 0;
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [teamMembers, setTeamMembers] = useState<StaffMember[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { data: projects = [] } = useQuery({
+    queryKey: ["blogs", "projects"],
+    queryFn: async () => (await ProjectAdmin.list()).results ?? [],
+    enabled: view === "form",
+    staleTime: Infinity,
+  });
 
-  useEffect(() => {
-    Promise.all([
-      ProjectAdmin.list(),
-      StaffC.search({}),
-      CategoryAdmin.listBlog(),
-    ])
-      .then(([projectRes, staffRes, catRes]) => {
-        setProjects(projectRes.results ?? []);
-        setTeamMembers(staffRes.results ?? []);
-        setCategories(catRes.results ?? []);
-      })
-      .catch(() => toast.error("Failed to load reference data"));
-  }, []);
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ["blogs", "staff"],
+    queryFn: async () => (await StaffC.search({})).results ?? [],
+    enabled: view === "form",
+    staleTime: Infinity,
+  });
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ["blogs", "categories"],
+    queryFn: async () => (await CategoryAdmin.listBlog()).results ?? [],
+    enabled: view === "form",
+    staleTime: Infinity,
+  });
 
   const openNew = () => {
     setForm(EMPTY_FORM);

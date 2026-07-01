@@ -403,7 +403,7 @@ export function BlogMediaTab({
             : editingBannerId ? "Update Banner Image"
             : "Select Banner Image"
           }
-          defaultCategory={mediaPickerMode === "model3d" ? "3D Models" : mediaPickerMode === "video" ? "Videos" : undefined}
+          defaultCategory={mediaPickerMode === "model3d" ? "3D Models" : mediaPickerMode === "video" ? "Videos" : "Images"}
           onSelect={handleMediaSelect}
         />
       )}

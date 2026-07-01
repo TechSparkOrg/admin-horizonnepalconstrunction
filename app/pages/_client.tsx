@@ -10,7 +10,8 @@ import type { Page as ApiPage, PageCreate, PageUpdate } from "@/api/types/page.t
 import { pageSchema } from "@/api/validation/page";
 import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
 import { PagesTable } from "@/components/page_ui/pages-table";
-import { PagesForm } from "@/components/page_ui/pages-form";
+import dynamic from "next/dynamic";
+const PagesForm = dynamic(() => import("@/components/page_ui/pages-form").then((m) => m.PagesForm), { ssr: false });
 import { toSlug } from "@/lib/slug";
 import { stripHtml } from "@/lib/html-content";
 import { PageHeader } from "@/components/global_ui/page-header";
@@ -98,6 +99,8 @@ export function _Client() {
   const { data: teamRes } = useQuery({
     queryKey: [QUERY_KEY, "team"],
     queryFn: () => StaffC.search({}),
+    enabled: view === "form",
+    staleTime: Infinity,
   });
 
   const pages = pagesRes?.results ?? [];

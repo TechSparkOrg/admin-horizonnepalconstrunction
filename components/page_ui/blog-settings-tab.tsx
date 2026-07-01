@@ -142,15 +142,19 @@ export function BlogSettingsTab({
         )}
       </div>
 
-      <MediaPickerDialog
-        open={authorPickerOpen}
-        onOpenChange={(o) => { if (!o) setAuthorPickerOpen(false); }}
-        title="Select Author Image"
-        onSelect={(item) => {
-          onChange("authorImage", item.url);
-          setAuthorPickerOpen(false);
-        }}
-      />
+      {authorPickerOpen && (
+        <MediaPickerDialog
+          open={authorPickerOpen}
+          onOpenChange={(o) => { if (!o) setAuthorPickerOpen(false); }}
+          mode="image"
+          defaultCategory="Images"
+          title="Select Author Image"
+          onSelect={(item) => {
+            onChange("authorImage", item.url);
+            setAuthorPickerOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

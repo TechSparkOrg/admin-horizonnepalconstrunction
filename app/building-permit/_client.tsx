@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { BuildingPermitAdmin } from "@/api/services/building-permit.service";
 import type { BuildingPermit } from "@/api/types/building-permit.types";
 import { BuildingPermitTable } from "@/components/page_ui/building-permit-table";
-import { BuildingPermitForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/building-permit-form";
 import type { BuildingPermitFormData } from "@/components/page_ui/building-permit-form";
 import { toSlug } from "@/lib/slug";
 import { PageHeader } from "@/components/global_ui/page-header";
@@ -14,6 +13,10 @@ import {
   InputGroup, InputGroupAddon, InputGroupInput,
 } from "@/components/ui/input-group";
 import { useMutation } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
+
+const BuildingPermitForm = dynamic(() => import("@/components/page_ui/building-permit-form").then((m) => m.BuildingPermitForm), { ssr: false });
+const EMPTY_FORM: BuildingPermitFormData = { title: "", slug: "", isActive: true, workflowSteps: [], regulationItems: [], municipalityItems: [], banners: [], metaTitle: "", metaKeywords: "", metaDescription: "" };
 
 const ITEMS_PER_PAGE = 10;
 type View = "list" | "form";

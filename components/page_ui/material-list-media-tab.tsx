@@ -237,6 +237,7 @@ export function MaterialListMediaTab({
           open={mediaPickerOpen}
           onOpenChange={(o) => { setMediaPickerOpen(o); if (!o) setEditingBannerId(null); }}
           mode="image"
+          defaultCategory="Images"
           title={editingBannerId ? "Update Banner Image" : "Select Banner Image"}
           onSelect={handleBannerSelect}
         />

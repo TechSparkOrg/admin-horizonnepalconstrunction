@@ -9,8 +9,10 @@ import { AdminUserAdmin } from "@/api/services/admin-user.service";
 import { PermissionAdmin } from "@/api/services/permission.service";
 import type { AdminUser } from "@/api/types/admin-user.types";
 import { AdminUserTable } from "@/components/page_ui/admin-user-table";
-import { AdminUserForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/admin-user-form";
+import dynamic from "next/dynamic";
 import type { AdminUserFormData, RoleOption } from "@/components/page_ui/admin-user-form";
+const AdminUserForm = dynamic(() => import("@/components/page_ui/admin-user-form").then((m) => m.AdminUserForm), { ssr: false });
+const EMPTY_FORM: AdminUserFormData = { name: "", email: "", role: "csr", password: "", currentPassword: "", staffMemberId: null, isActive: true };
 import { Button } from "@/components/ui/button";
 import {
   Select,

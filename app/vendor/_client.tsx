@@ -5,7 +5,8 @@ import { Search } from "lucide-react";
 import { useVendorList, useVendorMutations } from "@/api/hooks/use-vendor-query";
 import { useVendorUiStore } from "@/api/zustand/use-vendor-store";
 import { VendorTable } from "@/components/page_ui/vendor-table";
-import { VendorForm } from "@/components/page_ui/vendor-form";
+import dynamic from "next/dynamic";
+const VendorForm = dynamic(() => import("@/components/page_ui/vendor-form").then((m) => m.VendorForm), { ssr: false });
 import { PageHeader } from "@/components/global_ui/page-header";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 

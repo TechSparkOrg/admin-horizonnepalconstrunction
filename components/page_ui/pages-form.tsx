@@ -466,16 +466,18 @@ export function PagesForm({
             if (!o) setEditingBannerId(null);
           }}
           mode="image"
+          defaultCategory="Images"
           title={editingBannerId ? "Update Banner Image" : "Select Banner Image"}
           onSelect={handleBannerSelect}
         />
       )}
-
+      
       {authorPickerOpen && (
         <MediaPickerDialog
           open={authorPickerOpen}
           onOpenChange={setAuthorPickerOpen}
           mode="image"
+          defaultCategory="Images"
           title="Select Author Image"
           onSelect={(item) => {
             onChange("authorImage", item.url);

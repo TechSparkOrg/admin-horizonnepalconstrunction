@@ -7,8 +7,10 @@ import { useStaffUiStore } from "@/api/zustand/use-staff-store";
 import type { StaffMember } from "@/api/types/staff.types";
 import { STAFF_TYPE_OPTIONS } from "@/api/types/staff.types";
 import { StaffTable } from "@/components/page_ui/staff-table";
-import { StaffForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/staff-form";
+import dynamic from "next/dynamic";
 import type { StaffFormData } from "@/components/page_ui/staff-form";
+const StaffForm = dynamic(() => import("@/components/page_ui/staff-form").then((m) => m.StaffForm), { ssr: false });
+const EMPTY_FORM: StaffFormData = { name: "", employeeId: "", type: "core", attributeId: null, designationLabel: "", designationValue: "", departmentLabel: "", departmentValue: "", joiningDate: "", currentlyWorking: true, endDate: "", photo: "", email: "", phone: "", socialLinks: [], salaryAmount: "", isActive: true, showOnPublic: false };
 import { PageHeader } from "@/components/global_ui/page-header";
 import {
   Select,

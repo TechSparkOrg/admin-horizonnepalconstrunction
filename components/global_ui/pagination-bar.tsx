@@ -12,6 +12,8 @@ interface PaginationBarProps {
   page: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  hasNext?: boolean;
+  hasPrevious?: boolean;
 }
 
 function getPageRange(page: number, totalPages: number): (number | "ellipsis")[] {
@@ -45,8 +47,8 @@ function getPageRange(page: number, totalPages: number): (number | "ellipsis")[]
   return pages;
 }
 
-export function PaginationBar({ page, totalPages, onPageChange }: PaginationBarProps) {
-  if (totalPages <= 1) return null;
+export function PaginationBar({ page, totalPages, onPageChange, hasNext, hasPrevious }: PaginationBarProps) {
+  if (totalPages <= 1 && !hasNext && !hasPrevious) return null;
 
   const pages = getPageRange(page, totalPages);
 
@@ -58,7 +60,7 @@ export function PaginationBar({ page, totalPages, onPageChange }: PaginationBarP
             <PaginationPrevious
               onClick={() => page !== 1 && onPageChange(page - 1)}
               className={
-                page === 1
+                hasPrevious === false || page === 1
                   ? "pointer-events-none opacity-40"
                   : "cursor-pointer rounded-lg border-gray-200 hover:bg-gray-50"
               }
@@ -91,7 +93,7 @@ export function PaginationBar({ page, totalPages, onPageChange }: PaginationBarP
             <PaginationNext
               onClick={() => page !== totalPages && onPageChange(page + 1)}
               className={
-                page === totalPages
+                hasNext === false || page === totalPages
                   ? "pointer-events-none opacity-40"
                   : "cursor-pointer rounded-lg border-gray-200 hover:bg-gray-50"
               }

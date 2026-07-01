@@ -283,6 +283,8 @@ export function VendorForm({
         <MediaPickerDialog
           open={mediaPickerOpen}
           onOpenChange={(o) => setMediaPickerOpen(o)}
+          mode="image"
+          defaultCategory="Images"
           onSelect={(item) => handleMediaSelect(item)}
         />
       )}

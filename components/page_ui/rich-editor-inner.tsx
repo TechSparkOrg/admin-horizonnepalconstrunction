@@ -475,16 +475,19 @@ export function RichEditorInner({ value, onChange, minHeight = 200 }: RichEditor
             <Link2Off className="size-4" />
           </Button>
           {linkOpen && <LinkDialog editor={editor} onClose={() => setLinkOpen(false)} />}
-          <MediaPickerDialog
-            open={imageDialogOpen}
-            onOpenChange={(open) => {
-              if (!open) imageMode.current = "insert";
-              setImageDialogOpen(open);
-            }}
-            mode="image"
-            title={imageMode.current === "replace" ? "Replace Image" : "Add Image"}
-            onSelect={handleImageSelect}
-          />
+          {imageDialogOpen && (
+            <MediaPickerDialog
+              open={imageDialogOpen}
+              onOpenChange={(open) => {
+                if (!open) imageMode.current = "insert";
+                setImageDialogOpen(open);
+              }}
+              mode="image"
+              defaultCategory="Images"
+              title={imageMode.current === "replace" ? "Replace Image" : "Add Image"}
+              onSelect={handleImageSelect}
+            />
+          )}
           <Button
             variant="ghost"
             size="icon"

@@ -6,8 +6,10 @@ import { toast } from "sonner";
 import { VastuAdmin } from "@/api/services/vastu.service";
 import type { VastuItem, VastuItemType, BilingualPair } from "@/api/types/vastu.types";
 import { VastuTable } from "@/components/page_ui/vastu-table";
-import { VastuForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/vastu-form";
+import dynamic from "next/dynamic";
 import type { VastuFormData } from "@/components/page_ui/vastu-form";
+const VastuForm = dynamic(() => import("@/components/page_ui/vastu-form").then((m) => m.VastuForm), { ssr: false });
+const EMPTY_FORM: VastuFormData = { type: "section", title: "", slug: "", order: 0, isActive: true, contentList: [], benefits: [], avoids: [], idealDirection: { en: "", np: "" }, facingDirection: { en: "", np: "" }, deity: "", element: "", description: { en: "", np: "" }, metaTitle: "", metaKeywords: "", metaDescription: "", authorMode: "manual", authorName: "", authorImage: "", authorTeamId: "" };
 import { toSlug } from "@/lib/slug";
 import { PageHeader } from "@/components/global_ui/page-header";
 import {

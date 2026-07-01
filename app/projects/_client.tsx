@@ -6,7 +6,8 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useProjectStore } from "@/api/zustand/use-project-store";
 import { ProjectTable } from "@/components/page_ui/project-table";
-import { ProjectForm } from "@/components/page_ui/project-form";
+import dynamic from "next/dynamic";
+const ProjectForm = dynamic(() => import("@/components/page_ui/project-form").then((m) => m.ProjectForm), { ssr: false });
 import { PageHeader } from "@/components/global_ui/page-header";
 import { stripHtml } from "@/lib/html-content";
 import {

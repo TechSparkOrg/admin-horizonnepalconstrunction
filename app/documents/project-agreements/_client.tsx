@@ -8,8 +8,10 @@ import { AgreementAdmin } from "@/api/services/agreement.service";
 import type { AgreementItem } from "@/api/types/agreement.types";
 import { agreementSchema } from "@/api/validation/agreement";
 import { AgreementTable } from "@/components/page_ui/agreement-table";
-import { AgreementForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/agreement-form";
+import dynamic from "next/dynamic";
 import type { AgreementFormData } from "@/components/page_ui/agreement-form";
+const AgreementForm = dynamic(() => import("@/components/page_ui/agreement-form").then((m) => m.AgreementForm), { ssr: false });
+const EMPTY_FORM: AgreementFormData = { name: "", clientName: "", templateId: "", variables: {}, projectId: "", status: "draft" };
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 

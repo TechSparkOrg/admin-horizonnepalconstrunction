@@ -7,7 +7,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { FaqAdmin } from "@/api/services/faq.service";
 import type { FaqGroup, FaqGroupCreate, FaqItemData } from "@/api/types/faq.types";
 import { FaqTable } from "@/components/page_ui/faq-table";
-import { FaqForm } from "@/components/page_ui/faq-form";
+import dynamic from "next/dynamic";
+const FaqForm = dynamic(() => import("@/components/page_ui/faq-form").then((m) => m.FaqForm), { ssr: false });
 import { toSlug } from "@/lib/slug";
 import { PageHeader } from "@/components/global_ui/page-header";
 import {

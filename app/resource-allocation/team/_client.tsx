@@ -3,14 +3,17 @@
 import { useState, useEffect, useMemo } from "react";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 import { StaffAdmin } from "@/api/services/staff.service";
 import { ProjectAdmin } from "@/api/services/project.service";
 import { TeamAllocationAdmin } from "@/api/services/resource-allocation.service";
 import type { StaffMember } from "@/api/types/staff.types";
 import type { Project } from "@/api/types/project.types";
 import type { TeamAllocation, SalaryEntry, ProjectBasisEntry, ProjectAssignment } from "@/api/types/resource-allocation.types";
-import { TeamAllocationForm, EMPTY_FORM } from "@/components/page_ui/team-allocation-form";
+import dynamic from "next/dynamic";
 import type { TeamAllocationFormData } from "@/components/page_ui/team-allocation-form";
+const TeamAllocationForm = dynamic(() => import("@/components/page_ui/team-allocation-form").then((m) => m.TeamAllocationForm), { ssr: false });
+const EMPTY_FORM: TeamAllocationFormData = { staff_member_id: "", user_type: "core", pay_type: "salary", is_active: true, notes: "" };
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 
@@ -21,8 +24,6 @@ const ITEMS_PER_PAGE = 10;
 export function _Client() {
   const [allocations, setAllocations] = useState<TeamAllocation[]>([]);
   const [total, setTotal] = useState(0);
-  const [teamMembers, setTeamMembers] = useState<StaffMember[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<TeamAllocationFormData>(EMPTY_FORM);
@@ -45,17 +46,19 @@ export function _Client() {
     page_size: ITEMS_PER_PAGE,
   }), [debouncedSearch, currentPage]);
 
-  useEffect(() => {
-    Promise.all([
-      StaffAdmin.search({}),
-      ProjectAdmin.list(),
-    ])
-      .then(([staffRes, projectRes]) => {
-        setTeamMembers(staffRes.results ?? []);
-        setProjects(projectRes.results ?? []);
-      })
-      .catch(() => toast.error("Failed to load data"));
-  }, []);
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ["team-allocation", "staff"],
+    queryFn: async () => (await StaffAdmin.search({})).results ?? [],
+    enabled: view === "form",
+    staleTime: Infinity,
+  });
+
+  const { data: projects = [] } = useQuery({
+    queryKey: ["team-allocation", "projects"],
+    queryFn: async () => (await ProjectAdmin.list()).results ?? [],
+    enabled: view === "form",
+    staleTime: Infinity,
+  });
 
   useEffect(() => {
     TeamAllocationAdmin.list(searchParams)

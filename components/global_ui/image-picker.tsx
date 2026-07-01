@@ -45,13 +45,16 @@ export function ImagePicker({ value, onChange, label = "Image" }: ImagePickerPro
           <ImagePlus className="size-3.5" /> Choose Image
         </Button>
       </div>
-      <MediaPickerDialog
-        open={open}
-        onOpenChange={setOpen}
-        mode="image"
-        title={`Choose ${label.toLowerCase()}`}
-        onSelect={handleSelect}
-      />
+      {open && (
+        <MediaPickerDialog
+          open={open}
+          onOpenChange={setOpen}
+          mode="image"
+          defaultCategory="Images"
+          title={`Choose ${label.toLowerCase()}`}
+          onSelect={handleSelect}
+        />
+      )}
     </div>
   );
 }

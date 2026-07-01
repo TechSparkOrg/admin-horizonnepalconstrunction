@@ -2,7 +2,6 @@
 
 import { FileText } from "lucide-react";
 import type { TemplateItem } from "@/api/types/template.types";
-import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
 import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 import { formatDate } from "@/lib/utils";
@@ -15,18 +14,12 @@ interface Props {
   totalPages: number;
   totalCount: number;
   onPageChange: (page: number) => void;
+  hasNext: boolean;
+  hasPrevious: boolean;
 }
 
-export function TemplateTable({ items, onEdit, onDelete, page, totalPages, totalCount, onPageChange }: Props) {
+export function TemplateTable({ items, onEdit, onDelete, page, totalPages, totalCount, onPageChange, hasNext, hasPrevious }: Props) {
   const columns: ColumnDef<TemplateItem>[] = [
-    {
-      header: "Type",
-      render: (item) => (
-        <Badge variant="outline" className="font-normal border-gray-200 bg-gray-50 text-gray-600">
-          {item.attribute_name}
-        </Badge>
-      ),
-    },
     {
       header: "Title",
       render: (item) => (
@@ -59,6 +52,8 @@ export function TemplateTable({ items, onEdit, onDelete, page, totalPages, total
       totalPages={totalPages}
       totalCount={totalCount}
       onPageChange={onPageChange}
+      hasNext={hasNext}
+      hasPrevious={hasPrevious}
       emptyState={{ icon: FileText, title: "No templates yet", description: "Add a template to get started." }}
       deleteDialog={{
         title: (id) => {

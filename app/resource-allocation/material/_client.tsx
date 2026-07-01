@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 import { MaterialListAdmin } from "@/api/services/material-list.service";
 import { StaffAdmin } from "@/api/services/staff.service";
 import { ProjectAdmin } from "@/api/services/project.service";
@@ -10,8 +11,10 @@ import type { MaterialItem } from "@/api/types/material-list.types";
 import type { StaffMember } from "@/api/types/staff.types";
 import type { Project } from "@/api/types/project.types";
 import type { ProjectScopeEntry } from "@/api/types/resource-allocation.types";
-import { MaterialAllocationForm, EMPTY_FORM } from "@/components/page_ui/material-allocation-form";
+import dynamic from "next/dynamic";
 import type { MaterialAllocationFormData } from "@/components/page_ui/material-allocation-form";
+const MaterialAllocationForm = dynamic(() => import("@/components/page_ui/material-allocation-form").then((m) => m.MaterialAllocationForm), { ssr: false });
+const EMPTY_FORM: MaterialAllocationFormData = { materialId: "", toolType: "rent", inchargeMemberId: "", location: "", isActive: true, dateTaken: "", dateGiven: "", expectedReturnDate: "", notes: "" };
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 
@@ -27,9 +30,6 @@ const ITEMS_PER_PAGE = 10;
 
 export function _Client() {
   const [records, setRecords] = useState<AllocationRecord[]>([]);
-  const [materials, setMaterials] = useState<MaterialItem[]>([]);
-  const [teamMembers, setTeamMembers] = useState<StaffMember[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<MaterialAllocationFormData>(EMPTY_FORM);
@@ -38,19 +38,26 @@ export function _Client() {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => {
-    Promise.all([
-      MaterialListAdmin.search({}),
-      StaffAdmin.search({}),
-      ProjectAdmin.list(),
-    ])
-      .then(([matRes, staffRes, projRes]) => {
-        setMaterials(matRes.results ?? []);
-        setTeamMembers(staffRes.results ?? []);
-        setProjects(projRes.results ?? []);
-      })
-      .catch(() => toast.error("Failed to load data"));
-  }, []);
+  const { data: materials = [] } = useQuery({
+    queryKey: ["material-allocation", "materials"],
+    queryFn: async () => (await MaterialListAdmin.search({})).results ?? [],
+    enabled: view === "form",
+    staleTime: Infinity,
+  });
+
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ["material-allocation", "staff"],
+    queryFn: async () => (await StaffAdmin.search({})).results ?? [],
+    enabled: view === "form",
+    staleTime: Infinity,
+  });
+
+  const { data: projects = [] } = useQuery({
+    queryKey: ["material-allocation", "projects"],
+    queryFn: async () => (await ProjectAdmin.list()).results ?? [],
+    enabled: view === "form",
+    staleTime: Infinity,
+  });
 
   const openNew = () => {
     setForm(EMPTY_FORM);

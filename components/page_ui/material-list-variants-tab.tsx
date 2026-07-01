@@ -160,6 +160,8 @@ export function MaterialListVariantsTab({ variants, onChange }: Props) {
             setMediaPickerOpen(o);
             if (!o) setEditingVariantId(null);
           }}
+          mode="image"
+          defaultCategory="Images"
           onSelect={(item) => handleMediaSelect(item)}
         />
       )}

@@ -11,8 +11,10 @@ import { useUnitConverterList } from "@/api/hooks/use-unit-converter-query";
 import type { UnitConversionItem } from "@/api/types/unit-converter.types";
 import { unitConverterSchema } from "@/api/validation/unit-converter";
 import { UnitConverterTable } from "@/components/page_ui/unit-converter-table";
-import { UnitConverterForm, EMPTY as EMPTY_FORM } from "@/components/page_ui/unit-converter-form";
+import dynamic from "next/dynamic";
 import type { UnitConverterFormData } from "@/components/page_ui/unit-converter-form";
+const UnitConverterForm = dynamic(() => import("@/components/page_ui/unit-converter-form").then((m) => m.UnitConverterForm), { ssr: false });
+const EMPTY_FORM: UnitConverterFormData = { title: "", slug: "", description: "", attributeId: null, fieldLabel: "", baseUnit: "", conversions: [], faqCategoryId: null, faqGroupSlug: "", isActive: true, metaTitle: "", metaDescription: "", metaKeywords: "", bannerImages: [], videoUrl: "" };
 import type { ConversionRule, BannerImage } from "@/api/types/unit-converter.types";
 import { Button } from "@/components/ui/button";
 import {

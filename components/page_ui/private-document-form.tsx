@@ -586,13 +586,16 @@ export function PrivateDocumentForm({
         </DialogContent>
       </Dialog>
 
-      <MediaPickerDialog
-        open={docPickerOpen}
-        onOpenChange={(o) => { setDocPickerOpen(o); if (!o) setMediaPickerTarget(null); }}
-        mode="image"
-        title="Select Image"
-        onSelect={handleMediaSelect}
-      />
+      {docPickerOpen && (
+        <MediaPickerDialog
+          open={docPickerOpen}
+          onOpenChange={(o) => { setDocPickerOpen(o); if (!o) setMediaPickerTarget(null); }}
+          mode="image"
+          defaultCategory="Images"
+          title="Select Image"
+          onSelect={handleMediaSelect}
+        />
+      )}
     </div>
   );
 }
