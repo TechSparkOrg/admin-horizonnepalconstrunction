@@ -231,8 +231,8 @@ export function PagesForm({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paginatedBanners.map((img) => (
-                        <TableRow key={img.id} className="border-gray-200 hover:bg-gray-50">
+                      {paginatedBanners.map((img, idx) => (
+                        <TableRow key={`${img.id}-${idx}`} className="border-gray-200 hover:bg-gray-50">
                           <TableCell>
                             <div className="size-10 rounded-md overflow-hidden bg-gray-100">
                               <img src={img.url} alt={img.name} className="w-full h-full object-cover" />

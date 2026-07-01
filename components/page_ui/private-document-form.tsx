@@ -46,7 +46,7 @@ import type {
   PrivateDocProposalItem,
 } from "@/api/types/private-document.types";
 
-const ITEMS_PER_PAGE = 5;
+const ITEMS_PER_PAGE = 10;
 
 function emptyDocItem(): PrivateDocDocumentItem {
   return { type: "government", title: "", image: "" };

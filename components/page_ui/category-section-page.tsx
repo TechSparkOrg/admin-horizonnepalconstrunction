@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { Search } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/global_ui/page-header";
 import { queryKeys } from "@/api/query-keys";
@@ -13,6 +14,11 @@ import type { CategoryFormData } from "@/api/validation/category";
 import { DeleteDialog } from "@/components/global_ui/delete-dialog";
 import { buildTree } from "@/lib/category";
 import { stripHtml } from "@/lib/html-content";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 
 const PAGE_SIZE = 10;
 
@@ -39,10 +45,24 @@ export function CategorySectionPage({ heading, breadcrumb, services, queryType, 
   const [view, setView] = useState<"list" | "form">("list");
   const [saving, setSaving] = useState(false);
   const [deleteCategory, setDeleteCategory] = useState<Category | null>(null);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const { data } = useQuery({
-    queryKey: [...queryKeys.categories.list(queryType), page],
-    queryFn: () => services.list({ page }),
+    queryKey: [...queryKeys.categories.list(queryType), page, debouncedSearch],
+    queryFn: () => {
+      const params: Record<string, unknown> = { page };
+      if (debouncedSearch) {
+        params.search = debouncedSearch;
+        params.page = undefined;
+      }
+      return services.list(params);
+    },
     placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
   });
@@ -127,6 +147,10 @@ export function CategorySectionPage({ heading, breadcrumb, services, queryType, 
     await deleteMutation.mutateAsync(id);
   };
 
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+  };
+
   const openCreate = useCallback(() => {
     setEditing(null);
     setView("form");
@@ -153,6 +177,21 @@ export function CategorySectionPage({ heading, breadcrumb, services, queryType, 
 
   return (
     <PageHeader title={heading} subtitle={`Categories / ${breadcrumb}`} actionLabel="Add Category" onAction={openCreate}>
+      <div className="flex items-center gap-3 mb-4">
+        <InputGroup className="flex-1 max-w-sm h-9">
+          <InputGroupAddon align="inline-start">
+            <Search className="size-4 text-muted-foreground" />
+          </InputGroupAddon>
+          <InputGroupInput
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="Search"
+          />
+        </InputGroup>
+        <p className="text-sm text-sidebar-primary font-medium whitespace-nowrap">
+          Total: {totalCount} {totalCount === 1 ? "item" : "items"} found.
+        </p>
+      </div>
       <CategoryTable
         categories={treeCats}
         page={page}

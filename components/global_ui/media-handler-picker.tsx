@@ -28,23 +28,29 @@ import { EmptyState } from "@/components/global_ui/empty-state";
 import { FormTabs } from "@/components/global_ui/form-tabs";
 import { isImageUrl, isVideoUrl, isModelUrl } from "@/lib/media";
 
-import "@google/model-viewer";
+import { useModelViewer } from "@/lib/model-viewer";
 
 function ModelThumbnail({ src, lazy = true }: { src: string; lazy?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
+  const { loadModelViewer } = useModelViewer();
 
   useEffect(() => {
-    const el = document.createElement("model-viewer") as any;
-    el.src = src;
-    el.loading = lazy ? "lazy" : "eager";
-    el.cameraControls = false;
-    el.autoRotate = false;
-    el.reveal = "auto";
-    el.style.width = "100%";
-    el.style.height = "100%";
-    ref.current?.appendChild(el);
-    return () => el.remove();
-  }, [src, lazy]);
+    let el: any = null;
+    loadModelViewer().then(() => {
+      el = document.createElement("model-viewer");
+      el.src = src;
+      el.loading = lazy ? "lazy" : "eager";
+      el.cameraControls = false;
+      el.autoRotate = false;
+      el.reveal = "auto";
+      el.style.width = "100%";
+      el.style.height = "100%";
+      ref.current?.appendChild(el);
+    });
+    return () => {
+      if (el) el.remove();
+    };
+  }, [src, lazy, loadModelViewer]);
 
   return <div ref={ref} className="w-full h-full" />;
 }
@@ -387,14 +393,14 @@ export function MediaPickerDialog({
                   />
                 ) : (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {allItems.map((item) => {
+                    {allItems.map((item, idx) => {
                       const thumb = item.thumbnail ?? item.url;
                       const active = multiSelect
                         ? multiSelected.some((i) => i.id === item.id)
                         : selected?.id === item.id;
                       return (
                         <button
-                          key={item.id}
+                          key={`${item.id}-${idx}`}
                           type="button"
                           onClick={() => handleSelectExisting(item)}
                           className={cn(

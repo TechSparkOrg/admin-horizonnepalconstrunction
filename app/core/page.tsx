@@ -1,7 +1,5 @@
-"use client";
+import { _Client } from "./_client";
 
-import { CoreForm } from "@/components/page_ui/core-form";
-
-export default function CorePage() {
-  return <CoreForm />;
+export default function Page() {
+  return <_Client />;
 }

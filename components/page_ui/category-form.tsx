@@ -312,8 +312,8 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
                         { label: "Actions", className: "text-right" },
                       ]} />
                       <TableBody>
-                        {paginatedBanners.map((img) => (
-                          <TableRow key={img.id} className="border-gray-200 hover:bg-gray-50">
+                        {paginatedBanners.map((img, idx) => (
+                          <TableRow key={`${img.id}-${idx}`} className="border-gray-200 hover:bg-gray-50">
                             <TableCell>
                               <button
                                 type="button"

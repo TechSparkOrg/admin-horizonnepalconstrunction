@@ -86,11 +86,11 @@ export function UnitConverterForm({
 
   const selectedAttribute = attributes.find((a) => a.id === form.attributeId);
 
-  const fieldLabels = selectedAttribute ? selectedAttribute.values.map((v) => v.label) : [];
+  const fieldLabels = selectedAttribute ? selectedAttribute.values.map((v) => v.label).filter(Boolean) : [];
 
   const selectedField = selectedAttribute?.values.find((v) => v.label === form.fieldLabel);
 
-  const allValues = selectedField?.values ?? [];
+  const allValues = selectedField?.values.filter(Boolean) ?? [];
 
   const otherValues = allValues.filter((v) => v !== form.baseUnit);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAttributeList, useAttributeMutations } from "@/api/hooks/use-attribute-query";
@@ -26,7 +26,13 @@ const ITEMS_PER_PAGE = 10;
 
 export function AttributeSectionPage() {
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
   const [deleteItem, setDeleteItem] = useState<AttributeItem | null>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -38,7 +44,7 @@ export function AttributeSectionPage() {
   const [saving, setSaving] = useState(false);
 
   const { data } = useAttributeList({
-    search: search || undefined,
+    search: debouncedSearch || undefined,
     page: currentPage,
     page_size: ITEMS_PER_PAGE,
   });

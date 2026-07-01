@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { ImagePlus, Eye, Pencil, Trash2, Box, X, Star } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +15,7 @@ import type { PickerMediaItem } from "@/components/global_ui/media-handler-picke
 import { ModelViewer } from "@/components/global_ui/ModelViewer";
 import { ImagePreviewDialog } from "@/components/global_ui/image-preview-dialog";
 import { isVideoUrl, detectPlatform } from "@/lib/media";
-import { useBlogUiStore } from "@/api/zustand/use-blog-store";
+import { MediaService } from "@/api/services/media.service";
 
 interface BlogMediaTabProps {
   model3dBlock: string;
@@ -37,8 +38,6 @@ export function BlogMediaTab({
   onReelBlocksChange,
   onChange,
 }: BlogMediaTabProps) {
-  const uploadMedia = useBlogUiStore((s) => s.uploadMedia);
-
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [mediaPickerMode, setMediaPickerMode] = useState<"banner" | "model3d" | "video">("banner");
@@ -59,8 +58,14 @@ export function BlogMediaTab({
   const handleBannerSelect = async (item: PickerMediaItem, altText: string, file?: File) => {
     let newItem: PickerMediaItem;
     if (file) {
-      const uploaded = await uploadMedia(file, altText);
-      if (!uploaded) return;
+      let uploaded;
+      try {
+        uploaded = await MediaService.uploadImage(file, { alt: altText || "" });
+        toast.success("Image uploaded");
+      } catch {
+        toast.error("Failed to upload image");
+        return;
+      }
       newItem = {
         id: uploaded.id,
         name: uploaded.alt || file.name,
@@ -171,8 +176,8 @@ export function BlogMediaTab({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedBanners.map((img) => (
-                  <TableRow key={img.id} className="border-gray-200 hover:bg-gray-50">
+                {paginatedBanners.map((img, idx) => (
+                  <TableRow key={`${img.id}-${idx}`} className="border-gray-200 hover:bg-gray-50">
                     <TableCell>
                       <button
                         type="button"

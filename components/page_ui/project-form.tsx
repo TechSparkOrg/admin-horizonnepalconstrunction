@@ -291,8 +291,8 @@ export function ProjectForm({
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {paginatedBanners.map((img) => (
-                          <TableRow key={img.id} className="border-gray-200 hover:bg-gray-50">
+                        {paginatedBanners.map((img, idx) => (
+                          <TableRow key={`${img.id}-${idx}`} className="border-gray-200 hover:bg-gray-50">
                             <TableCell>
                               <button
                                 type="button"
@@ -475,8 +475,8 @@ export function ProjectForm({
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {paginatedMsImages.map((img) => (
-                                      <TableRow key={img.id} className="border-gray-200 hover:bg-gray-50">
+                                    {paginatedMsImages.map((img, idx) => (
+                                      <TableRow key={`${img.id}-${idx}`} className="border-gray-200 hover:bg-gray-50">
                                         <TableCell>
                                           <div className="size-10 rounded-md overflow-hidden bg-gray-100 relative">
                                             <Image src={img.url} alt={img.name} fill className="object-cover" />

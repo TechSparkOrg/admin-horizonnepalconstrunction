@@ -1,19 +1,20 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { BlogAdmin } from "@/api/services/blog.service";
 import { queryKeys } from "@/api/query-keys";
 import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
 import { toast } from "sonner";
 import type { BlogPost, BlogPostCreate } from "@/api/types/blog.types";
 
-export function useBlogList() {
+export function useBlogList(params?: Record<string, unknown>) {
   return useQuery({
-    queryKey: queryKeys.blogs.list(),
+    queryKey: [...queryKeys.blogs.list(), params],
     queryFn: async () => {
-      const res = await BlogAdmin.list();
-      return res.results ?? [];
+      const res = await BlogAdmin.list(params);
+      return { items: res.results ?? [], totalCount: res.count ?? 0 };
     },
+    placeholderData: keepPreviousData,
   });
 }
 
