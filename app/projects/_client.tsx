@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { useProjectStore } from "@/api/zustand/use-project-store";
 import { ProjectTable } from "@/components/page_ui/project-table";
 import dynamic from "next/dynamic";
-const ProjectForm = dynamic(() => import("@/components/page_ui/project-form").then((m) => m.ProjectForm), { ssr: false });
+
 import { PageHeader } from "@/components/global_ui/page-header";
 import { stripHtml } from "@/lib/html-content";
 import {
@@ -26,16 +26,16 @@ import type { Category } from "@/api/types/category.types";
 import type { StaffMember } from "@/api/types/staff.types";
 import type { MaterialItem } from "@/api/types/material-list.types";
 import type { DocumentItem } from "@/api/types/document.types";
-
+const ProjectForm = dynamic(() => import("@/components/page_ui/project-form").then((m) => m.ProjectForm), { ssr: false });
 const ITEMS_PER_PAGE = 10;
 
 export function _Client() {
   const {
     projects, total, currentPage, search, view, editingSlug,
-    form, client, milestones, spendingRecords, bannerImages,
+    form, client, milestones, bannerImages, isLoadingDetail,
     fetchAll, refetch, setSearch, setPage,
     openNew, openEdit, back, setFormField, setClient,
-    setMilestones, setBannerImages, setSpendingRecords,
+    setMilestones, setBannerImages,
     confirmDelete,
   } = useProjectStore();
 
@@ -101,10 +101,11 @@ export function _Client() {
       meta_title: stripHtml(formData.meta_title || ""),
       meta_description: stripHtml(formData.meta_description || ""),
       meta_keywords: stripHtml(formData.meta_keywords || ""),
+      faq_group_slug: form.faqGroupSlug,
+      boq_slug: form.boqSlug,
       thumbnail: primary?.url ?? "",
       clients: client.name ? [client] : [],
       milestones,
-      spending_records: spendingRecords,
       banner_images: bannerImages,
     };
     if (editingSlug) {
@@ -146,6 +147,10 @@ export function _Client() {
             onPageChange={setPage}
           />
         </PageHeader>
+      ) : isLoadingDetail ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        </div>
       ) : (
         <div className="px-4">
           <ProjectForm
@@ -159,8 +164,6 @@ export function _Client() {
             onMilestonesChange={setMilestones}
             bannerImages={bannerImages}
             onBannerImagesChange={setBannerImages}
-            spendingRecords={spendingRecords}
-            onSpendingRecordsChange={setSpendingRecords}
             staffMembers={staffMembers}
             materials={materials}
             documents={documents}

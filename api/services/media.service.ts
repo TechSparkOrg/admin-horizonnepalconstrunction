@@ -78,6 +78,9 @@ export const MediaService = {
   scanUsage: () =>
     apiPrivate.post<{ deleted: number; created: number; models_scanned: number }>('/admin/media/scan-usage'),
 
+  generateThumbnail: (id: string) =>
+    apiPrivate.post<{ thumbnail_url: string | null; media: MediaItem | null }>(`/admin/media/${id}/generate-thumbnail`),
+
   getUsageTypes: () =>
     apiPrivate.get<string[]>('/admin/media/usage-types'),
 

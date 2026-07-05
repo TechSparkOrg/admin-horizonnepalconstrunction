@@ -5,7 +5,7 @@ import { StaffAdmin } from "@/api/services/staff.service";
 import { queryKeys } from "@/api/query-keys";
 import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
 import { toast } from "sonner";
-import type { StaffMember } from "@/api/types/staff.types";
+import type { StaffMemberListItem } from "@/api/types/staff.types";
 
 interface StaffListParams {
   search?: string;

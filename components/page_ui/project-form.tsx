@@ -25,7 +25,7 @@ import type { Category } from "@/api/types/category.types";
 import type { StaffMember } from "@/api/types/staff.types";
 import type { MaterialItem } from "@/api/types/material-list.types";
 import type { DocumentItem } from "@/api/types/document.types";
-import type { Client, ProjectMilestone as Milestone, SpendingRecord, ProjectMilestoneImage, ProjectMilestoneEmbed } from "@/api/types/project.types";
+import type { Client, ProjectMilestone as Milestone, ProjectMilestoneImage, ProjectMilestoneEmbed } from "@/api/types/project.types";
 import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { ImagePreviewDialog } from "@/components/global_ui/image-preview-dialog";
 
@@ -41,6 +41,8 @@ interface ProjectFormData {
   meta_description: string;
   meta_keywords: string;
   is_published: boolean;
+  faqGroupSlug: string;
+  boqSlug: string;
   author: string;
   author_image: string;
   author_role: string;
@@ -58,8 +60,6 @@ interface Props {
   onMilestonesChange: (milestones: Milestone[]) => void;
   bannerImages: { id: string; url: string; name: string; isPrimary?: boolean }[];
   onBannerImagesChange: (images: { id: string; url: string; name: string; isPrimary?: boolean }[]) => void;
-  spendingRecords: SpendingRecord[];
-  onSpendingRecordsChange: (records: SpendingRecord[]) => void;
   staffMembers: StaffMember[];
   materials: MaterialItem[];
   documents: DocumentItem[];
@@ -68,8 +68,7 @@ interface Props {
   onBack: () => void;
 }
 
-const EMPTY_MILESTONE: Milestone = { id: "", date_started: "", estimated_end: "", completed_date: null, images: [], model_3d_url: "", video_url: "", video_embed_urls: [] };
-const EMPTY_SPENDING: SpendingRecord = { id: "", spending_type: "team", staff_member_id: null, material_id: null, time_spent: "", amount: 0 };
+const EMPTY_MILESTONE: Milestone = { id: "", date_started: "", estimated_end: "", completed_date: null, description: "", images: [], model_3d_url: "", video_url: "", video_embed_urls: [] };
 
 let _pid = 0;
 function genId() { return crypto.randomUUID?.() ?? `pid-${++_pid}`; }
@@ -86,6 +85,8 @@ const EMPTY_FORM: ProjectFormData = {
   meta_description: "",
   meta_keywords: "",
   is_published: false,
+  faqGroupSlug: "",
+  boqSlug: "",
   author: "",
   author_image: "",
   author_role: "",
@@ -102,7 +103,6 @@ export function ProjectForm({
   client, onClientChange,
   milestones, onMilestonesChange,
   bannerImages, onBannerImagesChange,
-  spendingRecords, onSpendingRecordsChange,
   staffMembers, materials, documents,
   onChange, onSave, onBack,
 }: Props) {
@@ -221,7 +221,6 @@ export function ProjectForm({
             { value: "milestones", label: "Milestones" },
             { value: "seo", label: "SEO" },
             { value: "settings", label: "Settings" },
-            { value: "spending", label: "Spending" },
           ]} />
         </div>
 
@@ -306,7 +305,7 @@ export function ProjectForm({
                             </TableCell>
                             <TableCell>
                               <div className="size-10 rounded-md overflow-hidden bg-gray-100 relative">
-                                <Image src={img.url} alt={img.name} fill className="object-cover" />
+                                <Image src={img.url} alt={img.name} fill className="object-cover" sizes="40px" />
                               </div>
                             </TableCell>
                             <TableCell className="text-sm text-gray-900 truncate max-w-[220px]">
@@ -451,6 +450,17 @@ export function ProjectForm({
                             </div>
                           </div>
 
+                          <div className="space-y-1">
+                            <Label className="text-[11px] text-gray-500">Description</Label>
+                            <textarea
+                              value={ms.description}
+                              onChange={(e) => onMilestonesChange(milestones.map((m) => m.id === ms.id ? { ...m, description: e.target.value } : m))}
+                              placeholder="Describe this milestone..."
+                              rows={2}
+                              className="w-full rounded-md border border-gray-200 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+
                           <div>
                             <div className="flex items-center justify-between mb-2">
                               <p className="text-xs font-medium text-gray-500">Images</p>
@@ -479,7 +489,7 @@ export function ProjectForm({
                                       <TableRow key={`${img.id}-${idx}`} className="border-gray-200 hover:bg-gray-50">
                                         <TableCell>
                                           <div className="size-10 rounded-md overflow-hidden bg-gray-100 relative">
-                                            <Image src={img.url} alt={img.name} fill className="object-cover" />
+                                            <Image src={img.url} alt={img.name} fill className="object-cover" sizes="40px" />
                                           </div>
                                         </TableCell>
                                         <TableCell className="text-sm text-gray-900 truncate max-w-[200px]">
@@ -720,6 +730,49 @@ export function ProjectForm({
               </FormCard>
 
             <FormCard>
+                <p className="text-sm font-semibold text-gray-900">Slugs</p>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label>FAQ Title / Slug</Label>
+                    <Input
+                      value={form.faqGroupSlug}
+                      onChange={(e) => onChange("faqGroupSlug", e.target.value)}
+                      placeholder="e.g. cement-faq"
+                    />
+                    <p className="text-[11px] text-amber-600 leading-relaxed mt-1">
+                      Slug must be exactly as you type in Faq section with selected category to get specific Q&amp;A
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>BOQ Slug</Label>
+                    <Input
+                      value={form.boqSlug}
+                      onChange={(e) => onChange("boqSlug", e.target.value)}
+                      placeholder="e.g. house-construction-boq"
+                    />
+                    <p className="text-[11px] text-amber-600 leading-relaxed mt-1">
+                      Slug must be exactly as you type in Cost Estimator section to link this project
+                    </p>
+                  </div>
+                </div>
+              </FormCard>
+
+            <FormCard>
+                <p className="text-sm font-semibold text-gray-900">Author</p>
+                <div className="space-y-1.5">
+                  <Label>FAQ Title / Slug</Label>
+                  <Input
+                    value={form.faqGroupSlug}
+                    onChange={(e) => onChange("faqGroupSlug", e.target.value)}
+                    placeholder="e.g. cement-faq"
+                  />
+                  <p className="text-[11px] text-amber-600 leading-relaxed mt-1">
+                    Slug must be exactly as you type in Faq section with selected category to get specific Q&amp;A
+                  </p>
+                </div>
+              </FormCard>
+
+            <FormCard>
                 <p className="text-sm font-semibold text-gray-900">Author</p>
 
                 <SegmentedToggle<string>
@@ -737,7 +790,7 @@ export function ProjectForm({
                       <Label>Author Image</Label>
                       {authorPreview ? (
                         <div className="relative size-16 rounded-full border border-gray-200 overflow-hidden group">
-                          <Image src={authorPreview} alt="Author" fill className="object-cover" />
+                          <Image src={authorPreview} alt="Author" fill className="object-cover" sizes="64px" />
                           <button type="button" onClick={() => { setAuthorPreview(null); onChange("author_image", ""); }}
                             className="absolute inset-0 grid place-items-center bg-black/50 text-white opacity-0 group-hover:opacity-100 transition">
                             <X className="size-4" />
@@ -783,79 +836,6 @@ export function ProjectForm({
               </FormCard>
           </TabsContent>
 
-          <TabsContent value="spending" className="mt-4">
-            <FormCard>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-gray-900">Spending Records</p>
-                  <Button type="button" variant="outline" size="sm" onClick={() => onSpendingRecordsChange([...spendingRecords, { ...EMPTY_SPENDING, id: genId() }])}>
-                    <Plus className="size-3.5" /> Add Record
-                  </Button>
-                </div>
-
-                {spendingRecords.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-gray-200 py-8 flex flex-col items-center justify-center gap-2 text-gray-500">
-                    <span className="text-sm">No spending records yet</span>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {spendingRecords.map((s) => (
-                      <div key={s.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-medium text-gray-700">Spending</p>
-                          <Button type="button" variant="outline" size="sm" className="text-red-500 border-red-200 hover:bg-red-50 h-6" onClick={() => onSpendingRecordsChange(spendingRecords.filter((r) => r.id !== s.id))}>
-                            <Trash2 className="size-3" />
-                          </Button>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[11px] text-gray-500">Type</Label>
-                          <SegmentedToggle<string>
-                            value={s.spending_type}
-                            onChange={(v) => onSpendingRecordsChange(spendingRecords.map((r) => r.id === s.id ? { ...r, spending_type: v as "team" | "material", staff_member_id: null, material_id: null } : r))}
-                            options={[
-                              { value: "team", label: "Team" },
-                              { value: "material", label: "Material" },
-                            ]}
-                          />
-                        </div>
-                        {s.spending_type === "team" ? (
-                          <div className="space-y-1">
-                            <Label className="text-[11px] text-gray-500">Team Member</Label>
-                            <SearchableSelect
-                              options={staffMembers.map((m) => ({ value: m.id, label: m.name }))}
-                              value={s.staff_member_id || ""}
-                              onChange={(v) => onSpendingRecordsChange(spendingRecords.map((r) => r.id === s.id ? { ...r, staff_member_id: v } : r))}
-                              placeholder="Select team member"
-                              searchPlaceholder="Search team members..."
-                            />
-                          </div>
-                        ) : (
-                          <div className="space-y-1">
-                            <Label className="text-[11px] text-gray-500">Material</Label>
-                            <SearchableSelect
-                              options={materials.map((m) => ({ value: m.id, label: m.name }))}
-                              value={s.material_id || ""}
-                              onChange={(v) => onSpendingRecordsChange(spendingRecords.map((r) => r.id === s.id ? { ...r, material_id: v } : r))}
-                              placeholder="Select material"
-                              searchPlaceholder="Search materials..."
-                            />
-                          </div>
-                        )}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1">
-                            <Label className="text-[11px] text-gray-500">Time Spent</Label>
-                            <Input value={s.time_spent} onChange={(e) => onSpendingRecordsChange(spendingRecords.map((r) => r.id === s.id ? { ...r, time_spent: e.target.value } : r))} placeholder="e.g. 2 hours" className="h-7 text-xs" />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-[11px] text-gray-500">Amount</Label>
-                            <Input type="number" value={s.amount || ""} onChange={(e) => onSpendingRecordsChange(spendingRecords.map((r) => r.id === s.id ? { ...r, amount: Number(e.target.value) } : r))} placeholder="0" className="h-7 text-xs" />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </FormCard>
-          </TabsContent>
         </div>
       </Tabs>
 

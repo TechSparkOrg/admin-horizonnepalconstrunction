@@ -14,7 +14,7 @@ import { TemplateTable } from "@/components/page_ui/template-table";
 import dynamic from "next/dynamic";
 import type { TemplateFormData } from "@/components/page_ui/template-form";
 const TemplateForm = dynamic(() => import("@/components/page_ui/template-form").then((m) => m.TemplateForm), { ssr: false });
-const EMPTY_FORM: TemplateFormData = { attributeId: "", title: "", slug: "", isActive: true, backgroundImage: false, backgroundImageUrl: "", showStamp: false, stampImageUrl: "", showSignature: false, signatureImageUrl: "", content: "" };
+const EMPTY_FORM: TemplateFormData = { attributeId: "", title: "", slug: "", isActive: true, content: "", masterTemplateFile: "" };
 import { toSlug } from "@/lib/slug";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
@@ -24,17 +24,12 @@ type View = "list" | "form";
 
 function itemToForm(item: TemplateItem): TemplateFormData {
   return {
-    attributeId: item.attribute_id,
+    attributeId: item.attribute,
     title: item.title,
     slug: item.slug,
     isActive: item.is_active,
-    backgroundImage: item.background_image,
-    backgroundImageUrl: item.background_image_url,
-    showStamp: item.show_stamp,
-    stampImageUrl: item.stamp_image_url,
-    showSignature: item.show_signature,
-    signatureImageUrl: item.signature_image_url,
     content: item.content,
+    masterTemplateFile: item.master_template_file ?? "",
   };
 }
 
@@ -44,13 +39,8 @@ function formToPayload(form: TemplateFormData) {
     slug: form.slug,
     is_active: form.isActive,
     attribute: form.attributeId,
-    background_image: form.backgroundImage,
-    background_image_url: form.backgroundImageUrl,
-    show_stamp: form.showStamp,
-    stamp_image_url: form.stampImageUrl,
-    show_signature: form.showSignature,
-    signature_image_url: form.signatureImageUrl,
     content: form.content,
+    master_template_file: form.masterTemplateFile || null,
   };
 }
 

@@ -39,6 +39,7 @@ interface BlogFormData {
   model3dBlock: string;
   videoBlockUrl: string;
   videoEmbedUrl: string;
+  faqGroupSlug: string;
 }
 
 interface Props {
@@ -132,6 +133,7 @@ export function BlogForm({
               authorName={form.authorName}
               authorImage={form.authorImage}
               authorTeamId={form.authorTeamId}
+              faqGroupSlug={form.faqGroupSlug}
               projects={projects}
               teamMembers={teamMembers}
               onChange={onChange}

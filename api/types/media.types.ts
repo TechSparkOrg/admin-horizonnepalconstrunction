@@ -6,6 +6,7 @@ export interface UsageTag {
 export interface MediaItem {
   id: string;
   url: string;
+  thumbnail_url?: string;
   alt: string;
   title: string;
   slug: string;

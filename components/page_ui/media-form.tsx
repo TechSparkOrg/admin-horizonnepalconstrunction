@@ -158,7 +158,7 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
     }
     return (
       <div className="relative w-full h-full max-w-[90vw] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-        <Image src={preview} alt="Full preview" fill className="object-contain rounded-lg" />
+        <Image src={preview} alt="Full preview" fill className="object-contain rounded-lg" sizes="90vw" />
       </div>
     );
   };

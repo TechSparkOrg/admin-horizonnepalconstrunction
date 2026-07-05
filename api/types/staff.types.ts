@@ -18,6 +18,20 @@ export interface StaffSocialLink {
   url: string;
 }
 
+export interface StaffMemberListItem {
+  id: string;
+  type: StaffType;
+  name: string;
+  email: string;
+  phone: string;
+  designation: string;
+  department: string;
+  is_active: boolean;
+  photo: string;
+  employee_id: string;
+  joining_date: string | null;
+}
+
 export interface StaffMember {
   id: string;
   type: StaffType;
@@ -26,9 +40,6 @@ export interface StaffMember {
   phone: string;
   designation: string;
   department: string;
-  designation_label: string;
-  department_label: string;
-  attribute_id: string | null;
   employee_id: string;
   joining_date: string | null;
   end_date: string | null;
@@ -41,7 +52,3 @@ export interface StaffMember {
   created_at: string;
   updated_at: string;
 }
-
-
-
-

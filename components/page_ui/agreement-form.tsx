@@ -24,7 +24,7 @@ import { apiPrivate } from "@/api/ServiceHelper";
 import { TemplateAdmin } from "@/api/services/template.service";
 import { ProjectAdmin } from "@/api/services/project.service";
 import type { TemplateItem } from "@/api/types/template.types";
-import type { Project } from "@/api/types/project.types";
+import type { ProjectListItem } from "@/api/types/project.types";
 
 interface AgreementFormData {
   name: string;
@@ -60,7 +60,7 @@ export type { AgreementFormData };
 export function AgreementForm({ form, editingId, saving, onChange, onVariablesChange, onSave, onBack }: Props) {
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateItem | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [exportFormat, setExportFormat] = useState("docx");
   const [templateSearch, setTemplateSearch] = useState("");
   const [projectSearch, setProjectSearch] = useState("");

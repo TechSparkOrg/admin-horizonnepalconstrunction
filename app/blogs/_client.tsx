@@ -44,6 +44,7 @@ interface BlogFormData {
   model3dBlock: string;
   videoBlockUrl: string;
   videoEmbedUrl: string;
+  faqGroupSlug: string;
 }
 
 const EMPTY_FORM: BlogFormData = {
@@ -53,6 +54,7 @@ const EMPTY_FORM: BlogFormData = {
   projectId: "", authorMode: "manual", authorName: "", authorImage: "", authorTeamId: "",
   categoryId: "",
   model3dBlock: "", videoBlockUrl: "", videoEmbedUrl: "",
+  faqGroupSlug: "",
 };
 
 function apiToForm(p: BlogPost): BlogFormData {
@@ -75,6 +77,7 @@ function apiToForm(p: BlogPost): BlogFormData {
     model3dBlock: p.model_3d_block ?? "",
     videoBlockUrl: p.video_block_url ?? "",
     videoEmbedUrl: p.video_embed_url ?? "",
+    faqGroupSlug: p.faq_group_slug ?? "",
   };
 }
 
@@ -197,6 +200,7 @@ export function _Client() {
       model_3d_block: form.model3dBlock,
       video_block_url: form.videoBlockUrl,
       video_embed_url: form.videoEmbedUrl,
+      faq_group_slug: form.faqGroupSlug,
       banner_images: bannerImages,
       reel_blocks: reelBlocks,
     };

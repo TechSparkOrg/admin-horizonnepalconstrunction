@@ -1,7 +1,7 @@
 "use client";
 
 import { FolderOpen } from "lucide-react";
-import type { Project } from "@/api/types/project.types";
+import type { ProjectListItem } from "@/api/types/project.types";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
 import { formatDate } from "@/lib/utils";
@@ -20,8 +20,8 @@ const PRIORITY_STYLES: Record<string, string> = {
 };
 
 interface Props {
-  projects: Project[];
-  onEdit: (item: Project) => void;
+  projects: ProjectListItem[];
+  onEdit: (slug: string) => void;
   onDelete: (slug: string) => void;
   page: number;
   totalPages: number;
@@ -30,7 +30,7 @@ interface Props {
 }
 
 export function ProjectTable({ projects, onEdit, onDelete, page, totalPages, totalCount, onPageChange }: Props) {
-  const columns: ColumnDef<Project>[] = [
+  const columns: ColumnDef<ProjectListItem>[] = [
     {
       header: "Title",
       render: (item) => (
@@ -62,10 +62,6 @@ export function ProjectTable({ projects, onEdit, onDelete, page, totalPages, tot
       ),
     },
     {
-      header: "Location",
-      render: (item) => <span className="text-sm text-gray-500">{item.location || "—"}</span>,
-    },
-    {
       header: "Created",
       render: (item) => <span className="text-sm text-gray-500">{formatDate(item.created_at)}</span>,
     },
@@ -75,7 +71,7 @@ export function ProjectTable({ projects, onEdit, onDelete, page, totalPages, tot
     <DataTable
       data={projects}
       columns={columns}
-      onEdit={onEdit}
+      onEdit={(item) => onEdit(item.slug)}
       onDelete={onDelete}
       getIdentifier={(item) => item.slug}
       page={page}

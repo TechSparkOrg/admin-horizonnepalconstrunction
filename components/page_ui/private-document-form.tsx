@@ -39,7 +39,7 @@ import { MediaPickerDialog } from "@/components/global_ui/media-handler-picker";
 import type { PickerMediaItem } from "@/components/global_ui/media-handler-picker";
 import { AgreementAdmin } from "@/api/services/agreement.service";
 import { ProjectAdmin } from "@/api/services/project.service";
-import type { Project } from "@/api/types/project.types";
+import type { ProjectListItem } from "@/api/types/project.types";
 import type { AgreementItem } from "@/api/types/agreement.types";
 import type {
   PrivateDocDocumentItem,
@@ -98,7 +98,7 @@ export function PrivateDocumentForm({
   onSave, onBack,
 }: Props) {
   const [agreements, setAgreements] = useState<AgreementItem[]>([]);
-  const [projectOptions, setProjectOptions] = useState<Project[]>([]);
+  const [projectOptions, setProjectOptions] = useState<ProjectListItem[]>([]);
   const [docPickerOpen, setDocPickerOpen] = useState(false);
   const [mediaPickerTarget, setMediaPickerTarget] = useState<{ tab: "documents"; index: number } | { tab: "proposals"; index: number } | null>(null);
   const [docPage, setDocPage] = useState(1);
@@ -289,7 +289,7 @@ export function PrivateDocumentForm({
                             <TableCell>
                               <div className="size-10 rounded-md overflow-hidden bg-gray-100 relative cursor-pointer" onClick={() => openDocMediaPicker(realIndex)}>
                                 {doc.image ? (
-                                  <Image src={doc.image} alt="" fill className="object-cover" />
+                                  <Image src={doc.image} alt="" fill className="object-cover" sizes="40px" />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center">
                                     <Upload className="size-4 text-gray-400" />
@@ -403,7 +403,7 @@ export function PrivateDocumentForm({
                                 <div className="size-10 rounded-md overflow-hidden bg-gray-100 relative cursor-pointer" onClick={() => openPropMediaPicker(realIndex)}>
                                   {prop.document_url ? (
                                     prop.document_url.match(/\.(jpg|jpeg|png|webp|gif|svg)(\?|$)/i) ? (
-                                      <Image src={prop.document_url} alt="" fill className="object-cover" />
+                                      <Image src={prop.document_url} alt="" fill className="object-cover" sizes="40px" />
                                     ) : (
                                       <div className="w-full h-full flex items-center justify-center">
                                         <FileText className="size-5 text-gray-400" />

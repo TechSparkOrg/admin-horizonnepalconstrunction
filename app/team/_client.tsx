@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { useStaffList, useStaffMutations } from "@/api/hooks/use-staff-query";
 import { useStaffUiStore } from "@/api/zustand/use-staff-store";
-import type { StaffMember } from "@/api/types/staff.types";
+import type { StaffMember, StaffMemberListItem } from "@/api/types/staff.types";
 import { STAFF_TYPE_OPTIONS } from "@/api/types/staff.types";
+import { StaffAdmin } from "@/api/services/staff.service";
 import { StaffTable } from "@/components/page_ui/staff-table";
 import dynamic from "next/dynamic";
 import type { StaffFormData } from "@/components/page_ui/staff-form";
 const StaffForm = dynamic(() => import("@/components/page_ui/staff-form").then((m) => m.StaffForm), { ssr: false });
-const EMPTY_FORM: StaffFormData = { name: "", employeeId: "", type: "core", attributeId: null, designationLabel: "", designationValue: "", departmentLabel: "", departmentValue: "", joiningDate: "", currentlyWorking: true, endDate: "", photo: "", email: "", phone: "", socialLinks: [], salaryAmount: "", isActive: true, showOnPublic: false };
+const EMPTY_FORM: StaffFormData = { name: "", employeeId: "", type: "core", role: "", department: "", joiningDate: "", currentlyWorking: true, endDate: "", photo: "", email: "", phone: "", socialLinks: [], salaryAmount: "", isActive: true, showOnPublic: false };
 import { PageHeader } from "@/components/global_ui/page-header";
 import {
   Select,
@@ -32,11 +34,8 @@ function itemToForm(item: StaffMember): StaffFormData {
     name: item.name,
     employeeId: item.employee_id,
     type: item.type,
-    attributeId: item.attribute_id,
-    designationLabel: item.designation_label,
-    designationValue: item.designation,
-    departmentLabel: item.department_label,
-    departmentValue: item.department,
+    role: item.designation,
+    department: item.department,
     joiningDate: item.joining_date ?? "",
     currentlyWorking: item.is_currently_working,
     endDate: item.end_date ?? "",
@@ -55,11 +54,8 @@ function formToPayload(form: StaffFormData) {
     name: form.name,
     employee_id: form.employeeId,
     type: form.type,
-    attribute_id: form.attributeId,
-    designation_label: form.designationLabel || null,
-    designation: form.designationValue || null,
-    department_label: form.departmentLabel || null,
-    department: form.departmentValue || null,
+    designation: form.role || null,
+    department: form.department || null,
     joining_date: form.joiningDate || null,
     is_currently_working: form.currentlyWorking,
     end_date: form.currentlyWorking ? null : (form.endDate || null),
@@ -83,6 +79,7 @@ export function _Client() {
   const currentPage = useStaffUiStore((s) => s.currentPage);
 
   const [inputSearch, setInputSearch] = useState("");
+  const [editingLoading, setEditingLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { setInputSearch(search); }, []);
@@ -113,8 +110,16 @@ export function _Client() {
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
 
-  const openEdit = (item: StaffMember) => {
-    useStaffUiStore.getState().openEdit(item.id, itemToForm(item));
+  const openEdit = async (item: StaffMemberListItem) => {
+    setEditingLoading(true);
+    try {
+      const detail = await StaffAdmin.adminGet(item.id);
+      useStaffUiStore.getState().openEdit(item.id, itemToForm(detail));
+    } catch {
+      toast.error("Failed to load staff details");
+    } finally {
+      setEditingLoading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -123,7 +128,7 @@ export function _Client() {
     try {
       const payload = formToPayload(form);
       await saveMutation.mutateAsync({ id: editingId, payload });
-
+      back();
     } catch {
       // handled by mutation
     } finally {
@@ -139,7 +144,11 @@ export function _Client() {
 
   return (
     <>
-      {view === "form" ? (
+      {editingLoading && view !== "form" ? (
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="size-6 animate-spin text-sidebar-primary" />
+        </div>
+      ) : view === "form" ? (
         <div className="px-4">
           <StaffForm
             form={form}

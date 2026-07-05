@@ -1,9 +1,9 @@
 "use client";
 
-import { Image, ImagePlus, Stamp, Signature, Minus } from "lucide-react";
+import { Minus, Eye, FileText, ExternalLink } from "lucide-react";
 import { FormHeader } from "@/components/global_ui/form-header";
 import { FormTabs } from "@/components/global_ui/form-tabs";
-import { useState, useCallback, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { RichEditor } from "@/components/page_ui/rich-editor";
 import { Button } from "@/components/ui/button";
@@ -12,21 +12,16 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { FormCard } from "@/components/global_ui/form-card";
 import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
-import { MediaPickerDialog } from "@/components/global_ui/media-handler-picker";
-import type { PickerMediaItem } from "@/components/global_ui/media-handler-picker";
+import { TemplateAdmin } from "@/api/services/template.service";
+import { DocumentPicker } from "@/components/global_ui/document-picker";
 
 interface TemplateFormData {
   attributeId: string;
   title: string;
   slug: string;
   isActive: boolean;
-  backgroundImage: boolean;
-  backgroundImageUrl: string;
-  showStamp: boolean;
-  stampImageUrl: string;
-  showSignature: boolean;
-  signatureImageUrl: string;
   content: string;
+  masterTemplateFile: string;
 }
 
 interface AttributeOption {
@@ -50,24 +45,33 @@ const EMPTY: TemplateFormData = {
   title: "",
   slug: "",
   isActive: true,
-  backgroundImage: false,
-  backgroundImageUrl: "",
-  showStamp: false,
-  stampImageUrl: "",
-  showSignature: false,
-  signatureImageUrl: "",
   content: "",
+  masterTemplateFile: "",
 };
 
 export { EMPTY };
 export type { TemplateFormData };
 
 export function TemplateForm({ form, editingId, saving, attributes, onChange, onSave, onBack }: Props) {
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerField, setPickerField] = useState<"backgroundImageUrl" | "stampImageUrl" | "signatureImageUrl">("backgroundImageUrl");
+  const [docPickerOpen, setDocPickerOpen] = useState(false);
 
-  const openPicker = (field: typeof pickerField) => { setPickerField(field); setPickerOpen(true); };
-  const handleMediaSelect = useCallback((item: PickerMediaItem) => { onChange(pickerField, item.url); }, [pickerField, onChange]);
+  const handlePreview = async () => {
+    if (!editingId) return;
+    try {
+      const html = await TemplateAdmin.previewHtml(editingId);
+      const iframe = document.createElement("iframe");
+      iframe.style.cssText = "position:fixed;top:0;left:-100vw;width:210mm;height:297mm;border:0;visibility:hidden";
+      document.body.appendChild(iframe);
+      iframe.onload = () => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => document.body.removeChild(iframe), 2000);
+      };
+      iframe.srcdoc = html;
+    } catch {
+      // ignore
+    }
+  };
 
   const insertToken = (token: string) => {
     onChange("content", (form.content || "") + ` {${token}}`);
@@ -83,19 +87,15 @@ export function TemplateForm({ form, editingId, saving, attributes, onChange, on
   );
 
   const attributeGroups = useMemo(
-    () => selectedAttribute?.values.map((g) => ({ label: g.label, values: g.values })) ?? [],
+    () => selectedAttribute?.values.map((g) => ({
+      label: g.label || selectedAttribute.title,
+      values: g.values,
+    })) ?? [],
     [selectedAttribute]
   );
 
-  const systemTokenGroups = useMemo(() => [
-    ...(form.showStamp ? [{ label: "Stamp", tokens: ["stamp"] }] : []),
-    ...(form.showSignature ? [{ label: "Signature", tokens: ["signature"] }] : []),
-  ], [form.showStamp, form.showSignature]);
-
   return (
     <div>
-      {pickerOpen && <MediaPickerDialog open={pickerOpen} onOpenChange={setPickerOpen} mode="image" defaultCategory="Images" title="Choose Image" onSelect={handleMediaSelect} />}
-
       <FormHeader
         breadcrumb="Templates"
         title={editingId ? form.title || "Edit Template" : "New Template"}
@@ -108,7 +108,7 @@ export function TemplateForm({ form, editingId, saving, attributes, onChange, on
 
       <Tabs defaultValue="overview" className="w-full flex flex-col">
         <div>
-          <FormTabs tabs={[{"value":"overview","label":"Overview"},{"value":"content","label":"Content"},{"value":"media","label":"Media"}]} />
+          <FormTabs tabs={[{ value: "overview", label: "Overview" }, { value: "content", label: "Content" }]} />
         </div>
 
         <div>
@@ -153,159 +153,86 @@ export function TemplateForm({ form, editingId, saving, attributes, onChange, on
                   ]}
                 />
               </div>
+
+              <div className="border-t border-gray-200 pt-4">
+                <p className="text-sm font-semibold text-gray-900 mb-3">Master Theme File</p>
+                <p className="text-xs text-gray-500 mb-3">Upload a PDF or DOCX file to use as the master background/theme for this template.</p>
+
+                {form.masterTemplateFile ? (
+                  <div className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50">
+                    <FileText className="size-5 text-blue-600 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900 truncate">{form.masterTemplateFile.split("/").pop()}</p>
+                      <p className="text-xs text-gray-500 truncate">{form.masterTemplateFile}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 gap-1 text-xs" asChild>
+                        <a href={form.masterTemplateFile} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="size-3" /> View
+                        </a>
+                      </Button>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-600" onClick={() => onChange("masterTemplateFile", "")}>
+                        <Minus className="size-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button type="button" variant="outline" size="sm" onClick={() => setDocPickerOpen(true)}>
+                    <FileText className="size-3.5" /> Choose Theme
+                  </Button>
+                )}
+              </div>
+
+              <DocumentPicker
+                open={docPickerOpen}
+                onOpenChange={setDocPickerOpen}
+                onSelect={(item) => {
+                  onChange("masterTemplateFile", item.url);
+                  setDocPickerOpen(false);
+                }}
+              />
             </FormCard>
           </TabsContent>
 
           <TabsContent value="content" className="mt-4">
             <FormCard>
-                <p className="text-sm font-semibold text-gray-900">Template Body</p>
-
-                <div className="space-y-2">
-                  <Label className="text-[11px] text-gray-500">Available Tokens</Label>
-                  {attributeGroups.length === 0 && systemTokenGroups.length === 0 ? (
-                    <p className="text-xs text-gray-400">No tokens available. Select an attribute first.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {attributeGroups.map((g) => (
-                        <div key={g.label}>
-                          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">{g.label}</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {g.values.map((v) => (
-                              <button key={v} type="button" onClick={() => insertToken(v)}
-                                className="text-[11px] px-2 py-1 rounded bg-sidebar-primary/10 text-sidebar-primary font-medium hover:bg-sidebar-primary/20 transition cursor-pointer whitespace-nowrap">
-                                {`{${v}}`}
-                              </button>
-                            ))}
-                          </div>
+              <div className="space-y-2 mb-4">
+                <Label className="text-[11px] text-gray-500">Available Tokens</Label>
+                {attributeGroups.length === 0 ? (
+                  <p className="text-xs text-gray-400">No tokens available. Select an attribute first.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {attributeGroups.map((g) => (
+                      <div key={g.label}>
+                        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">{g.label}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {g.values.map((v) => (
+                            <button key={v} type="button" onClick={() => insertToken(v)}
+                              className="text-[11px] px-2 py-1 rounded bg-sidebar-primary/10 text-sidebar-primary font-medium hover:bg-sidebar-primary/20 transition cursor-pointer whitespace-nowrap">
+                              {`{${v}}`}
+                            </button>
+                          ))}
                         </div>
-                      ))}
-                      {systemTokenGroups.length > 0 && (
-                        <div className="pt-1 border-t border-gray-100">
-                          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">System Fields</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {systemTokenGroups.flatMap((g) => g.tokens).map((t) => (
-                              <button key={t} type="button" onClick={() => insertToken(t)}
-                                className="text-[11px] px-2 py-1 rounded bg-gray-200 text-gray-600 font-medium hover:bg-gray-300 transition cursor-pointer whitespace-nowrap">
-                                {`{${t}}`}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-[11px] text-gray-500">Content</Label>
+              <div className="space-y-1.5 border-t border-gray-100 pt-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-gray-900">Body</p>
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant="outline" size="sm" className="h-7 text-[11px]" onClick={handlePreview}>
+                      <Eye className="size-3" /> Preview
+                    </Button>
                     <Button type="button" variant="outline" size="sm" className="h-7 text-[11px]" onClick={insertPageBreak}>
                       <Minus className="size-3" /> Page Break
                     </Button>
                   </div>
-                  <RichEditor value={form.content} onChange={(html) => onChange("content", html)} minHeight={400} />
                 </div>
-            </FormCard>
-          </TabsContent>
-
-          <TabsContent value="media" className="mt-4 space-y-4">
-            <FormCard>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Image className="size-4 text-gray-400" />
-                    <p className="text-sm font-semibold text-gray-900">Background Image</p>
-                  </div>
-                  <SegmentedToggle<boolean>
-                    value={form.backgroundImage}
-                    onChange={(v) => onChange("backgroundImage", v)}
-                    options={[
-                      { value: true, label: "Yes" },
-                      { value: false, label: "No" },
-                    ]}
-                  />
-                </div>
-                {form.backgroundImage && (
-                  <div className="space-y-3">
-                    <Button type="button" variant="outline" size="sm" onClick={() => openPicker("backgroundImageUrl")}>
-                      <ImagePlus className="size-3.5" /> Choose Image
-                    </Button>
-                    {form.backgroundImageUrl && (
-                      <div className="flex items-center gap-3">
-                        <div className="w-24 h-16 rounded-lg border border-gray-200 overflow-hidden bg-gray-50">
-                          <img src={form.backgroundImageUrl} alt="" className="w-full h-full object-cover" />
-                        </div>
-                        <button type="button" onClick={() => onChange("backgroundImageUrl", "")}
-                          className="text-xs text-red-500 hover:text-red-600">Remove</button>
-                      </div>
-                    )}
-                  </div>
-                )}
-            </FormCard>
-
-            <FormCard>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Stamp className="size-4 text-gray-400" />
-                    <p className="text-sm font-semibold text-gray-900">Stamp</p>
-                  </div>
-                  <SegmentedToggle<boolean>
-                    value={form.showStamp}
-                    onChange={(v) => onChange("showStamp", v)}
-                    options={[
-                      { value: true, label: "Yes" },
-                      { value: false, label: "No" },
-                    ]}
-                  />
-                </div>
-                {form.showStamp && (
-                  <div className="space-y-3">
-                    <Button type="button" variant="outline" size="sm" onClick={() => openPicker("stampImageUrl")}>
-                      <ImagePlus className="size-3.5" /> Choose Image
-                    </Button>
-                    {form.stampImageUrl && (
-                      <div className="flex items-center gap-3">
-                        <div className="w-24 h-16 rounded-lg border border-gray-200 overflow-hidden bg-gray-50">
-                          <img src={form.stampImageUrl} alt="" className="w-full h-full object-cover" />
-                        </div>
-                        <button type="button" onClick={() => onChange("stampImageUrl", "")}
-                          className="text-xs text-red-500 hover:text-red-600">Remove</button>
-                      </div>
-                    )}
-                  </div>
-                )}
-            </FormCard>
-
-            <FormCard>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Signature className="size-4 text-gray-400" />
-                    <p className="text-sm font-semibold text-gray-900">Signature</p>
-                  </div>
-                  <SegmentedToggle<boolean>
-                    value={form.showSignature}
-                    onChange={(v) => onChange("showSignature", v)}
-                    options={[
-                      { value: true, label: "Yes" },
-                      { value: false, label: "No" },
-                    ]}
-                  />
-                </div>
-                {form.showSignature && (
-                  <div className="space-y-3">
-                    <Button type="button" variant="outline" size="sm" onClick={() => openPicker("signatureImageUrl")}>
-                      <ImagePlus className="size-3.5" /> Choose Image
-                    </Button>
-                    {form.signatureImageUrl && (
-                      <div className="flex items-center gap-3">
-                        <div className="w-24 h-16 rounded-lg border border-gray-200 overflow-hidden bg-gray-50">
-                          <img src={form.signatureImageUrl} alt="" className="w-full h-full object-cover" />
-                        </div>
-                        <button type="button" onClick={() => onChange("signatureImageUrl", "")}
-                          className="text-xs text-red-500 hover:text-red-600">Remove</button>
-                      </div>
-                    )}
-                  </div>
-                )}
+                <RichEditor value={form.content} onChange={(html) => onChange("content", html)} minHeight={300} />
+              </div>
             </FormCard>
           </TabsContent>
         </div>

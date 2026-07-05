@@ -27,7 +27,7 @@ export function ImagePicker({ value, onChange, label = "Image" }: ImagePickerPro
       <div className="flex items-start gap-4">
         {value ? (
           <div className="relative w-32 h-24 rounded-lg border border-gray-200 overflow-hidden group shrink-0">
-            <Image src={value} alt="" fill className="object-cover" />
+            <Image src={value} alt="" fill className="object-cover" sizes="128px" />
             <button
               type="button"
               onClick={() => onChange("")}

@@ -111,7 +111,20 @@ export function useMediaMutations() {
     },
   });
 
-  return { createMutation, deleteMutation, updateMutation, uploadMutation, duplicateMutation, scanUsageMutation };
+  const generateThumbnailMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await MediaService.generateThumbnail(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.media.all });
+    },
+    onError: (err) => {
+      const parsed = ErrorHandler.parse(err);
+      ErrorHandler.toast(parsed.message);
+    },
+  });
+
+  return { createMutation, deleteMutation, updateMutation, uploadMutation, duplicateMutation, scanUsageMutation, generateThumbnailMutation };
 }
 
 export function useUsageTypes() {

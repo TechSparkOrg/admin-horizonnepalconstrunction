@@ -2,15 +2,15 @@
 
 import { Users } from "lucide-react";
 import Image from "next/image";
-import type { StaffMember } from "@/api/types/staff.types";
+import type { StaffMemberListItem } from "@/api/types/staff.types";
 import { STAFF_TYPE_STYLES } from "@/api/types/staff.types";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
 import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 
 interface Props {
-  items: StaffMember[];
-  onEdit: (item: StaffMember) => void;
+  items: StaffMemberListItem[];
+  onEdit: (item: StaffMemberListItem) => void;
   onDelete: (id: string) => void;
   page: number;
   totalPages: number;
@@ -18,7 +18,7 @@ interface Props {
 }
 
 export function StaffTable({ items, onEdit, onDelete, page, totalPages, onPageChange }: Props) {
-  const columns: ColumnDef<StaffMember>[] = [
+  const columns: ColumnDef<StaffMemberListItem>[] = [
     {
       header: "Name",
       render: (item) => (
@@ -39,7 +39,7 @@ export function StaffTable({ items, onEdit, onDelete, page, totalPages, onPageCh
       render: (item) => <span className="text-sm text-gray-600">{item.email}</span>,
     },
     {
-      header: "Designation",
+      header: "Role",
       render: (item) => <span className="text-sm text-gray-600">{item.designation || "\u2014"}</span>,
     },
     {

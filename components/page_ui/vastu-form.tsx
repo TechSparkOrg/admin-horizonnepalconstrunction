@@ -442,7 +442,7 @@ export function VastuForm({
                       <Label>Author Image</Label>
                       {authorPreview ? (
                         <div className="relative size-16 rounded-full border border-gray-200 overflow-hidden group">
-                          <Image src={authorPreview} alt="Author" fill className="object-cover" />
+                          <Image src={authorPreview} alt="Author" fill className="object-cover" sizes="64px" />
                           <button
                             type="button"
                             onClick={() => {

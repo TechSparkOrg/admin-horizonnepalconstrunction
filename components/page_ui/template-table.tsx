@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText } from "lucide-react";
+import { FileText, FileCheck2, FileX2 } from "lucide-react";
 import type { TemplateItem } from "@/api/types/template.types";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
 import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
@@ -29,6 +29,18 @@ export function TemplateTable({ items, onEdit, onDelete, page, totalPages, total
           </div>
           <span className="text-sm text-gray-900">{item.title}</span>
         </div>
+      ),
+    },
+    {
+      header: "Master File",
+      render: (item) => item.master_template_file ? (
+        <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium">
+          <FileCheck2 className="size-3.5" /> Uploaded
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+          <FileX2 className="size-3.5" /> None
+        </span>
       ),
     },
     {

@@ -42,6 +42,7 @@ export interface BlogPost {
   video_block_url?: string;
   video_embed_url?: string;
   reel_blocks?: { url: string }[];
+  faq_group_slug?: string;
   created_at: string;
   updated_at: string;
 }

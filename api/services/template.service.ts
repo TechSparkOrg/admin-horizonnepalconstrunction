@@ -17,4 +17,15 @@ export const TemplateAdmin = {
 
   delete: (id: string) =>
     apiPrivate.delete<{ ok: boolean }>(`/admin/templates/${id}`),
+
+  previewHtml: (
+    id: string,
+    vars?: Record<string, string>,
+    data?: {
+      materials?: Array<{ name: string; variant: string; price: number; qty: number; total: number; group: string }>;
+      team?: Array<{ name: string; role: string; rate: number; hours: number; days: number; total: number; group: string }>;
+      taxes?: Array<{ label: string; rate_display: string; type: string; amount: number }>;
+    }
+  ) =>
+    apiPrivate.post<string>(`/admin/templates/${id}/preview`, { ...(vars ?? {}), ...(data ?? {}) }),
 };

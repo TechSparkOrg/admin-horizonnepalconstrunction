@@ -3,15 +3,14 @@
 import { RiImageAddLine, RiCloseLine, RiAddLine, RiDeleteBinLine } from "@remixicon/react";
 import { FormHeader } from "@/components/global_ui/form-header";
 import { FormTabs } from "@/components/global_ui/form-tabs";
-import { SearchableSelect } from "@/components/global_ui/searchable-select";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import {  Select,  SelectContent,  SelectItem,  SelectTrigger,  SelectValue} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import {  ToggleGroup,  ToggleGroupItem} from "@/components/ui/toggle-group";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { MediaPickerDialog } from "@/components/global_ui/media-handler-picker";
 import type { PickerMediaItem } from "@/components/global_ui/media-handler-picker";
@@ -26,11 +25,8 @@ interface StaffFormData {
   name: string;
   employeeId: string;
   type: StaffType;
-  attributeId: string | null;
-  designationLabel: string;
-  designationValue: string;
-  departmentLabel: string;
-  departmentValue: string;
+  role: string;
+  department: string;
   joiningDate: string;
   currentlyWorking: boolean;
   endDate: string;
@@ -56,11 +52,8 @@ const EMPTY: StaffFormData = {
   name: "",
   employeeId: "",
   type: "core",
-  attributeId: null,
-  designationLabel: "",
-  designationValue: "",
-  departmentLabel: "",
-  departmentValue: "",
+  role: "",
+  department: "",
   joiningDate: "",
   currentlyWorking: true,
   endDate: "",
@@ -87,26 +80,42 @@ export function StaffForm({
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const { data: attributes = [] } = useAttributeOptions();
 
-  const selectedAttribute = attributes.find((a) => a.id === form.attributeId);
-  const fieldLabels = selectedAttribute ? selectedAttribute.values.map((v) => v.label) : [];
+  const allLabels = useMemo(() => {
+    return attributes.map(a => a.title).filter(t => t.trim()).sort();
+  }, [attributes]);
 
-  const selectedDesigField = selectedAttribute?.values.find((v) => v.label === form.designationLabel);
-  const selectedDeptField = selectedAttribute?.values.find((v) => v.label === form.departmentLabel);
+  const [roleLabel, setRoleLabel] = useState("");
+  const [deptLabel, setDeptLabel] = useState("");
 
-  const availableDesigLabels = fieldLabels.filter((l) => l !== form.departmentLabel);
-  const availableDeptLabels = fieldLabels.filter((l) => l !== form.designationLabel);
+  const detectedRoleLabel = useMemo(() => {
+    if (!form.role) return "";
+    const found = attributes.find(a => a.values.flatMap(v => v.values).includes(form.role));
+    return found?.title ?? "";
+  }, [attributes, form.role]);
+
+  const detectedDeptLabel = useMemo(() => {
+    if (!form.department) return "";
+    const found = attributes.find(a => a.values.flatMap(v => v.values).includes(form.department));
+    return found?.title ?? "";
+  }, [attributes, form.department]);
+
+  const effectiveRoleLabel = roleLabel || detectedRoleLabel;
+  const effectiveDeptLabel = deptLabel || detectedDeptLabel;
+
+  const roleValues = useMemo(() => {
+    if (!effectiveRoleLabel) return [];
+    const attr = attributes.find(a => a.title === effectiveRoleLabel);
+    return (attr?.values.flatMap(v => v.values).filter(v => v.trim()).sort()) ?? [];
+  }, [attributes, effectiveRoleLabel]);
+
+  const deptValues = useMemo(() => {
+    if (!effectiveDeptLabel) return [];
+    const attr = attributes.find(a => a.title === effectiveDeptLabel);
+    return (attr?.values.flatMap(v => v.values).filter(v => v.trim()).sort()) ?? [];
+  }, [attributes, effectiveDeptLabel]);
 
   const normalizePlatform = (p: string) =>
     SOCIAL_PLATFORMS.find((sp) => sp.toLowerCase() === p.toLowerCase()) ?? p;
-
-  const handleAttributeChange = (v: string) => {
-    const id = v === "none" ? null : v;
-    onChange("attributeId", id);
-    onChange("designationLabel", "");
-    onChange("designationValue", "");
-    onChange("departmentLabel", "");
-    onChange("departmentValue", "");
-  };
 
   const handleMediaSelect = (item: PickerMediaItem) => {
     onChange("photo", item.url);
@@ -184,6 +193,51 @@ export function StaffForm({
                     ))}
                   </ToggleGroup>
                 </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label>Role</Label>
+                    <div className="flex items-center gap-2">
+                      <Select value={effectiveRoleLabel} onValueChange={(v) => { setRoleLabel(v); onChange("role", ""); }}>
+                        <SelectTrigger className="w-1/2 h-9 text-sm">
+                          <SelectValue placeholder="Label" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allLabels.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Select value={form.role} onValueChange={(v) => onChange("role", v)} disabled={!effectiveRoleLabel}>
+                        <SelectTrigger className="w-1/2 h-9 text-sm">
+                          <SelectValue placeholder="Value" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {roleValues.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Department</Label>
+                    <div className="flex items-center gap-2">
+                      <Select value={effectiveDeptLabel} onValueChange={(v) => { setDeptLabel(v); onChange("department", ""); }}>
+                        <SelectTrigger className="w-1/2 h-9 text-sm">
+                          <SelectValue placeholder="Label" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allLabels.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Select value={form.department} onValueChange={(v) => onChange("department", v)} disabled={!effectiveDeptLabel}>
+                        <SelectTrigger className="w-1/2 h-9 text-sm">
+                          <SelectValue placeholder="Value" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {deptValues.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -191,99 +245,6 @@ export function StaffForm({
           <TabsContent value="details" className="mt-4">
             <Card className="bg-white border border-gray-200 rounded-xl">
               <CardContent className="p-5 space-y-4">
-                <div className="space-y-1.5">
-                  <Label>Attribute Type</Label>
-                  <SearchableSelect
-                    options={[
-                      { value: "", label: "None" },
-                      ...attributes.map((a) => ({ value: a.id, label: a.title })),
-                    ]}
-                    value={form.attributeId ?? ""}
-                    onChange={(v) => handleAttributeChange(v || "none")}
-                    placeholder="Select an attribute"
-                    searchPlaceholder="Search attributes..."
-
-                  />
-                </div>
-
-                {selectedAttribute && (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label>Designation <span className="text-red-500">*</span></Label>
-                      <div className="flex items-center gap-2">
-                        <Select
-                          value={form.designationLabel}
-                          onValueChange={(v) => {
-                            onChange("designationLabel", v);
-                            onChange("designationValue", "");
-                          }}
-                        >
-                          <SelectTrigger className="w-full h-9 text-sm">
-                            <SelectValue placeholder="Pick a field" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableDesigLabels.map((l) => (
-                              <SelectItem key={l} value={l}>{l}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <span className="text-gray-300 select-none shrink-0 text-sm font-medium">|</span>
-                        <Select
-                          value={form.designationValue}
-                          onValueChange={(v) => onChange("designationValue", v)}
-                          disabled={!form.designationLabel}
-                        >
-                          <SelectTrigger className="w-full h-9 text-sm">
-                            <SelectValue placeholder="Select value" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {selectedDesigField?.values.map((val) => (
-                              <SelectItem key={val} value={val}>{val}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label>Department <span className="text-red-500">*</span></Label>
-                      <div className="flex items-center gap-2">
-                        <Select
-                          value={form.departmentLabel}
-                          onValueChange={(v) => {
-                            onChange("departmentLabel", v);
-                            onChange("departmentValue", "");
-                          }}
-                        >
-                          <SelectTrigger className="w-full h-9 text-sm">
-                            <SelectValue placeholder="Pick a field" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableDeptLabels.map((l) => (
-                              <SelectItem key={l} value={l}>{l}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <span className="text-gray-300 select-none shrink-0 text-sm font-medium">|</span>
-                        <Select
-                          value={form.departmentValue}
-                          onValueChange={(v) => onChange("departmentValue", v)}
-                          disabled={!form.departmentLabel}
-                        >
-                          <SelectTrigger className="w-full h-9 text-sm">
-                            <SelectValue placeholder="Select value" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {selectedDeptField?.values.map((val) => (
-                              <SelectItem key={val} value={val}>{val}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="space-y-1.5 max-w-xs">
                     <Label>Joining Date</Label>

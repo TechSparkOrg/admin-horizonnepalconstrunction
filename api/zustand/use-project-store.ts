@@ -3,7 +3,7 @@ import { ProjectAdmin } from "@/api/services/project.service";
 import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
 import { toSlug } from "@/lib/slug";
 import { stripHtml } from "@/lib/html-content";
-import type { Project, Client, ProjectMilestone, SpendingRecord } from "@/api/types/project.types";
+import type { Project, ProjectListItem, Client, ProjectMilestone } from "@/api/types/project.types";
 
 export interface ProjectFormData {
   title: string;
@@ -17,6 +17,8 @@ export interface ProjectFormData {
   meta_description: string;
   meta_keywords: string;
   is_published: boolean;
+  faqGroupSlug: string;
+  boqSlug: string;
   author: string;
   author_image: string;
   author_role: string;
@@ -27,13 +29,13 @@ export const EMPTY_FORM: ProjectFormData = {
   title: "", slug: "", category_id: null, description: "",
   status: "ongoing", pause_reason: "", priority: "medium",
   meta_title: "", meta_description: "", meta_keywords: "",
-  is_published: false, author: "", author_image: "", author_role: "",
+  is_published: false, faqGroupSlug: "", boqSlug: "",
+  author: "", author_image: "", author_role: "",
   authorMode: "manual",
 };
 
 export const EMPTY_CLIENT: Client = { id: "", name: "", location: "", contract_value: 0, profession: "", document_id: null };
-export const EMPTY_MILESTONE: ProjectMilestone = { id: "", date_started: "", estimated_end: "", completed_date: null, images: [], model_3d_url: "", video_url: "", video_embed_urls: [] };
-export const EMPTY_SPENDING: SpendingRecord = { id: "", spending_type: "team", staff_member_id: null, material_id: null, time_spent: "", amount: 0 };
+export const EMPTY_MILESTONE: ProjectMilestone = { id: "", date_started: "", estimated_end: "", completed_date: null, description: "", images: [], model_3d_url: "", video_url: "", video_embed_urls: [] };
 
 function genId() { return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`; }
 
@@ -46,6 +48,8 @@ function apiToForm(item: Project): ProjectFormData {
     meta_description: stripHtml(item.meta_description),
     meta_keywords: stripHtml(item.meta_keywords),
     is_published: item.is_published,
+    faqGroupSlug: item.faq_group_slug ?? "",
+    boqSlug: item.boq_slug ?? "",
     author: item.author, author_image: item.author_image, author_role: item.author_role,
     authorMode: "manual",
   };
@@ -56,7 +60,8 @@ type View = "list" | "form";
 const ITEMS_PER_PAGE = 10;
 
 interface ProjectStore {
-  projects: Project[];
+  projects: ProjectListItem[];
+  isLoadingDetail: boolean;
   total: number;
   currentPage: number;
   search: string;
@@ -65,7 +70,6 @@ interface ProjectStore {
   form: ProjectFormData;
   client: Client;
   milestones: ProjectMilestone[];
-  spendingRecords: SpendingRecord[];
   bannerImages: { id: string; url: string; name: string; isPrimary?: boolean }[];
 
   fetchAll: () => Promise<void>;
@@ -73,18 +77,18 @@ interface ProjectStore {
   setSearch: (search: string) => void;
   setPage: (page: number) => void;
   openNew: () => void;
-  openEdit: (item: Project) => void;
+  openEdit: (slug: string) => Promise<void>;
   back: () => void;
   setFormField: (key: string, value: string | boolean | null) => void;
   setClient: (client: Client) => void;
   setBannerImages: (images: { id: string; url: string; name: string; isPrimary?: boolean }[]) => void;
   setMilestones: (milestones: ProjectMilestone[]) => void;
-  setSpendingRecords: (records: SpendingRecord[]) => void;
   confirmDelete: (slug: string) => Promise<void>;
 }
 
 export const useProjectStore = create<ProjectStore>((set, get) => ({
   projects: [],
+  isLoadingDetail: false,
   total: 0,
   currentPage: 1,
   search: "",
@@ -93,7 +97,6 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   form: { ...EMPTY_FORM },
   client: { ...EMPTY_CLIENT },
   milestones: [],
-  spendingRecords: [],
   bannerImages: [],
 
   fetchAll: async () => {
@@ -123,27 +126,34 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   openNew: () => {
     set({
       form: { ...EMPTY_FORM }, client: { ...EMPTY_CLIENT },
-      milestones: [], spendingRecords: [], bannerImages: [],
+      milestones: [], bannerImages: [],
       editingSlug: null, view: "form",
     });
   },
 
-  openEdit: (item) => {
-    set({
-      form: apiToForm(item),
-      client: item.clients?.[0] || { ...EMPTY_CLIENT },
-      milestones: item.milestones,
-      spendingRecords: item.spending_records,
-      bannerImages: item.banner_images ?? [],
-      editingSlug: item.slug,
-      view: "form",
-    });
+  openEdit: async (slug) => {
+    set({ isLoadingDetail: true });
+    try {
+      const item = await ProjectAdmin.adminGet(slug);
+      set({
+        form: apiToForm(item),
+        client: item.clients?.[0] || { ...EMPTY_CLIENT },
+        milestones: item.milestones,
+        bannerImages: item.banner_images ?? [],
+        editingSlug: item.slug,
+        view: "form",
+        isLoadingDetail: false,
+      });
+    } catch (err) {
+      ErrorHandler.toast(ErrorHandler.parse(err).message);
+      set({ isLoadingDetail: false });
+    }
   },
 
   back: () => {
     set({
       form: { ...EMPTY_FORM }, client: { ...EMPTY_CLIENT },
-      milestones: [], spendingRecords: [], bannerImages: [],
+      milestones: [], bannerImages: [],
       view: "list",
     });
   },
@@ -161,7 +171,6 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   setClient: (client) => set({ client }),
   setBannerImages: (bannerImages) => set({ bannerImages }),
   setMilestones: (milestones) => set({ milestones }),
-  setSpendingRecords: (spendingRecords) => set({ spendingRecords }),
 
   confirmDelete: async (slug) => {
     try {

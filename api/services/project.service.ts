@@ -1,10 +1,10 @@
 import { apiPrivate } from '../ServiceHelper/index';
-import type { Project, ProjectCreate, ProjectUpdate, ProjectListParams } from '../types/project.types';
+import type { Project, ProjectListItem, ProjectCreate, ProjectUpdate, ProjectListParams } from '../types/project.types';
 import type { PaginatedResponse } from '../types/consultation.types';
 
 export const ProjectAdmin = {
   list: (params?: ProjectListParams) =>
-    apiPrivate.get<PaginatedResponse<Project>>('/admin/projects', { params }),
+    apiPrivate.get<PaginatedResponse<ProjectListItem>>('/admin/projects', { params }),
 
   adminGet: (slug: string) =>
     apiPrivate.get<Project>(`/admin/projects/${slug}`),

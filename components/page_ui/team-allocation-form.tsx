@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { StaffMember } from "@/api/types/staff.types";
-import type { Project } from "@/api/types/project.types";
+import type { ProjectListItem } from "@/api/types/project.types";
 import type { SalaryEntry, ProjectBasisEntry, ProjectAssignment } from "@/api/types/resource-allocation.types";
 
 interface TeamAllocationFormData {
@@ -28,7 +28,7 @@ interface Props {
   editingId: string | null;
   saving: boolean;
   teamMembers: StaffMember[];
-  projects: Project[];
+  projects: ProjectListItem[];
   salaryEntries: SalaryEntry[];
   onSalaryEntriesChange: (entries: SalaryEntry[]) => void;
   projectBasisEntries: ProjectBasisEntry[];

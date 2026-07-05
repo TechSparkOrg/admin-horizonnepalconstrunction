@@ -1,10 +1,10 @@
 import { apiPrivate } from '../ServiceHelper/index';
-import type { StaffMember } from '../types/staff.types';
+import type { StaffMember, StaffMemberListItem } from '../types/staff.types';
 import type { PaginatedResponse } from '../types/consultation.types';
 
 export const StaffAdmin = {
   search: (params: { search?: string; type?: string; page?: number; page_size?: number }) =>
-    apiPrivate.get<PaginatedResponse<StaffMember>>('/admin/staff', { params }),
+    apiPrivate.get<PaginatedResponse<StaffMemberListItem>>('/admin/staff', { params }),
 
   adminGet: (id: string) =>
     apiPrivate.get<StaffMember>(`/admin/staff/${id}`),

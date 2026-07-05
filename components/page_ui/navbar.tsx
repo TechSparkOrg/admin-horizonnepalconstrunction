@@ -63,7 +63,7 @@ const navLinks: NavLink[] = [
       { label: "FAQs", href: "/faqs" },
     ],
   },
-  { label: "Costumer Relations", href: "/dashboard/content-management", icon: Activity ,
+  { label: "Costumer Relations", href: "#", icon: Activity ,
     children: [
       { label: "Enquiries", href: "/customer-enquires" },
 
@@ -76,10 +76,9 @@ const navLinks: NavLink[] = [
   { label: "Resources Management", href: "/material-list", icon: Calculator ,
     children: [
       { label: "Material list", href: "/material-list" },
-      { label: "Cost Estimation", href: "/cost-estimation" },
-        //  { label: "Team Allocation", href: "/resource-allocation/team" },
+         { label: "Billing calculation", href: "/billing-calculations" },
+         { label: "Accounting", href: "/accounting" },
              { label: "Vendor", href: "/vendor" },
-
                { label: "Unit Converter", href: "/material-list/unit-converter" }
     ],
   },
@@ -88,9 +87,9 @@ const navLinks: NavLink[] = [
   { label: "Documents", href: "/documents/templates", icon: Calculator ,
     children: [
          { label: "Templates", href: "/documents/templates" },
-      { label: "Project Agreements", href: "/documents/project-agreements" },
-      { label: "Project Documents", href: "/documents/private-documents" },
-        // { label: "Bid Documents", href: "/documents/bid-documents"}
+      // { label: "Project Agreements", href: "/documents/project-agreements" },
+      // { label: "Project Documents", href: "/documents/private-documents" },
+      //   // { label: "Bid Documents", href: "/documents/bid-documents"}
       
   
     ],
@@ -203,10 +202,13 @@ export default function Navbar() {
       <SidebarFooter className="border-t border-sidebar-border p-3 group-data-[collapsible=icon]:p-2">
         {user && (
           <div className="mb-1 flex items-center gap-3 px-2 py-1.5 group-data-[collapsible=icon]:hidden">
-            <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground text-xs font-semibold uppercase">
-              {user.email?.[0]}
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gray-500 text-white text-xs font-semibold uppercase">
+              {user.name?.[0] ?? user.email?.[0] ?? "?"}
             </div>
-            <span className="truncate text-xs text-sidebar-foreground/70">{user.email}</span>
+            <div className="flex flex-col leading-tight min-w-0">
+              <span className="truncate text-sm font-medium text-sidebar-foreground">{user.name}</span>
+              <span className="truncate text-[11px] text-sidebar-foreground/60">{user.email}</span>
+            </div>
           </div>
         )}
         <SidebarMenu>

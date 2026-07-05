@@ -21,18 +21,19 @@ import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
 import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight,
-  Bold, CheckSquare, Code, Eraser,
+  Bold, CheckSquare, Code, Code2, Eraser,
   Heading1, Heading2, Heading3,
   Image as ImageIcon, Italic,
   Link, Link2Off,
   List, ListOrdered, Minus,
-  Pilcrow, Quote, Redo, Rows3,
+  Pilcrow, Quote, Redo,
   Strikethrough, SubscriptIcon, SuperscriptIcon,
   RefreshCw, Table as TableIcon, Trash2, Underline, Undo,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -40,7 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MediaPickerDialog, type PickerMediaItem } from "@/components/global_ui/media-handler-picker";
+import { RichMediaPicker, type PickerMediaItem } from "@/components/global_ui/rich-media-picker";
 
 import { NodeViewWrapper, ReactNodeViewRenderer, type ReactNodeViewProps } from "@tiptap/react";
 
@@ -86,6 +87,8 @@ const FORMAT_TOOLS: ToolConfig[] = [
  
   { label: "Subscript", icon: SubscriptIcon, isActive: (e) => e.isActive("subscript"), action: (e) => e.chain().focus().toggleSubscript().run() },
   { label: "Superscript", icon: SuperscriptIcon, isActive: (e) => e.isActive("superscript"), action: (e) => e.chain().focus().toggleSuperscript().run() },
+  { label: "Inline Code", icon: Code, isActive: (e) => e.isActive("code"), action: (e) => e.chain().focus().toggleCode().run() },
+  { label: "Code Block", icon: Code2, isActive: (e) => e.isActive("codeBlock"), action: (e) => e.chain().focus().toggleCodeBlock().run() },
 ];
 
 const LIST_TOOLS: ToolConfig[] = [
@@ -254,6 +257,145 @@ function ResizableImageComponent({ node, updateAttributes, selected, editor, get
   );
 }
 
+const CustomTable = Table.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      tableAlign: {
+        default: null,
+        parseHTML: (el) => {
+          const s = (el as HTMLElement).style;
+          if (s.marginLeft === 'auto' && s.marginRight === 'auto') return 'center';
+          if (s.marginLeft === 'auto') return 'right';
+          return null;
+        },
+        renderHTML: (attrs) => {
+          if (attrs.tableAlign === 'center') return { style: 'margin:0 auto;width:auto;table-layout:auto' };
+          if (attrs.tableAlign === 'right') return { style: 'margin-left:auto;margin-right:0;width:auto;table-layout:auto' };
+          return {};
+        },
+      },
+    };
+  },
+});
+
+function TableSizePicker({ onSelect }: { onSelect: (rows: number, cols: number) => void }) {
+  const [hovered, setHovered] = useState({ r: 0, c: 0 });
+  const ROWS = 8, COLS = 8;
+  return (
+    <div>
+      <p className="text-[11px] text-center text-gray-500 mb-1.5">
+        {hovered.r > 0 ? `${hovered.r} × ${hovered.c} table` : "Select size"}
+      </p>
+      <div className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${COLS}, 1fr)` }}>
+        {Array.from({ length: ROWS * COLS }).map((_, i) => {
+          const r = Math.floor(i / COLS) + 1;
+          const c = (i % COLS) + 1;
+          const active = r <= hovered.r && c <= hovered.c;
+          return (
+            <div
+              key={i}
+              className={`w-4 h-4 border rounded-[2px] cursor-pointer transition-colors ${
+                active ? "bg-brand-secondary/70 border-brand-secondary" : "bg-muted border-border hover:bg-muted/80"
+              }`}
+              onMouseEnter={() => setHovered({ r, c })}
+              onMouseLeave={() => setHovered({ r: 0, c: 0 })}
+              onClick={() => onSelect(r, c)}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TableControlsPopover({ editor }: { editor: Editor }) {
+  const inTable = editor.isActive("table");
+  const tableAlign = editor.isActive("table") ? (editor.getAttributes("table").tableAlign ?? "left") : "left";
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost" size="icon"
+          className={inTable ? "bg-brand-secondary/10 text-brand-secondary" : undefined}
+          onMouseDown={(e) => e.preventDefault()}
+          title={inTable ? "Table Controls" : "Insert Table"}
+          aria-label={inTable ? "Table Controls" : "Insert Table"}
+        >
+          <TableIcon className="size-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-2 space-y-2.5" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+        {!inTable ? (
+          <TableSizePicker onSelect={(rows, cols) =>
+            editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run()
+          } />
+        ) : (
+          <>
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Column</p>
+              <div className="flex gap-1">
+                {[
+                  { label: "←+", title: "Add col before", action: () => editor.chain().focus().addColumnBefore().run() },
+                  { label: "+→", title: "Add col after", action: () => editor.chain().focus().addColumnAfter().run() },
+                  { label: "−Col", title: "Delete column", action: () => editor.chain().focus().deleteColumn().run(), danger: true },
+                ].map(({ label, title, action, danger }) => (
+                  <Button key={label} size="sm" variant="outline"
+                    className={`h-7 px-2 text-xs${danger ? " text-red-600 hover:text-red-700 hover:bg-red-50" : ""}`}
+                    onMouseDown={(e) => e.preventDefault()} onClick={action} title={title}>
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Row</p>
+              <div className="flex gap-1">
+                {[
+                  { label: "↑+", title: "Add row before", action: () => editor.chain().focus().addRowBefore().run() },
+                  { label: "+↓", title: "Add row after", action: () => editor.chain().focus().addRowAfter().run() },
+                  { label: "−Row", title: "Delete row", action: () => editor.chain().focus().deleteRow().run(), danger: true },
+                ].map(({ label, title, action, danger }) => (
+                  <Button key={label} size="sm" variant="outline"
+                    className={`h-7 px-2 text-xs${danger ? " text-red-600 hover:text-red-700 hover:bg-red-50" : ""}`}
+                    onMouseDown={(e) => e.preventDefault()} onClick={action} title={title}>
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Table Align</p>
+              <div className="flex gap-1">
+                {([
+                  { icon: AlignLeft, align: "left", title: "Align table left" },
+                  { icon: AlignCenter, align: "center", title: "Center table" },
+                  { icon: AlignRight, align: "right", title: "Align table right" },
+                ] as const).map(({ icon: Icon, align, title }) => (
+                  <Button key={align} size="sm" variant="outline"
+                    className={`h-7 px-2${tableAlign === align ? " bg-brand-secondary/10 text-brand-secondary border-brand-secondary" : ""}`}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => editor.chain().focus().updateAttributes("table", { tableAlign: align === "left" ? null : align }).run()}
+                    title={title}>
+                    <Icon className="size-3.5" />
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <Button size="sm" variant="outline"
+              className="w-full h-7 text-red-600 hover:text-red-700 hover:bg-red-50 gap-1.5"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().deleteTable().run()}>
+              <Trash2 className="size-3.5" /> Delete Table
+            </Button>
+          </>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function LinkDialog({ editor, onClose }: { editor: Editor; onClose: () => void }) {
   const existing = editor.getAttributes("link").href || "";
   const [url, setUrl] = useState(existing);
@@ -320,7 +462,7 @@ export function RichEditorInner({ value, onChange, minHeight = 200 }: RichEditor
       Typography,
       Subscript,
       Superscript,
-      Table.configure({ resizable: true }),
+      CustomTable,
       TableRow,
       TableCell,
       TableHeader,
@@ -358,12 +500,17 @@ export function RichEditorInner({ value, onChange, minHeight = 200 }: RichEditor
       ? "right" : editor.isActive({ textAlign: "justify" })
         ? "justify" : "left";
 
-  const handleImageSelect = (item: PickerMediaItem) => {
+  const handleImageSelect = (item: PickerMediaItem, width?: number, height?: number) => {
+    const attrs: { src: string; width?: number; height?: number } = { src: item.url };
+    if (width && height) {
+      attrs.width = width;
+      attrs.height = height;
+    }
     if (imageMode.current === "replace" && replacePosRef.current !== null) {
-      editor.chain().focus().setNodeSelection(replacePosRef.current).updateAttributes("image", { src: item.url }).run();
+      editor.chain().focus().setNodeSelection(replacePosRef.current).updateAttributes("image", attrs).run();
       replacePosRef.current = null;
     } else {
-      editor.chain().focus().setImage({ src: item.url }).run();
+      editor.chain().focus().setImage(attrs).run();
     }
     setImageDialogOpen(false);
     imageMode.current = "insert";
@@ -425,6 +572,15 @@ export function RichEditorInner({ value, onChange, minHeight = 200 }: RichEditor
             label: "Clear Formatting", icon: Eraser,
             isActive: () => false, action: (e) => e.chain().focus().unsetAllMarks().clearNodes().run(),
           }} />
+          <input
+            type="color"
+            title="Text Color"
+            aria-label="Text Color"
+            value={editor.getAttributes("textStyle").color || "#000000"}
+            onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="w-7 h-7 rounded cursor-pointer border border-input p-0.5 bg-transparent"
+          />
           <Separator orientation="vertical" className="mx-0.5" />
 
           {/* Lists */}
@@ -476,14 +632,12 @@ export function RichEditorInner({ value, onChange, minHeight = 200 }: RichEditor
           </Button>
           {linkOpen && <LinkDialog editor={editor} onClose={() => setLinkOpen(false)} />}
           {imageDialogOpen && (
-            <MediaPickerDialog
+            <RichMediaPicker
               open={imageDialogOpen}
               onOpenChange={(open) => {
                 if (!open) imageMode.current = "insert";
                 setImageDialogOpen(open);
               }}
-              mode="image"
-              defaultCategory="Images"
               title={imageMode.current === "replace" ? "Replace Image" : "Add Image"}
               onSelect={handleImageSelect}
             />
@@ -511,50 +665,7 @@ export function RichEditorInner({ value, onChange, minHeight = 200 }: RichEditor
           <Separator orientation="vertical" className="mx-0.5" />
 
           {/* Table */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className={editor.isActive("table") ? "bg-brand-secondary/10 text-brand-secondary" : undefined}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
-            title="Insert Table"
-            aria-label="Insert Table"
-          >
-            <TableIcon className="size-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={!editor.isActive("table")}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().addColumnAfter().run()}
-            title="Add Column"
-            aria-label="Add Column"
-          >
-            <span className="text-xs font-semibold">+C</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={!editor.isActive("table")}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().addRowAfter().run()}
-            title="Add Row"
-            aria-label="Add Row"
-          >
-            <span className="text-xs font-semibold">+R</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={!editor.isActive("table")}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().deleteTable().run()}
-            title="Delete Table"
-            aria-label="Delete Table"
-          >
-            <Trash2 className="size-4" />
-          </Button>
+          <TableControlsPopover editor={editor} />
           <Separator orientation="vertical" className="mx-0.5" />
 
           {/* History */}

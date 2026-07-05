@@ -12,7 +12,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { StaffMember } from "@/api/types/staff.types";
 import type { MaterialItem } from "@/api/types/material-list.types";
-import type { Project } from "@/api/types/project.types";
+import type { ProjectListItem } from "@/api/types/project.types";
 import type { ProjectScopeEntry } from "@/api/types/resource-allocation.types";
 
 interface MaterialAllocationFormData {
@@ -33,7 +33,7 @@ interface Props {
   saving: boolean;
   materials: MaterialItem[];
   teamMembers: StaffMember[];
-  projects: Project[];
+  projects: ProjectListItem[];
   projectScope: ProjectScopeEntry[];
   onProjectScopeChange: (entries: ProjectScopeEntry[]) => void;
   onChange: (key: string, value: string | boolean) => void;

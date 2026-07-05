@@ -250,7 +250,7 @@ export function VendorForm({
               <div className="flex items-start gap-4">
                 {form.logo ? (
                   <div className="relative w-32 h-24 rounded-lg border border-gray-200 overflow-hidden group shrink-0">
-                    <Image src={form.logo} alt={form.name} fill className="object-cover" />
+                    <Image src={form.logo} alt={form.name} fill className="object-cover" sizes="128px" />
                     <button
                       type="button"
                       onClick={() => onChange("logo", "")}

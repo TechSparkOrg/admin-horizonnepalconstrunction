@@ -1,8 +1,3 @@
-export interface ProjectSocialLink {
-  platform: string;
-  url: string;
-}
-
 export interface Client {
   id: string;
   name: string;
@@ -29,19 +24,24 @@ export interface ProjectMilestone {
   date_started: string;
   estimated_end: string;
   completed_date: string | null;
+  description: string;
   images: ProjectMilestoneImage[];
   model_3d_url: string;
   video_url: string;
   video_embed_urls: ProjectMilestoneEmbed[];
 }
 
-export interface SpendingRecord {
+export interface ProjectListItem {
   id: string;
-  spending_type: "team" | "material";
-  staff_member_id: string | null;
-  material_id: string | null;
-  time_spent: string;
-  amount: number;
+  title: string;
+  slug: string;
+  status: "ongoing" | "completed" | "paused";
+  priority: "low" | "medium" | "high" | "top";
+  created_at: string;
+  thumbnail: string;
+  category_id: string | null;
+  is_published: boolean;
+  updated_at: string;
 }
 
 export interface Project {
@@ -52,21 +52,17 @@ export interface Project {
   status: "ongoing" | "completed" | "paused";
   pause_reason: string;
   priority: "low" | "medium" | "high" | "top";
-  date_started: string;
-  estimated_end_date: string;
-  completed_date: string | null;
   description: string;
   thumbnail: string;
   banner_images?: { id: string; url: string; name: string; isPrimary?: boolean }[];
-  location: string;
-  social_links: ProjectSocialLink[];
   clients: Client[];
   milestones: ProjectMilestone[];
-  spending_records: SpendingRecord[];
   meta_title: string;
   meta_description: string;
   meta_keywords: string;
   is_published: boolean;
+  faq_group_slug?: string;
+  boq_slug?: string;
   author: string;
   author_image: string;
   author_role: string;

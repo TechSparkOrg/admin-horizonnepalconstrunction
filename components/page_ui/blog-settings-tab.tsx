@@ -24,6 +24,7 @@ interface BlogSettingsTabProps {
   isPublished: boolean;
   publishDate: string;
   projectId: string;
+  faqGroupSlug: string;
   authorMode: "manual" | "team";
   authorName: string;
   authorImage: string;
@@ -37,6 +38,7 @@ export function BlogSettingsTab({
   isPublished,
   publishDate,
   projectId,
+  faqGroupSlug,
   authorMode,
   authorName,
   authorImage,
@@ -83,6 +85,18 @@ export function BlogSettingsTab({
           />
           <p className="text-xs text-gray-400">Link this blog to an existing project.</p>
         </div>
+
+                <div className="space-y-1.5">
+                  <Label>FAQ Title / Slug</Label>
+                  <Input
+                    value={faqGroupSlug}
+                    onChange={(e) => onChange("faqGroupSlug", e.target.value)}
+                    placeholder="e.g. cement-faq"
+                  />
+                  <p className="text-[11px] text-amber-600 leading-relaxed mt-1">
+                    Slug must be exactly as you type in Faq section with selected category to get specific Q&amp;A
+                  </p>
+                </div>
       </div>
 
       <div className="p-5 bg-white border border-gray-200 rounded-xl">
