@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
-import { queryKeys } from "@/api/query-keys";
 import { ProjectAdmin } from "@/api/services/project.service";
 import { EmiBankAdmin } from "@/api/services/emi.service";
 import { useAuthStore } from "@/app/store/auth-store";
@@ -41,8 +40,9 @@ export function TeamEntryDialog({ open, onOpenChange, form, onChange, onSave, ed
   const user = useAuthStore((s) => s.user);
 
   const { data: projects = [] } = useQuery({
-    queryKey: queryKeys.projects.all,
-    queryFn: async () => (await ProjectAdmin.list()).results ?? [],
+    queryKey: ["accounting", "team-projects"],
+    queryFn: async () => (await ProjectAdmin.list({ page_size: 5 })).results ?? [],
+    enabled: open,
     staleTime: 60000,
   });
 
@@ -52,8 +52,9 @@ export function TeamEntryDialog({ open, onOpenChange, form, onChange, onSave, ed
   );
 
   const { data: banks = [] } = useQuery({
-    queryKey: ["accounting", "banks"],
-    queryFn: async () => (await EmiBankAdmin.search({})).results ?? [],
+    queryKey: ["accounting", "team-banks"],
+    queryFn: async () => (await EmiBankAdmin.search({ page_size: 5 })).results ?? [],
+    enabled: open,
     staleTime: 60000,
   });
 
