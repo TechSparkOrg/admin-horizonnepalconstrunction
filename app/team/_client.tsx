@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useStaffList, useStaffMutations } from "@/api/hooks/use-staff-query";
@@ -78,11 +78,9 @@ export function _Client() {
   const typeFilter = useStaffUiStore((s) => s.typeFilter);
   const currentPage = useStaffUiStore((s) => s.currentPage);
 
-  const [inputSearch, setInputSearch] = useState("");
+  const [inputSearch, setInputSearch] = useState(search);
   const [editingLoading, setEditingLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => { setInputSearch(search); }, []);
 
   const handleSearchChange = (value: string) => {
     setInputSearch(value);

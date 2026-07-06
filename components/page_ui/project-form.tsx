@@ -387,19 +387,7 @@ export function ProjectForm({
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label>Document</Label>
-                  <Select value={client.document_id || ""} onValueChange={(v) => onClientChange({ ...client, document_id: v || null })}>
-                    <SelectTrigger className="max-w-sm">
-                      <SelectValue placeholder="Select document" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {documents.map((d) => (
-                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+             
               </FormCard>
           </TabsContent>
 
@@ -743,34 +731,11 @@ export function ProjectForm({
                       Slug must be exactly as you type in Faq section with selected category to get specific Q&amp;A
                     </p>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label>BOQ Slug</Label>
-                    <Input
-                      value={form.boqSlug}
-                      onChange={(e) => onChange("boqSlug", e.target.value)}
-                      placeholder="e.g. house-construction-boq"
-                    />
-                    <p className="text-[11px] text-amber-600 leading-relaxed mt-1">
-                      Slug must be exactly as you type in Cost Estimator section to link this project
-                    </p>
-                  </div>
+              
                 </div>
               </FormCard>
 
-            <FormCard>
-                <p className="text-sm font-semibold text-gray-900">Author</p>
-                <div className="space-y-1.5">
-                  <Label>FAQ Title / Slug</Label>
-                  <Input
-                    value={form.faqGroupSlug}
-                    onChange={(e) => onChange("faqGroupSlug", e.target.value)}
-                    placeholder="e.g. cement-faq"
-                  />
-                  <p className="text-[11px] text-amber-600 leading-relaxed mt-1">
-                    Slug must be exactly as you type in Faq section with selected category to get specific Q&amp;A
-                  </p>
-                </div>
-              </FormCard>
+    
 
             <FormCard>
                 <p className="text-sm font-semibold text-gray-900">Author</p>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { useVendorList, useVendorMutations } from "@/api/hooks/use-vendor-query";
 import { useVendorUiStore } from "@/api/zustand/use-vendor-store";
@@ -18,10 +18,8 @@ export function _Client() {
   const form = useVendorUiStore((s) => s.form);
   const search = useVendorUiStore((s) => s.search);
   const currentPage = useVendorUiStore((s) => s.currentPage);
-  const [inputSearch, setInputSearch] = useState("");
+  const [inputSearch, setInputSearch] = useState(search);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => { setInputSearch(search); }, []);
 
   const handleSearchChange = (value: string) => {
     setInputSearch(value);

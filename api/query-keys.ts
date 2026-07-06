@@ -20,13 +20,11 @@ export const queryKeys = {
   },
   unitConverters: resource("unit-converters"),
   materialList: resource("material-list"),
-  enquiries: resource("enquiries"),
   billing: resource("billing"),
   templates: resource("templates"),
-  agreements: resource("agreements"),
+  accounting: resource("accounting"),
+  teamAccounting: resource("team-accounting"),
   referenceData: {
-    projects: ["reference", "projects"] as const,
-    staff: ["reference", "staff"] as const,
     categories: (type: string) => ["reference", "categories", type] as const,
   },
 };

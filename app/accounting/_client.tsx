@@ -1,24 +1,23 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Wallet } from "lucide-react";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/api/query-keys";
 import { ProjectAdmin } from "@/api/services/project.service";
 import { AccountingAdmin } from "@/api/services/accounting.service";
 import { AccountingForm } from "@/components/page_ui/accounting-form";
 import { PageHeader } from "@/components/global_ui/page-header";
 import { SearchableSelect } from "@/components/global_ui/searchable-select";
-import { FormCard } from "@/components/global_ui/form-card";
-import type { AccountingEntry, AccountingEntryFormData } from "@/api/types/accounting.types";
+import type { AccountingEntryFormData } from "@/api/types/accounting.types";
 
 export function _Client() {
+  const queryClient = useQueryClient();
   const [projectId, setProjectId] = useState("");
-  const [entries, setEntries] = useState<AccountingEntry[]>([]);
-  const [saving, setSaving] = useState(false);
 
   const { data: projects = [] } = useQuery({
-    queryKey: ["accounting", "projects"],
+    queryKey: queryKeys.projects.all,
     queryFn: async () => (await ProjectAdmin.list()).results ?? [],
     staleTime: 60000,
   });
@@ -29,99 +28,97 @@ export function _Client() {
   }, [projectId, projects]);
 
   const { data: projectDetail } = useQuery({
-    queryKey: ["accounting", "project-detail", selectedProject?.slug],
-    queryFn: async () => {
-      if (!selectedProject?.slug) return null;
-      return await ProjectAdmin.adminGet(selectedProject.slug);
-    },
+    queryKey: queryKeys.projects.detail(selectedProject?.slug ?? ""),
+    queryFn: () => ProjectAdmin.adminGet(selectedProject?.slug ?? ""),
     enabled: !!selectedProject?.slug,
     staleTime: 30000,
   });
 
-  useEffect(() => {
-    if (!projectId) { setEntries([]); return; }
-    AccountingAdmin.list({ project_id: projectId })
-      .then((res) => setEntries(res.results ?? []))
-      .catch(() => setEntries([]));
-  }, [projectId]);
+  const { data: entries = [] } = useQuery({
+    queryKey: queryKeys.accounting.list({ project_id: projectId }),
+    queryFn: async () => {
+      if (!projectId) return [];
+      const res = await AccountingAdmin.list({ project_id: projectId });
+      return res.results ?? [];
+    },
+    enabled: !!projectId,
+  });
 
-  const refreshEntries = () => {
-    if (!projectId) return;
-    AccountingAdmin.list({ project_id: projectId })
-      .then((res) => setEntries(res.results ?? []))
-      .catch(() => toast.error("Failed to load entries"));
-  };
+  const invalidateEntries = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.accounting.all, refetchType: "active" });
 
-  const handleEntrySave = async (form: AccountingEntryFormData, editingId: string | null) => {
+  const createMutation = useMutation({
+    mutationFn: (payload: Record<string, unknown>) => AccountingAdmin.create(payload),
+    onSuccess: () => { toast.success("Entry created"); invalidateEntries(); },
+    onError: () => toast.error("Failed to create entry"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Record<string, unknown> }) => AccountingAdmin.update(id, payload),
+    onSuccess: () => { toast.success("Entry updated"); invalidateEntries(); },
+    onError: () => toast.error("Failed to update entry"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => AccountingAdmin.delete(id),
+    onSuccess: () => { toast.success("Entry deleted"); invalidateEntries(); },
+    onError: () => toast.error("Failed to delete entry"),
+  });
+
+  const handleEntrySave = (form: AccountingEntryFormData, editingId: string | null) => {
     if (!projectId) { toast.error("Select a project first"); return; }
     if (!form.date) { toast.error("Date is required"); return; }
     if (form.type === "income" && !form.amount) { toast.error("Amount is required"); return; }
-    if (form.type === "expense" && form.expense_category === "material" && form.material_entries.length === 0) { toast.error("Add at least one material item"); return; }
-    if (form.type === "expense" && form.expense_category === "team" && form.team_entries.length === 0) { toast.error("Add at least one team member"); return; }
-    if (form.type === "expense" && form.expense_category === "vendor" && !form.amount) { toast.error("Amount is required"); return; }
-    setSaving(true);
-    try {
-      const isComputed = form.expense_category === "material" || form.expense_category === "team";
-      const payload: Record<string, unknown> = {
-        ...form,
-        amount: isComputed ? 0 : Number(form.amount),
-        cheque_voucher_date: form.cheque_voucher_date || null,
-        project_id: projectId,
-      };
-      if (editingId) {
-        await AccountingAdmin.update(editingId, payload);
-        toast.success("Entry updated");
-      } else {
-        await AccountingAdmin.create(payload);
-        toast.success("Entry created");
-      }
-      refreshEntries();
-    } catch {
-      toast.error("Failed to save entry");
-    } finally {
-      setSaving(false);
+    if (form.type === "expense" && form.material_entries.length === 0) { toast.error("Add at least one material item"); return; }
+
+    const payload: Record<string, unknown> = {
+      ...form,
+      amount: form.type === "expense" ? 0 : Number(form.amount),
+      cheque_voucher_date: form.cheque_voucher_date || null,
+      project_id: projectId,
+    };
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, payload });
+    } else {
+      createMutation.mutate(payload);
     }
   };
 
-  const handleEntryDelete = async (id: string) => {
-    try {
-      await AccountingAdmin.delete(id);
-      setEntries((prev) => prev.filter((e) => e.id !== id));
-      toast.success("Entry deleted");
-    } catch {
-      toast.error("Failed to delete entry");
-    }
+  const handleEntryDelete = (id: string) => {
+    deleteMutation.mutate(id);
   };
+
+  const projectOptions = useMemo(
+    () => projects.map((p) => ({ value: p.id, label: p.title })),
+    [projects]
+  );
 
   return (
     <PageHeader
       title="Accounting"
       subtitle={selectedProject ? `Financial records for ${selectedProject.title}` : "Select a project to manage financial entries"}
     >
-      <div className="mb-6 max-w-md">
+      <div className="mb-5 max-w-sm">
         <SearchableSelect
-          options={projects.map((p) => ({ value: p.id, label: p.title }))}
+          options={projectOptions}
           value={projectId}
           onChange={setProjectId}
-          placeholder="Select a project..."
+          placeholder="Select project..."
           searchPlaceholder="Search projects..."
         />
       </div>
 
       {!projectId && (
-        <FormCard>
-          <div className="py-12 flex flex-col items-center justify-center gap-3 text-gray-400">
-            <Wallet className="size-10" />
-            <p className="text-sm">Select a project above to view its financial records</p>
-          </div>
-        </FormCard>
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border py-16 text-muted-foreground">
+          <Wallet className="size-7 opacity-40" />
+          <p className="text-sm">Select a project to view its financial records</p>
+        </div>
       )}
 
       {projectId && (
         <AccountingForm
           entries={entries}
           project={projectDetail ?? null}
-          saving={saving}
           onEntrySave={handleEntrySave}
           onEntryDelete={handleEntryDelete}
         />

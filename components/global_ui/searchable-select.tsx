@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -56,19 +56,27 @@ export function SearchableSelect({
           type="button"
           disabled={disabled}
           className={cn(
-            "flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors",
-            "hover:bg-accent hover:text-accent-foreground",
+            "flex h-9 w-full items-center justify-between gap-2 rounded-lg border bg-background px-3 text-sm transition-all",
+            "border-border hover:border-border/70",
+            open && "border-sidebar-primary/50 ring-2 ring-sidebar-primary/10",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary/20",
             "disabled:cursor-not-allowed disabled:opacity-50",
-            !value && "text-muted-foreground",
+            value ? "text-foreground" : "text-muted-foreground",
             triggerClassName
           )}
         >
-          <span className="truncate">{selectedLabel || placeholder}</span>
-          <ChevronDown className="size-4 shrink-0 opacity-50" />
+          <span className="truncate">{selectedLabel ?? placeholder}</span>
+          <ChevronDown
+            className={cn(
+              "size-4 shrink-0 text-muted-foreground transition-transform duration-200",
+              open && "rotate-180"
+            )}
+          />
         </button>
       </PopoverTrigger>
+
       <PopoverContent
-        className="p-0"
+        className="p-0 shadow-lg rounded-xl overflow-hidden"
         style={{ width: "var(--radix-popover-trigger-width)" }}
         align="start"
       >
@@ -76,10 +84,10 @@ export function SearchableSelect({
           <CommandInput
             placeholder={searchPlaceholder}
             onValueChange={onSearchChange}
-            className="h-9"
+            className="text-sm"
           />
-          <CommandList className="max-h-60">
-            <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
+          <CommandList className="max-h-56">
+            <CommandEmpty className="py-8 text-center text-sm">
               {emptyMessage}
             </CommandEmpty>
             <CommandGroup>
@@ -87,22 +95,16 @@ export function SearchableSelect({
                 <CommandItem
                   key={option.value}
                   value={option.label}
+                  data-checked={option.value === value}
                   onSelect={() => {
                     onChange(option.value);
                     setOpen(false);
                   }}
                   className={cn(
-                    "rounded-md text-sm",
-                    option.value === value &&
-                      "bg-sidebar-primary/10 text-sidebar-primary font-medium"
+                    "cursor-pointer rounded-lg text-sm",
+                    option.value === value && "bg-sidebar-primary/10 font-medium"
                   )}
                 >
-                  <Check
-                    className={cn(
-                      "mr-2 size-4 shrink-0",
-                      option.value === value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
                   <span className="truncate">{option.label}</span>
                 </CommandItem>
               ))}

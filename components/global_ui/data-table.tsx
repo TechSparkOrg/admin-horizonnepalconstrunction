@@ -25,6 +25,7 @@ interface DataTableProps<T> {
   columns: ColumnDef<T>[];
   onEdit?: (item: T) => void;
   onDelete?: (identifier: string) => void;
+  onPrint?: (item: T) => void;
   getIdentifier: (item: T) => string;
   page: number;
   totalPages: number;
@@ -43,6 +44,8 @@ interface DataTableProps<T> {
   hideDeleteDialog?: boolean;
   hasNext?: boolean;
   hasPrevious?: boolean;
+  iconOnlyActions?: boolean;
+  bare?: boolean;
 }
 
 export function DataTable<T>({
@@ -50,6 +53,7 @@ export function DataTable<T>({
   columns,
   onEdit,
   onDelete,
+  onPrint,
   getIdentifier,
   page,
   totalPages,
@@ -61,6 +65,8 @@ export function DataTable<T>({
   hideDeleteDialog = false,
   hasNext,
   hasPrevious,
+  iconOnlyActions,
+  bare = false,
 }: DataTableProps<T>) {
   const [deleteIdentifier, setDeleteIdentifier] = useState<string | null>(null);
 
@@ -77,6 +83,8 @@ export function DataTable<T>({
 
   if (data.length === 0) return <EmptyState {...emptyState} />;
 
+  const showActions = !!(onEdit || onDelete || onPrint);
+
   const pagination = totalCount !== undefined ? (
     <div className="flex items-center justify-between px-4 py-1 border-t border-gray-200">
       <span className="text-sm text-gray-500">{totalCount} {totalCount === 1 ? "item" : "items"} total</span>
@@ -84,53 +92,63 @@ export function DataTable<T>({
     </div>
   ) : null;
 
-  return (
+  const paginationBar = (totalPages > 1 || hasNext || hasPrevious) && (
+    <div className="mt-6"><PaginationBar page={page} totalPages={totalPages} onPageChange={onPageChange} hasNext={hasNext} hasPrevious={hasPrevious} /></div>
+  );
+
+  const tableContent = (
     <>
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-gray-200 hover:bg-transparent">
+      <Table>
+        <TableHeader>
+          <TableRow className="border-gray-200 hover:bg-transparent">
+            {columns.map((col, i) => (
+              <TableHead key={i} className={`text-gray-900 font-semibold ${col.className ?? ""}`}>
+                {col.header}
+              </TableHead>
+            ))}
+            {showActions && (
+              <TableHead className="text-gray-900 font-semibold text-right">Actions</TableHead>
+            )}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.map((item) => (
+            <TableRow
+              key={getIdentifier(item)}
+              className={`border-gray-200 ${onEdit ? "cursor-pointer hover:bg-gray-50" : "hover:bg-transparent"}`}
+              onClick={() => onEdit?.(item)}
+            >
               {columns.map((col, i) => (
-                <TableHead key={i} className={`text-gray-900 font-semibold ${col.className ?? ""}`}>
-                  {col.header}
-                </TableHead>
+                <TableCell key={i} className={col.className ?? ""} style={i === 0 && getDepth ? { paddingLeft: `${getDepth(item) * 24 + 16}px` } : undefined}>
+                  {col.render(item)}
+                </TableCell>
               ))}
-              {(onEdit || onDelete) && (
-                <TableHead className="text-gray-900 font-semibold text-right">Actions</TableHead>
+              {showActions && (
+                <TableCell>
+                  <ActionButtons
+                    onEdit={onEdit ? () => onEdit(item) : undefined}
+                    onDelete={onDelete ? (hideDeleteDialog ? () => onDelete(getIdentifier(item)) : () => setDeleteIdentifier(getIdentifier(item))) : undefined}
+                    onPrint={onPrint ? () => onPrint(item) : undefined}
+                    iconOnly={iconOnlyActions}
+                  />
+                </TableCell>
               )}
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.map((item) => (
-              <TableRow
-                key={getIdentifier(item)}
-                className={`border-gray-200 ${onEdit ? "cursor-pointer hover:bg-gray-50" : "hover:bg-transparent"}`}
-                onClick={() => onEdit?.(item)}
-              >
-                {columns.map((col, i) => (
-                  <TableCell key={i} className={col.className ?? ""} style={i === 0 && getDepth ? { paddingLeft: `${getDepth(item) * 24 + 16}px` } : undefined}>
-                    {col.render(item)}
-                  </TableCell>
-                ))}
-                {(onEdit || onDelete) && (
-                  <TableCell>
-                    <ActionButtons
-                      onEdit={onEdit ? () => onEdit(item) : undefined}
-                      onDelete={onDelete ? (hideDeleteDialog ? () => onDelete(getIdentifier(item)) : () => setDeleteIdentifier(getIdentifier(item))) : undefined}
-                    />
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        {pagination}
-      </div>
+          ))}
+        </TableBody>
+      </Table>
+      {pagination}
+    </>
+  );
 
-      {!pagination && (totalPages > 1 || hasNext || hasPrevious) && (
-        <div className="mt-6"><PaginationBar page={page} totalPages={totalPages} onPageChange={onPageChange} hasNext={hasNext} hasPrevious={hasPrevious} /></div>
+  return (
+    <>
+      {bare ? tableContent : (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          {tableContent}
+        </div>
       )}
-
+      {!pagination && paginationBar}
       {!hideDeleteDialog && (
         <DeleteDialog
           open={!!deleteIdentifier}

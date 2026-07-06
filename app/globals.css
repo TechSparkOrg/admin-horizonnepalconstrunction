@@ -72,10 +72,12 @@
 }
 
 :root {
+  color-scheme: light;
+
   /* Brand palette — Horizon Nepal */
-  --brand-primary: oklch(0.564 0.215 25.6);   /* warm red/orange accent */
+  --brand-primary: oklch(0.564 0.215 25.6);    /* warm red/orange accent */
   --brand-secondary: oklch(0.487 0.103 257.4); /* muted blue */
-  --brand-dark: oklch(0.293 0.065 257.8);     /* deep navy text */
+  --brand-dark: oklch(0.293 0.065 257.8);      /* deep navy text */
   --off-white: oklch(0.99 0.003 260);
   --light-gray: oklch(0.925 0.008 70);
   --mid-gray: oklch(0.44 0.012 75);
@@ -113,19 +115,21 @@
   --chart-4: oklch(0.511 0.096 186.391);
   --chart-5: oklch(0.437 0.078 188.216);
 
-  --radius: 0.45rem;
+  --radius: 0.5rem;
 
   --sidebar: oklch(1 0 0);
   --sidebar-foreground: var(--brand-dark);
-  --sidebar-primary: lab(20 23.9 -60.14);
+  --sidebar-primary: oklch(0.21 0.08 262);
   --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: var(--brand-dark);
   --sidebar-border: var(--light-gray);
-  --sidebar-ring: lab(20 23.9 -60.14);
+  --sidebar-ring: oklch(0.21 0.08 262);
 }
 
 .dark {
+  color-scheme: dark;
+
   --brand-primary: oklch(0.624 0.215 25.6);
   --brand-secondary: oklch(0.587 0.103 257.4);
   --brand-dark: oklch(0.96 0.005 260);
@@ -136,9 +140,9 @@
   --background: var(--off-white);
   --foreground: var(--brand-dark);
 
-  --card: oklch(0.22 0.012 260);
+  --card: oklch(0.26 0.012 260);
   --card-foreground: var(--brand-dark);
-  --popover: oklch(0.22 0.012 260);
+  --popover: oklch(0.26 0.012 260);
   --popover-foreground: var(--brand-dark);
 
   --primary: var(--brand-primary);
@@ -167,22 +171,24 @@
 
   --sidebar: oklch(0.22 0.012 260);
   --sidebar-foreground: var(--brand-dark);
-  --sidebar-primary: lab(20 23.9 -60.14);
+  --sidebar-primary: oklch(0.21 0.08 262);
   --sidebar-primary-foreground: oklch(0.99 0.003 260);
   --sidebar-accent: oklch(0.28 0.012 260);
   --sidebar-accent-foreground: var(--brand-dark);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: lab(20 23.9 -60.14);
+  --sidebar-ring: oklch(0.21 0.08 262);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    @apply font-sans antialiased;
+    text-rendering: optimizeLegibility;
+  }
   body {
     @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
+    line-height: 1.6;
   }
 }

@@ -19,6 +19,7 @@ import type { BillingFormData, BillingMaterialEntry, BillingTeamEntry, MaterialG
 import type { ProjectListItem, Project } from "@/api/types/project.types";
 import { AttributeValuePickerDialog } from "@/components/global_ui/attribute-value-picker";
 import { TemplateTokensCard } from "@/components/global_ui/template-tokens-card";
+import { getBillingSections } from "@/lib/template-tokens";
 import { BillingPrintDialog } from "@/components/page_ui/billing-print-dialog";
 import type { BillingDataPayload } from "@/components/page_ui/billing-print-dialog";
 import { useQuery } from "@tanstack/react-query";
@@ -370,7 +371,7 @@ export function BillingForm({
               </FormCard>
             )}
 
-            <TemplateTokensCard materialGroups={materialGroups} teamGroups={teamGroups} taxes={taxes} billingVars={billingVars} />
+            <TemplateTokensCard sections={getBillingSections(materialGroups, teamGroups, taxes)} />
           </TabsContent>
 
           {/* ═══════════════ MATERIALS ═══════════════ */}

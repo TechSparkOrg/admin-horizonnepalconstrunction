@@ -43,10 +43,8 @@ export function _Client() {
   const [staffMembers, setStaffMembers] = useState<StaffMemberListItem[]>([]);
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
-  const [inputSearch, setInputSearch] = useState("");
+  const [inputSearch, setInputSearch] = useState(search);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => { setInputSearch(search); }, []);
 
   const handleSearchChange = (value: string) => {
     setInputSearch(value);

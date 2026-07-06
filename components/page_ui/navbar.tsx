@@ -86,6 +86,7 @@ const navLinks: NavLink[] = [
    
          { label: "Billing calculation", href: "/billing-calculations" },
          { label: "Project Accounting", href: "/accounting" },
+               { label: "Team  Accounting", href: "/accounting-team" },
 
     ],
   },

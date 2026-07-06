@@ -45,9 +45,9 @@ export function PageHeader({
     <div className={cn("px-4", className)}>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 leading-none">{title}</h1>
+          <h1 className="text-2xl font-bold text-foreground leading-none">{title}</h1>
           {subtitle && (
-            <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
+            <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
           )}
         </div>
         <div className="flex items-center gap-2">

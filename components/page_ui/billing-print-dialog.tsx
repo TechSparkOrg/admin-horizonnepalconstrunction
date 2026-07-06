@@ -10,6 +10,9 @@ import { toast } from "sonner";
 import { TemplateAdmin } from "@/api/services/template.service";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/api/query-keys";
+import { printHtml } from "@/lib/print";
+import { TemplateTokensCard } from "@/components/global_ui/template-tokens-card";
+import { BILLING_SECTIONS } from "@/lib/template-tokens";
 
 export type BillingDataPayload = {
   materials: Array<{ name: string; variant: string; price: number; qty: number; total: number; group: string }>;
@@ -40,15 +43,7 @@ export function BillingPrintDialog({ open, onOpenChange, billingVars, billingDat
     setLoading(true);
     try {
       const html = await TemplateAdmin.previewHtml(printTemplateId, billingVars, billingData);
-      const iframe = document.createElement("iframe");
-      iframe.style.cssText = "position:fixed;top:0;left:-100vw;width:210mm;height:297mm;border:0;visibility:hidden";
-      document.body.appendChild(iframe);
-      iframe.onload = () => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-        setTimeout(() => document.body.removeChild(iframe), 2000);
-      };
-      iframe.srcdoc = html;
+      printHtml(html, 2000);
     } catch {
       toast.error("Failed to generate preview");
     } finally {
@@ -83,36 +78,9 @@ export function BillingPrintDialog({ open, onOpenChange, billingVars, billingDat
             )}
           </div>
 
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 space-y-2">
-            <p className="text-[11px] font-semibold text-gray-600">Available tokens</p>
-            <div>
-              <p className="text-[10px] text-gray-400 mb-1">Tables (full auto-generated)</p>
-              <div className="flex flex-wrap gap-1">
-                {["materials_table", "team_table", "taxes_table"].map((k) => (
-                  <span key={k} className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-mono">{`{${k}}`}</span>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-400 mb-1">Row tokens — place in a <code className="bg-gray-200 px-0.5 rounded">{"<td>"}</code>, row repeats per entry</p>
-              <div className="flex flex-wrap gap-1">
-                {[
-                  "materials.name","materials.variant","materials.price","materials.qty","materials.total","materials.group",
-                  "team.name","team.role","team.rate","team.hours","team.days","team.total","team.group",
-                  "taxes.label","taxes.rate_display","taxes.type","taxes.amount",
-                ].map((k) => (
-                  <span key={k} className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-mono">{`{${k}}`}</span>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-400 mb-1">Values</p>
-              <div className="flex flex-wrap gap-1">
-                {Object.keys(billingVars).map((k) => (
-                  <span key={k} className="text-[10px] px-1.5 py-0.5 rounded bg-sidebar-primary/10 text-sidebar-primary font-mono">{`{${k}}`}</span>
-                ))}
-              </div>
-            </div>
+          <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <p className="text-[11px] font-semibold text-gray-600 mb-2">Available tokens</p>
+            <TemplateTokensCard sections={BILLING_SECTIONS} />
           </div>
         </div>
 

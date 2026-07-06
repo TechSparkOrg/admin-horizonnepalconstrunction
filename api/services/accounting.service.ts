@@ -1,5 +1,5 @@
 import { apiPrivate } from '../ServiceHelper/index';
-import type { AccountingEntry, DashboardDataPoint } from '../types/accounting.types';
+import type { AccountingEntry } from '../types/accounting.types';
 import type { PaginatedResponse } from '../types/consultation.types';
 
 export interface AccountingListParams {
@@ -22,7 +22,4 @@ export const AccountingAdmin = {
 
   delete: (id: string) =>
     apiPrivate.delete<{ ok: boolean }>(`/admin/accounting/${id}`),
-
-  dashboard: (days = 30) =>
-    apiPrivate.get<{ data: DashboardDataPoint[] }>('/admin/accounting/dashboard', { params: { days } }),
 };
