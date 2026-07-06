@@ -6,6 +6,7 @@ export const templateSchema = z.object({
   isActive: z.boolean(),
   content: z.string().optional(),
   masterTemplateFile: z.string().optional(),
+  attributeId: z.string().optional(),
 });
 
 export type TemplateFormData = z.infer<typeof templateSchema>;

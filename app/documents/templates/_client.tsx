@@ -24,7 +24,7 @@ type View = "list" | "form";
 
 function itemToForm(item: TemplateItem): TemplateFormData {
   return {
-    attributeId: item.attribute,
+    attributeId: item.attribute ?? "",
     title: item.title,
     slug: item.slug,
     isActive: item.is_active,
@@ -38,7 +38,7 @@ function formToPayload(form: TemplateFormData) {
     title: form.title,
     slug: form.slug,
     is_active: form.isActive,
-    attribute: form.attributeId,
+    attribute: form.attributeId || null,
     content: form.content,
     master_template_file: form.masterTemplateFile || null,
   };
@@ -128,24 +128,20 @@ export function _Client() {
     mutationFn: (payload: Parameters<typeof TemplateAdmin.create>[0]) =>
       TemplateAdmin.create(payload),
     onSuccess: () => { toast.success("Template created"); refetch(); back(); },
-    onError: () => toast.error("Failed to create template"),
+    onError: (error: any) => toast.error(error?.parsed?.message || "Failed to create template"),
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: Parameters<typeof TemplateAdmin.update>[1] }) =>
       TemplateAdmin.update(id, payload),
     onSuccess: () => { toast.success("Template updated"); refetch(); back(); },
-    onError: () => toast.error("Failed to update template"),
+    onError: (error: any) => toast.error(error?.parsed?.message || "Failed to update template"),
   });
 
   const save = () => {
     const parsed = templateSchema.safeParse(form);
     if (!parsed.success) {
       toast.error(parsed.error.issues[0]?.message || "Validation failed");
-      return;
-    }
-    if (!form.attributeId) {
-      toast.error("Please select an attribute");
       return;
     }
     const payload = formToPayload(form);

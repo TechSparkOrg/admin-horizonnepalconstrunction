@@ -1,6 +1,6 @@
 export interface TemplateItem {
   id: string;
-  attribute: string;
+  attribute: string | null;
   attribute_name: string;
   title: string;
   slug: string;
