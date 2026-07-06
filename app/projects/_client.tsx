@@ -23,7 +23,7 @@ import { ProjectAdmin } from "@/api/services/project.service";
 import { projectSchema } from "@/api/validation/project";
 import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
 import type { Category } from "@/api/types/category.types";
-import type { StaffMember } from "@/api/types/staff.types";
+import type { StaffMemberListItem } from "@/api/types/staff.types";
 import type { MaterialItem } from "@/api/types/material-list.types";
 import type { DocumentItem } from "@/api/types/document.types";
 const ProjectForm = dynamic(() => import("@/components/page_ui/project-form").then((m) => m.ProjectForm), { ssr: false });
@@ -40,7 +40,7 @@ export function _Client() {
   } = useProjectStore();
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
+  const [staffMembers, setStaffMembers] = useState<StaffMemberListItem[]>([]);
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [inputSearch, setInputSearch] = useState("");

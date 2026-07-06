@@ -76,10 +76,17 @@ const navLinks: NavLink[] = [
   { label: "Resources Management", href: "/material-list", icon: Calculator ,
     children: [
       { label: "Material list", href: "/material-list" },
-         { label: "Billing calculation", href: "/billing-calculations" },
-         { label: "Accounting", href: "/accounting" },
+    
              { label: "Vendor", href: "/vendor" },
                { label: "Unit Converter", href: "/material-list/unit-converter" }
+    ],
+  },
+    { label: "Accounting", href: "/billing-calculations", icon: Calculator ,
+    children: [
+   
+         { label: "Billing calculation", href: "/billing-calculations" },
+         { label: "Project Accounting", href: "/accounting" },
+
     ],
   },
 

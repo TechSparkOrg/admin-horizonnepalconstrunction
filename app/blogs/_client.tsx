@@ -187,7 +187,7 @@ export function _Client() {
       date: form.publishDate || "",
       author: teamAuthor?.name || form.authorName,
       author_image: teamAuthor?.photo || form.authorImage,
-      author_role: teamAuthor?.designation_label ?? "",
+      author_role: teamAuthor?.designation ?? "",
       content: form.content,
       category_id: form.categoryId,
       project_id: form.projectId,

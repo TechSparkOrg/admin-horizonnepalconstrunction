@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { StaffAdmin } from "@/api/services/staff.service";
-import type { StaffMember } from "@/api/types/staff.types";
+import type { StaffMemberListItem } from "@/api/types/staff.types";
 
 interface AdminUserFormData {
   name: string;
@@ -71,7 +71,7 @@ export function AdminUserForm({
   onBack,
   roleOptions,
 }: Props) {
-  const [coreStaff, setCoreStaff] = useState<StaffMember[]>([]);
+  const [coreStaff, setCoreStaff] = useState<StaffMemberListItem[]>([]);
   const [staffSearch, setStaffSearch] = useState("");
 
   const debounceFetch = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);

@@ -328,9 +328,14 @@ function TableControlsPopover({ editor }: { editor: Editor }) {
       </PopoverTrigger>
       <PopoverContent className="w-auto p-2 space-y-2.5" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
         {!inTable ? (
-          <TableSizePicker onSelect={(rows, cols) =>
-            editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run()
-          } />
+          <div className="space-y-2.5">
+            <TableSizePicker onSelect={(rows, cols) =>
+              editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run()
+            } />
+            <p className="text-[10px] text-gray-400 text-center pt-1 border-t border-border">
+              Click inside a table to edit it
+            </p>
+          </div>
         ) : (
           <>
             <div>
@@ -363,6 +368,25 @@ function TableControlsPopover({ editor }: { editor: Editor }) {
                     {label}
                   </Button>
                 ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Header</p>
+              <div className="flex gap-1">
+                <Button size="sm" variant="outline"
+                  className="h-7 px-2 text-xs"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => editor.chain().focus().toggleHeaderRow().run()}
+                  title="Toggle header row (th ↔ td)">
+                  Header Row
+                </Button>
+                <Button size="sm" variant="outline"
+                  className="h-7 px-2 text-xs"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => editor.chain().focus().toggleHeaderCell().run()}
+                  title="Toggle this cell as header (th ↔ td)">
+                  Header Cell
+                </Button>
               </div>
             </div>
             <div>
@@ -447,7 +471,7 @@ export function RichEditorInner({ value, onChange, minHeight = 200 }: RichEditor
       StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false, underline: false }),
       LinkExtension.configure({
         openOnClick: false,
-        autolink: true,
+        autolink: false,
         linkOnPaste: true,
         HTMLAttributes: { rel: "noopener noreferrer nofollow", target: "_blank" },
       }),

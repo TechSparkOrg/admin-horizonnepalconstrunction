@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Trash2, Printer, Eye, Building2, Users, Banknote, Wallet, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Plus, Trash2, Printer, Eye, Building2, Users, Banknote, Wallet, ArrowUpRight, ArrowDownRight, X } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,18 +13,49 @@ import { FormTabs } from "@/components/global_ui/form-tabs";
 import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { StaffAdmin } from "@/api/services/staff.service";
 import { TemplateAdmin } from "@/api/services/template.service";
 import { MaterialListAdmin } from "@/api/services/material-list.service";
 import { EmiBankAdmin } from "@/api/services/emi.service";
+import { VendorAdmin } from "@/api/services/vendor.service";
 import { useAuthStore } from "@/app/store/auth-store";
-import type { AccountingEntry, AccountingEntryFormData, ExpenseCategory, EntryType } from "@/api/types/accounting.types";
-import { EXPENSE_CATEGORY_OPTIONS, EXPENSE_CATEGORY_STYLES, EMPTY_ENTRY_FORM } from "@/api/types/accounting.types";
+import type { AccountingEntry, AccountingEntryFormData, AccountingMaterialEntry, AccountingTeamEntry, ExpenseCategory, EntryType } from "@/api/types/accounting.types";
+import { EXPENSE_CATEGORY_OPTIONS, EXPENSE_CATEGORY_STYLES, EMPTY_ENTRY_FORM, PAID_BY_OPTIONS, genId, materialEntriesTotal, teamEntriesTotal } from "@/api/types/accounting.types";
 import type { Project } from "@/api/types/project.types";
+import type { StaffMemberListItem } from "@/api/types/staff.types";
 
 function formatCurrency(n: number) {
   if (n >= 10000000) return `Rs ${(n / 10000000).toFixed(2)} Cr`;
   if (n >= 100000) return `Rs ${(n / 100000).toFixed(2)} L`;
   return `Rs ${n.toLocaleString("en-IN")}`;
+}
+
+function NumericInput({ value, onCommit, className, min = 0, placeholder = "Enter value" }: {
+  value: number; onCommit: (n: number) => void;
+  className?: string; min?: number; placeholder?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState("");
+  const displayed = editing ? text : (value === 0 ? "" : String(value));
+  return (
+    <Input
+      type="text"
+      inputMode="decimal"
+      className={className}
+      value={displayed}
+      placeholder={placeholder}
+      onChange={(e) => {
+        const v = e.target.value;
+        if (v === "" || /^-?\d*\.?\d*$/.test(v)) setText(v);
+      }}
+      onFocus={(e) => { setEditing(true); setText(value === 0 ? "" : String(value)); e.target.select(); }}
+      onBlur={() => {
+        setEditing(false);
+        const n = parseFloat(text);
+        onCommit(isNaN(n) ? 0 : Math.max(min, n));
+      }}
+    />
+  );
 }
 
 // ─── Entry Dialog ──────────────────────────────────────────────────────
@@ -34,18 +65,27 @@ interface EntryDialogProps {
   entryType: EntryType;
   form: AccountingEntryFormData;
   onChange: (key: string, value: string) => void;
+  onMaterialEntriesChange: (entries: AccountingMaterialEntry[]) => void;
+  onTeamEntriesChange: (entries: AccountingTeamEntry[]) => void;
   onSave: () => void;
 }
 
-function EntryDialog({ open, onOpenChange, entryType, form, onChange, onSave }: EntryDialogProps) {
+function EntryDialog({ open, onOpenChange, entryType, form, onChange, onMaterialEntriesChange, onTeamEntriesChange, onSave }: EntryDialogProps) {
   const isExpense = entryType === "expense";
-  const title = isExpense ? (form.description || "New Expense") : (form.description || "New Income");
+  const title = isExpense ? "New Expense" : "New Income";
   const user = useAuthStore((s) => s.user);
 
   const { data: materials = [] } = useQuery({
     queryKey: ["accounting", "materials"],
     queryFn: async () => (await MaterialListAdmin.search({})).results ?? [],
     enabled: open && isExpense && form.expense_category === "material",
+    staleTime: 60000,
+  });
+
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ["accounting", "team-members"],
+    queryFn: async () => (await StaffAdmin.search({})).results ?? [],
+    enabled: open && isExpense && form.expense_category === "team",
     staleTime: 60000,
   });
 
@@ -56,20 +96,91 @@ function EntryDialog({ open, onOpenChange, entryType, form, onChange, onSave }: 
     staleTime: 60000,
   });
 
+  const { data: vendors = [] } = useQuery({
+    queryKey: ["accounting", "vendors"],
+    queryFn: async () => (await VendorAdmin.search({})).results ?? [],
+    enabled: open && isExpense && (form.expense_category === "material" || form.expense_category === "vendor"),
+    staleTime: 60000,
+  });
+
   const showBank = form.payment_method === "cheque" || form.payment_method === "bank_transfer";
   const showCheque = form.payment_method === "cheque";
+  const showTransactionId = form.payment_method === "bank_transfer";
 
-  const handleMaterialSelect = (materialId: string) => {
+  const materialAmount = materialEntriesTotal(form.material_entries);
+  const teamAmount = teamEntriesTotal(form.team_entries);
+
+  // ── Material line items ──
+  const handleSelectMaterial = (materialId: string) => {
     const mat = materials.find((m) => m.id === materialId);
-    if (mat) {
-      onChange("description", mat.name);
-      onChange("amount", String(mat.price_per_unit));
-    }
+    if (!mat) return;
+    const entry: AccountingMaterialEntry = {
+      id: genId(), material_id: mat.id, material_name: mat.name,
+      variant_id: "", variant_name: "",
+      quantity: 1, unit_price: mat.price_per_unit, total: mat.price_per_unit,
+    };
+    onMaterialEntriesChange([...form.material_entries, entry]);
   };
+
+  const updateMaterialEntry = (id: string, field: string, value: number | string) => {
+    onMaterialEntriesChange(form.material_entries.map((e) => {
+      if (e.id !== id) return e;
+      const updated = { ...e, [field]: field === "quantity" || field === "unit_price" ? Number(value) : value };
+      if (field === "quantity" || field === "unit_price") {
+        updated.total = updated.quantity * updated.unit_price;
+      }
+      return updated;
+    }));
+  };
+
+  const removeMaterialEntry = (id: string) => {
+    onMaterialEntriesChange(form.material_entries.filter((e) => e.id !== id));
+  };
+
+  // ── Team line items ──
+  const handleSelectTeamMember = (staffId: string) => {
+    const member = teamMembers.find((m) => m.id === staffId) as StaffMemberListItem | undefined;
+    if (!member) return;
+    const entry: AccountingTeamEntry = {
+      id: genId(), staff_member_id: member.id, member_name: member.name,
+      role: member.designation || "", rate: 0, hours: 8, days: 1, total: 0,
+      paid_by: "salary",
+    };
+    onTeamEntriesChange([...form.team_entries, entry]);
+  };
+
+  const updateTeamEntry = (id: string, field: string, value: number | string) => {
+    onTeamEntriesChange(form.team_entries.map((e) => {
+      if (e.id !== id) return e;
+      const updated = { ...e, [field]: value };
+      if (field === "rate" || field === "hours" || field === "days") {
+        updated.total = Number(updated.rate) * Number(updated.hours) * Number(updated.days);
+      }
+      return updated;
+    }));
+  };
+
+  const removeTeamEntry = (id: string) => {
+    onTeamEntriesChange(form.team_entries.filter((e) => e.id !== id));
+  };
+
+  const computedTotal = form.expense_category === "material" ? materialAmount
+    : form.expense_category === "team" ? teamAmount
+    : Number(form.amount || 0);
+
+  const canSave = form.date && (
+    isExpense
+      ? form.expense_category === "material"
+        ? form.material_entries.length > 0
+        : form.expense_category === "team"
+          ? form.team_entries.length > 0
+          : computedTotal > 0
+      : computedTotal > 0
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{isExpense ? "Record an expense entry" : "Record an income entry"}</DialogDescription>
@@ -81,7 +192,11 @@ function EntryDialog({ open, onOpenChange, entryType, form, onChange, onSave }: 
               <SearchableSelect
                 options={EXPENSE_CATEGORY_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
                 value={form.expense_category}
-                onChange={(v) => { onChange("expense_category", v); if (v !== "material") onChange("description", ""); }}
+                onChange={(v) => {
+                  onChange("expense_category", v);
+                  onChange("description", "");
+                  onChange("amount", "");
+                }}
                 placeholder="Select category..."
               />
             </div>
@@ -103,36 +218,249 @@ function EntryDialog({ open, onOpenChange, entryType, form, onChange, onSave }: 
             </div>
           )}
 
+          {/* ══════════════ MATERIAL ══════════════ */}
           {isExpense && form.expense_category === "material" && (
-            <div className="space-y-1.5">
-              <Label className="text-xs text-gray-500">Material</Label>
-              <SearchableSelect
-                options={materials.map((m) => ({ value: m.id, label: `${m.name} — Rs ${m.price_per_unit}` }))}
-                value=""
-                onChange={handleMaterialSelect}
-                placeholder="Select material..."
-                searchPlaceholder="Search materials..."
-              />
-              <p className="text-[10px] text-gray-400">Select a material to auto-fill description and amount</p>
+            <div className="space-y-3">
+              {/* ── Material Items (always shown) ── */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-gray-500">Material Items</Label>
+                  <SearchableSelect
+                    options={materials.map((m) => ({ value: m.id, label: `${m.name} — Rs ${m.price_per_unit}` }))}
+                    value=""
+                    onChange={handleSelectMaterial}
+                    placeholder="Add material..."
+                    searchPlaceholder="Search materials..."
+                    triggerClassName="h-7 text-xs w-[200px]"
+                  />
+                </div>
+                {form.material_entries.length === 0 ? (
+                  <p className="text-xs text-gray-400 py-2">No items added yet</p>
+                ) : (
+                  <div className="overflow-x-auto rounded-lg border border-gray-200">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent border-gray-200">
+                          <TableHead className="text-gray-900 font-semibold text-xs">Material</TableHead>
+                          <TableHead className="text-gray-900 font-semibold text-xs w-20">Qty</TableHead>
+                          <TableHead className="text-gray-900 font-semibold text-xs w-24">Unit Price (Rs)</TableHead>
+                          <TableHead className="text-gray-900 font-semibold text-xs text-right w-24">Total (Rs)</TableHead>
+                          <TableHead className="w-8" />
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {form.material_entries.map((entry) => (
+                          <TableRow key={entry.id} className="border-gray-100 hover:bg-gray-50">
+                            <TableCell>
+                              <span className="text-xs text-gray-900 font-medium">{entry.material_name}</span>
+                            </TableCell>
+                            <TableCell>
+                              <NumericInput value={entry.quantity} onCommit={(n) => updateMaterialEntry(entry.id, "quantity", n)} className="h-7 text-xs text-right" min={1} placeholder="Qty" />
+                            </TableCell>
+                            <TableCell>
+                              <NumericInput value={entry.unit_price} onCommit={(n) => updateMaterialEntry(entry.id, "unit_price", n)} className="h-7 text-xs text-right" min={0} placeholder="Price" />
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-gray-900 text-xs">
+                              {formatCurrency(entry.quantity * entry.unit_price)}
+                            </TableCell>
+                            <TableCell>
+                              <button type="button" onClick={() => removeMaterialEntry(entry.id)}
+                                className="size-7 flex items-center justify-center rounded text-red-400 hover:text-red-600 hover:bg-red-50">
+                                <X className="size-3" />
+                              </button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+                {form.material_entries.length > 0 && (
+                  <div className="flex justify-end">
+                    <p className="text-sm font-bold text-gray-900">Total: {formatCurrency(materialAmount)}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Paid To ── */}
+              <div className="space-y-2">
+                <Label className="text-xs text-gray-500">Paid To</Label>
+                <SearchableSelect
+                  options={vendors.map((v) => ({ value: v.id, label: v.name }))}
+                  value={form.vendor_id}
+                  onChange={(id) => {
+                    const v = vendors.find((v) => v.id === id);
+                    onChange("vendor_id", id);
+                    onChange("vendor_name", v?.name || "");
+                  }}
+                  placeholder="Pick a vendor..."
+                  searchPlaceholder="Search vendors..."
+                />
+                <div className="relative">
+                  <span className="absolute left-0 top-0 text-xs text-gray-400 -mt-1.5 px-2 bg-white">or type manually</span>
+                  <Input
+                    value={form.vendor_name}
+                    onChange={(e) => {
+                      onChange("vendor_name", e.target.value);
+                      if (!e.target.value) onChange("vendor_id", "");
+                    }}
+                    placeholder="Type vendor name if not in list above"
+                    className="pt-3"
+                  />
+                </div>
+              </div>
             </div>
           )}
 
+          {/* ══════════════ TEAM ══════════════ */}
+          {isExpense && form.expense_category === "team" && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-gray-500">Team Members</Label>
+                <SearchableSelect
+                  options={teamMembers.map((m) => ({ value: m.id, label: m.name }))}
+                  value=""
+                  onChange={handleSelectTeamMember}
+                  placeholder="Add member..."
+                  searchPlaceholder="Search members..."
+                  triggerClassName="h-7 text-xs w-[200px]"
+                />
+              </div>
+              {form.team_entries.length === 0 ? (
+                <p className="text-xs text-gray-400 py-2">No members added yet</p>
+              ) : (
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent border-gray-200">
+                        <TableHead className="text-gray-900 font-semibold text-xs">Member</TableHead>
+                        <TableHead className="text-gray-900 font-semibold text-xs">Role</TableHead>
+                        <TableHead className="text-gray-900 font-semibold text-xs w-20">Rate/hr</TableHead>
+                        <TableHead className="text-gray-900 font-semibold text-xs w-14">Hrs</TableHead>
+                        <TableHead className="text-gray-900 font-semibold text-xs w-14">Days</TableHead>
+                        <TableHead className="text-gray-900 font-semibold text-xs text-right w-24">Total (Rs)</TableHead>
+                        <TableHead className="text-gray-900 font-semibold text-xs w-20">Paid By</TableHead>
+                        <TableHead className="w-8" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {form.team_entries.map((entry) => (
+                        <TableRow key={entry.id} className="border-gray-100 hover:bg-gray-50">
+                          <TableCell>
+                            <span className="text-xs text-gray-900 font-medium">{entry.member_name}</span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-xs text-gray-500">{entry.role || "\u2014"}</span>
+                          </TableCell>
+                          <TableCell>
+                            <NumericInput value={entry.rate} onCommit={(n) => updateTeamEntry(entry.id, "rate", n)} className="h-7 text-xs text-right" min={0} placeholder="Rate" />
+                          </TableCell>
+                          <TableCell>
+                            <NumericInput value={entry.hours} onCommit={(n) => updateTeamEntry(entry.id, "hours", n)} className="h-7 text-xs text-right" min={1} placeholder="Hrs" />
+                          </TableCell>
+                          <TableCell>
+                            <NumericInput value={entry.days} onCommit={(n) => updateTeamEntry(entry.id, "days", n)} className="h-7 text-xs text-right" min={1} placeholder="Days" />
+                          </TableCell>
+                          <TableCell className="text-right font-medium text-gray-900 text-xs">
+                            {formatCurrency(entry.rate * entry.hours * entry.days)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex rounded-md border border-gray-200 overflow-hidden h-7 w-fit">
+                              {PAID_BY_OPTIONS.map((opt) => (
+                                <button
+                                  key={opt.value}
+                                  type="button"
+                                  onClick={() => updateTeamEntry(entry.id, "paid_by", opt.value)}
+                                  className={`px-2 text-xs font-medium transition-colors ${
+                                    entry.paid_by === opt.value
+                                      ? "bg-sidebar-primary text-white"
+                                      : "bg-white text-gray-500 hover:bg-gray-50"
+                                  }`}
+                                >{opt.label}</button>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <button type="button" onClick={() => removeTeamEntry(entry.id)}
+                              className="size-7 flex items-center justify-center rounded text-red-400 hover:text-red-600 hover:bg-red-50">
+                              <X className="size-3" />
+                            </button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+              {form.team_entries.length > 0 && (
+                <div className="flex justify-end">
+                  <p className="text-sm font-bold text-gray-900">Total: {formatCurrency(teamAmount)}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ══════════════ VENDOR ══════════════ */}
+          {isExpense && form.expense_category === "vendor" && (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-gray-500">Description</Label>
+                <Input value={form.description} onChange={(e) => onChange("description", e.target.value)} placeholder="Brief description" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-gray-500">Amount (Rs) <span className="text-red-500">*</span></Label>
+                <Input type="number" value={form.amount} onChange={(e) => onChange("amount", e.target.value)} placeholder="0.00" min={0} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-gray-500">Paid To</Label>
+                <SearchableSelect
+                  options={vendors.map((v) => ({ value: v.id, label: v.name }))}
+                  value={form.vendor_id}
+                  onChange={(id) => {
+                    const v = vendors.find((v) => v.id === id);
+                    onChange("vendor_id", id);
+                    onChange("vendor_name", v?.name || "");
+                  }}
+                  placeholder="Pick a vendor..."
+                  searchPlaceholder="Search vendors..."
+                />
+                <div className="relative">
+                  <span className="absolute left-0 top-0 text-xs text-gray-400 -mt-1.5 px-2 bg-white">or type manually</span>
+                  <Input
+                    value={form.vendor_name}
+                    onChange={(e) => {
+                      onChange("vendor_name", e.target.value);
+                      if (!e.target.value) onChange("vendor_id", "");
+                    }}
+                    placeholder="Type vendor name if not in list above"
+                    className="pt-3"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ══════════════ INCOME / fallback ══════════════ */}
+          {!isExpense && (
+            <>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-gray-500">Description</Label>
+                <Input value={form.description} onChange={(e) => onChange("description", e.target.value)} placeholder="Brief description" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-gray-500">Amount (Rs) <span className="text-red-500">*</span></Label>
+                <Input type="number" value={form.amount} onChange={(e) => onChange("amount", e.target.value)} placeholder="0.00" min={0} />
+              </div>
+            </>
+          )}
+
+          {/* ── Date ── */}
           <div className="space-y-1.5">
-            <Label className="text-xs text-gray-500">Description</Label>
-            <Input value={form.description} onChange={(e) => onChange("description", e.target.value)} placeholder="Brief description" />
+            <Label className="text-xs text-gray-500">Date <span className="text-red-500">*</span></Label>
+            <Input type="date" value={form.date} onChange={(e) => onChange("date", e.target.value)} />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-gray-500">Amount (Rs) <span className="text-red-500">*</span></Label>
-              <Input type="number" value={form.amount} onChange={(e) => onChange("amount", e.target.value)} placeholder="0.00" min={0} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-gray-500">Date <span className="text-red-500">*</span></Label>
-              <Input type="date" value={form.date} onChange={(e) => onChange("date", e.target.value)} />
-            </div>
-          </div>
-
+          {/* ── Payment Method ── */}
           <div className="space-y-1.5">
             <Label className="text-xs text-gray-500">Payment Method</Label>
             <SearchableSelect
@@ -144,7 +472,15 @@ function EntryDialog({ open, onOpenChange, entryType, form, onChange, onSave }: 
                 { value: "other", label: "Other" },
               ]}
               value={form.payment_method}
-              onChange={(v) => { onChange("payment_method", v); if (v === "cash" || v === "online" || v === "other") { onChange("bank_name", ""); onChange("cheque_voucher_no", ""); onChange("cheque_voucher_date", ""); } }}
+              onChange={(v) => {
+                onChange("payment_method", v);
+                onChange("transaction_id", "");
+                if (v === "cash" || v === "online" || v === "other") {
+                  onChange("bank_name", "");
+                  onChange("cheque_voucher_no", "");
+                  onChange("cheque_voucher_date", "");
+                }
+              }}
               placeholder="Select method..."
             />
           </div>
@@ -162,6 +498,13 @@ function EntryDialog({ open, onOpenChange, entryType, form, onChange, onSave }: 
             </div>
           )}
 
+          {showTransactionId && (
+            <div className="space-y-1.5">
+              <Label className="text-xs text-gray-500">Transaction ID</Label>
+              <Input value={form.transaction_id} onChange={(e) => onChange("transaction_id", e.target.value)} placeholder="Enter bank transaction ID" />
+            </div>
+          )}
+
           {showCheque && (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -175,19 +518,30 @@ function EntryDialog({ open, onOpenChange, entryType, form, onChange, onSave }: 
             </div>
           )}
 
+          {/* ── Entered By (read-only) ── */}
           <div className="space-y-1.5">
             <Label className="text-xs text-gray-500">Entered By</Label>
-            <Input value={form.entered_by || user?.name || ""} onChange={(e) => onChange("entered_by", e.target.value)} placeholder="Person name" />
+            <Input value={user?.name || ""} disabled className="bg-gray-50 text-gray-500 font-medium" />
           </div>
 
+          {/* ── Remark ── */}
           <div className="space-y-1.5">
             <Label className="text-xs text-gray-500">Remark</Label>
             <Input value={form.remark} onChange={(e) => onChange("remark", e.target.value)} placeholder="Optional remark" />
           </div>
+
+          {/* ── Computed amount display ── */}
+          {computedTotal > 0 && (
+            <div className="flex justify-end pt-2 border-t border-gray-100">
+              <p className="text-base font-bold text-gray-900">
+                Total Amount: {formatCurrency(computedTotal)}
+              </p>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button variant="default" size="sm" onClick={onSave} disabled={!form.date || !form.amount}>Save</Button>
+          <Button variant="default" size="sm" onClick={onSave} disabled={!canSave}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -216,6 +570,12 @@ function EntryPrintDialog({ open, onOpenChange, entry, project }: EntryPrintDial
     if (!templateId) { toast.error("Select a template first"); return; }
     if (!entry) return;
     try {
+      const materialLines = (entry.material_entries ?? []).map((e) =>
+        `${e.material_name} ×${e.quantity} @ Rs ${e.unit_price} = Rs ${e.total}`
+      ).join("\n");
+      const teamLines = (entry.team_entries ?? []).map((e) =>
+        `${e.member_name} (${e.role}) — ${e.hours}h × ${e.days}d × Rs ${e.rate} = Rs ${e.total} [${e.paid_by}]`
+      ).join("\n");
       const vars: Record<string, string> = {
         type: entry.type === "expense" ? "Expense" : "Income",
         amount: String(entry.amount),
@@ -231,6 +591,10 @@ function EntryPrintDialog({ open, onOpenChange, entry, project }: EntryPrintDial
         project: project?.title ?? "",
         project_status: project?.status ?? "",
         category: entry.expense_category || "",
+        material_count: String(entry.material_entries?.length ?? 0),
+        team_count: String(entry.team_entries?.length ?? 0),
+        material_items: materialLines,
+        team_items: teamLines,
       };
       const html = await TemplateAdmin.previewHtml(templateId, vars);
       const iframe = document.createElement("iframe");
@@ -336,8 +700,13 @@ export function AccountingForm({ entries, project, saving, onEntrySave, onEntryD
     setEntryForm({
       type: entry.type,
       expense_category: entry.expense_category,
+      vendor_id: entry.vendor_id || "",
+      vendor_name: entry.vendor_name || "",
+      transaction_id: entry.transaction_id || "",
       description: entry.description,
       amount: String(entry.amount),
+      material_entries: entry.material_entries ?? [],
+      team_entries: entry.team_entries ?? [],
       date: entry.date,
       payment_method: entry.payment_method,
       payment_type: entry.payment_type,
@@ -352,6 +721,14 @@ export function AccountingForm({ entries, project, saving, onEntrySave, onEntryD
 
   const handleEntryFormChange = (key: string, value: string) => {
     setEntryForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleMaterialEntriesChange = (entries: AccountingMaterialEntry[]) => {
+    setEntryForm((prev) => ({ ...prev, material_entries: entries }));
+  };
+
+  const handleTeamEntriesChange = (entries: AccountingTeamEntry[]) => {
+    setEntryForm((prev) => ({ ...prev, team_entries: entries }));
   };
 
   const handleEntrySave = () => {
@@ -544,20 +921,31 @@ export function AccountingForm({ entries, project, saving, onEntrySave, onEntryD
                       <TableRow className="hover:bg-transparent border-gray-200">
                         <TableHead className="text-gray-900 font-semibold text-xs">Date</TableHead>
                         <TableHead className="text-gray-900 font-semibold text-xs">Category</TableHead>
-                        <TableHead className="text-gray-900 font-semibold text-xs">Description</TableHead>
+                        <TableHead className="text-gray-900 font-semibold text-xs">Description / Items</TableHead>
                         <TableHead className="text-gray-900 font-semibold text-xs text-right">Amount (Rs)</TableHead>
                         <TableHead className="text-gray-900 font-semibold text-xs">Method</TableHead>
                         <TableHead className="w-20" />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {expenses.map((entry) => (
+                      {expenses.map((entry) => {
+                        const materialCount = entry.material_entries?.length ?? 0;
+                        const teamCount = entry.team_entries?.length ?? 0;
+                        const hasItems = materialCount > 0 || teamCount > 0;
+                        return (
                         <TableRow key={entry.id} className="border-gray-100 hover:bg-gray-50">
                           <TableCell><span className="text-xs text-gray-600">{entry.date}</span></TableCell>
                           <TableCell>{categoryBadge(entry.expense_category as ExpenseCategory)}</TableCell>
                           <TableCell>
                             <span className="text-sm text-gray-900">{entry.description || "\u2014"}</span>
-                            {entry.remark && <p className="text-[10px] text-gray-400">{entry.remark}</p>}
+                            {hasItems && (
+                              <p className="text-[10px] text-gray-400 mt-0.5">
+                                {materialCount > 0 && <span className="text-blue-600">{materialCount} material item{materialCount > 1 ? "s" : ""}</span>}
+                                {materialCount > 0 && teamCount > 0 && <span className="text-gray-300 mx-1">·</span>}
+                                {teamCount > 0 && <span className="text-purple-600">{teamCount} team member{teamCount > 1 ? "s" : ""}</span>}
+                              </p>
+                            )}
+                            {entry.remark && !hasItems && <p className="text-[10px] text-gray-400">{entry.remark}</p>}
                           </TableCell>
                           <TableCell className="text-right font-medium text-red-600 text-sm">
                             {formatCurrency(entry.amount)}
@@ -580,7 +968,8 @@ export function AccountingForm({ entries, project, saving, onEntrySave, onEntryD
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))}
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
@@ -694,6 +1083,8 @@ export function AccountingForm({ entries, project, saving, onEntrySave, onEntryD
         entryType={entryType}
         form={entryForm}
         onChange={handleEntryFormChange}
+        onMaterialEntriesChange={handleMaterialEntriesChange}
+        onTeamEntriesChange={handleTeamEntriesChange}
         onSave={handleEntrySave}
       />
 

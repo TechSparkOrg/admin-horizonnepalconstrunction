@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { StaffMember } from "@/api/types/staff.types";
+import type { StaffMemberListItem } from "@/api/types/staff.types";
 import type { MaterialItem } from "@/api/types/material-list.types";
 import type { ProjectListItem } from "@/api/types/project.types";
 import type { ProjectScopeEntry } from "@/api/types/resource-allocation.types";
@@ -32,7 +32,7 @@ interface Props {
   editingId: string | null;
   saving: boolean;
   materials: MaterialItem[];
-  teamMembers: StaffMember[];
+  teamMembers: StaffMemberListItem[];
   projects: ProjectListItem[];
   projectScope: ProjectScopeEntry[];
   onProjectScopeChange: (entries: ProjectScopeEntry[]) => void;

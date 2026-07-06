@@ -54,12 +54,18 @@ export function _Client() {
 
   const handleEntrySave = async (form: AccountingEntryFormData, editingId: string | null) => {
     if (!projectId) { toast.error("Select a project first"); return; }
-    if (!form.amount || !form.date) { toast.error("Amount and date are required"); return; }
+    if (!form.date) { toast.error("Date is required"); return; }
+    if (form.type === "income" && !form.amount) { toast.error("Amount is required"); return; }
+    if (form.type === "expense" && form.expense_category === "material" && form.material_entries.length === 0) { toast.error("Add at least one material item"); return; }
+    if (form.type === "expense" && form.expense_category === "team" && form.team_entries.length === 0) { toast.error("Add at least one team member"); return; }
+    if (form.type === "expense" && form.expense_category === "vendor" && !form.amount) { toast.error("Amount is required"); return; }
     setSaving(true);
     try {
+      const isComputed = form.expense_category === "material" || form.expense_category === "team";
       const payload: Record<string, unknown> = {
         ...form,
-        amount: Number(form.amount),
+        amount: isComputed ? 0 : Number(form.amount),
+        cheque_voucher_date: form.cheque_voucher_date || null,
         project_id: projectId,
       };
       if (editingId) {

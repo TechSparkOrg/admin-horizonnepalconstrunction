@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { StaffMember } from "@/api/types/staff.types";
+import type { StaffMemberListItem } from "@/api/types/staff.types";
 import type { ProjectListItem } from "@/api/types/project.types";
 import type { SalaryEntry, ProjectBasisEntry, ProjectAssignment } from "@/api/types/resource-allocation.types";
 
@@ -27,7 +27,7 @@ interface Props {
   form: TeamAllocationFormData;
   editingId: string | null;
   saving: boolean;
-  teamMembers: StaffMember[];
+  teamMembers: StaffMemberListItem[];
   projects: ProjectListItem[];
   salaryEntries: SalaryEntry[];
   onSalaryEntriesChange: (entries: SalaryEntry[]) => void;

@@ -22,7 +22,7 @@ import {  Pagination,  PaginationContent,  PaginationItem,  PaginationLink,  Pag
 import { MediaPickerDialog } from "@/components/global_ui/media-handler-picker";
 import type { PickerMediaItem } from "@/components/global_ui/media-handler-picker";
 import type { Category } from "@/api/types/category.types";
-import type { StaffMember } from "@/api/types/staff.types";
+import type { StaffMemberListItem } from "@/api/types/staff.types";
 import type { MaterialItem } from "@/api/types/material-list.types";
 import type { DocumentItem } from "@/api/types/document.types";
 import type { Client, ProjectMilestone as Milestone, ProjectMilestoneImage, ProjectMilestoneEmbed } from "@/api/types/project.types";
@@ -60,7 +60,7 @@ interface Props {
   onMilestonesChange: (milestones: Milestone[]) => void;
   bannerImages: { id: string; url: string; name: string; isPrimary?: boolean }[];
   onBannerImagesChange: (images: { id: string; url: string; name: string; isPrimary?: boolean }[]) => void;
-  staffMembers: StaffMember[];
+  staffMembers: StaffMemberListItem[];
   materials: MaterialItem[];
   documents: DocumentItem[];
   onChange: (key: string, value: string | boolean | null) => void;

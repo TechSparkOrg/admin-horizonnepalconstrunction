@@ -30,6 +30,9 @@ export interface AccountingEntry {
   project_id: string;
   type: EntryType;
   expense_category: ExpenseCategory | "";
+  vendor_id: string;
+  vendor_name: string;
+  transaction_id: string;
   description: string;
   amount: number;
   material_entries: AccountingMaterialEntry[];
@@ -49,6 +52,9 @@ export interface AccountingEntry {
 export interface AccountingEntryFormData {
   type: EntryType;
   expense_category: ExpenseCategory | "";
+  vendor_id: string;
+  vendor_name: string;
+  transaction_id: string;
   description: string;
   amount: string;
   material_entries: AccountingMaterialEntry[];
@@ -103,12 +109,15 @@ export const PAID_BY_OPTIONS = [
 export const EXPENSE_CATEGORY_STYLES: Record<ExpenseCategory, { color: string; bg: string; label: string }> = {
   material: { color: "text-blue-700", bg: "bg-blue-50", label: "Material" },
   team: { color: "text-purple-700", bg: "bg-purple-50", label: "Team" },
-  vendor: { color: "text-orange-700", bg: "bg-orange-50", label: "Vendor" },
+  vendor: { color: "text-green-700", bg: "bg-green-50", label: "Vendor" },
 };
 
 export const EMPTY_ENTRY_FORM: AccountingEntryFormData = {
   type: "expense",
   expense_category: "material",
+  vendor_id: "",
+  vendor_name: "",
+  transaction_id: "",
   description: "",
   amount: "",
   material_entries: [],
