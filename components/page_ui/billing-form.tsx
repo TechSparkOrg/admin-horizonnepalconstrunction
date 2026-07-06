@@ -1,7 +1,7 @@
 "use client";
 
-import { Plus, Trash2, Printer, FileText, Eye, Building2, Users, Banknote, Pencil, Download } from "lucide-react";
-import { useState, useMemo, useRef } from "react";
+import { Plus, Trash2, Printer, Building2, Pencil, X } from "lucide-react";
+import { useState, useMemo, useCallback } from "react";
 import { FormHeader } from "@/components/global_ui/form-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,33 +12,28 @@ import { FormCard } from "@/components/global_ui/form-card";
 import { FormTabs } from "@/components/global_ui/form-tabs";
 import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
 import { SearchableSelect } from "@/components/global_ui/searchable-select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { toast } from "sonner";
-import { TemplateAdmin } from "@/api/services/template.service";
+import { MaterialListAdmin } from "@/api/services/material-list.service";
+import { StaffAdmin } from "@/api/services/staff.service";
 import type { BillingFormData, BillingMaterialEntry, BillingTeamEntry, MaterialGroup, TeamGroup, TaxEntry } from "@/api/types/billing.types";
-import type { MaterialItem } from "@/api/types/material-list.types";
-import type { StaffMemberListItem } from "@/api/types/staff.types";
 import type { ProjectListItem, Project } from "@/api/types/project.types";
-import type { TemplateItem } from "@/api/types/template.types";
-import type { AttributeItem } from "@/api/types/attribute.types";
+import { AttributeValuePickerDialog } from "@/components/global_ui/attribute-value-picker";
+import { TemplateTokensCard } from "@/components/global_ui/template-tokens-card";
+import { BillingPrintDialog } from "@/components/page_ui/billing-print-dialog";
+import type { BillingDataPayload } from "@/components/page_ui/billing-print-dialog";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/api/query-keys";
-import { X } from "lucide-react";
+import { useAttributeOptions } from "@/api/hooks/use-attribute-query";
 import { formatCurrency, computeTaxAmount } from "@/lib/currency";
+import { genId } from "@/lib/utils";
 import { NumericInput } from "@/components/global_ui/numeric-input";
-
-function genId() { return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`; }
 
 interface Props {
   form: BillingFormData;
   editingId: string | null;
   saving: boolean;
-  materials: MaterialItem[];
-  teamMembers: StaffMemberListItem[];
   projects: ProjectListItem[];
   projectDetail?: Project;
-  attributes: AttributeItem[];
   materialGroups: MaterialGroup[];
   teamGroups: TeamGroup[];
   taxes: TaxEntry[];
@@ -58,218 +53,32 @@ function teamTotal(entries: BillingTeamEntry[]) {
   return entries.reduce((s, e) => s + e.price * e.hours_per_day * e.days, 0);
 }
 
-function flattenAttributeValues(attributes: AttributeItem[]): { label: string; values: string[] }[] {
-  return attributes.flatMap((a) => {
-    const groups = a.values.filter((v) => v.values.length > 0);
-    if (groups.length === 0) return [];
-    return groups.map((g) => ({
-      label: g.label || a.title,
-      values: g.values,
-    }));
-  });
-}
-
-// ─── Attribute Value Picker Dialog (reused for materials, team, taxes) ───────
-interface PickerDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onConfirm: (value: string) => void;
-  attributes: AttributeItem[];
-  title: string;
-  placeholder: string;
-}
-
-function AttributeValuePickerDialog({ open, onOpenChange, onConfirm, attributes, title, placeholder }: PickerDialogProps) {
-  const attrGroups = useMemo(() => flattenAttributeValues(attributes), [attributes]);
-  const [selectedLabel, setSelectedLabel] = useState("");
-  const [selectedValue, setSelectedValue] = useState("");
-
-  const currentValues = useMemo(() => {
-    const group = attrGroups.find((g) => g.label === selectedLabel);
-    return group?.values ?? [];
-  }, [attrGroups, selectedLabel]);
-
-  const handleConfirm = () => {
-    if (!selectedValue) {
-      toast.error("Pick a value first");
-      return;
-    }
-    onConfirm(selectedValue);
-    setSelectedLabel("");
-    setSelectedValue("");
-    onOpenChange(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) { setSelectedLabel(""); setSelectedValue(""); } onOpenChange(o); }}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{placeholder}</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3 py-2">
-          <div className="space-y-1.5">
-            <Label className="text-xs text-gray-500">Label</Label>
-            <SearchableSelect
-              options={attrGroups.map((g) => ({ value: g.label, label: g.label }))}
-              value={selectedLabel}
-              onChange={(v) => { setSelectedLabel(v); setSelectedValue(""); }}
-              placeholder="Choose a label..."
-              searchPlaceholder="Search labels..."
-            />
-          </div>
-          {selectedLabel && (
-            <div className="space-y-1.5">
-              <Label className="text-xs text-gray-500">Value</Label>
-              <SearchableSelect
-                options={currentValues.map((v) => ({ value: v, label: v }))}
-                value={selectedValue}
-                onChange={setSelectedValue}
-                placeholder="Choose a value..."
-                searchPlaceholder="Search values..."
-              />
-            </div>
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button variant="default" size="sm" onClick={handleConfirm}>Add</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ─── Print / Export Dialog ───────────────────────────────────────────────────
-type BillingDataPayload = {
-  materials: Array<{ name: string; variant: string; price: number; qty: number; total: number; group: string }>;
-  team: Array<{ name: string; role: string; rate: number; hours: number; days: number; total: number; group: string }>;
-  taxes: Array<{ label: string; rate_display: string; type: string; amount: number }>;
-};
-
-interface PrintDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  billingVars: Record<string, string>;
-  billingData: BillingDataPayload;
-}
-
-function PrintExportDialog({ open, onOpenChange, billingVars, billingData }: PrintDialogProps) {
-  const [printTemplateId, setPrintTemplateId] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const { data: printTemplates = [] } = useQuery({
-    queryKey: queryKeys.templates.list({}),
-    queryFn: async () => (await TemplateAdmin.search({})).results ?? [],
-    enabled: open,
-    staleTime: 60000,
-  });
-
-  const triggerPrint = async () => {
-    if (!printTemplateId) { toast.error("Select a template first"); return; }
-    setLoading(true);
-    try {
-      const html = await TemplateAdmin.previewHtml(printTemplateId, billingVars, billingData);
-      const iframe = document.createElement("iframe");
-      iframe.style.cssText = "position:fixed;top:0;left:-100vw;width:210mm;height:297mm;border:0;visibility:hidden";
-      document.body.appendChild(iframe);
-      iframe.onload = () => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-        setTimeout(() => document.body.removeChild(iframe), 2000);
-      };
-      iframe.srcdoc = html;
-    } catch {
-      toast.error("Failed to generate preview");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const selectedTemplate = printTemplates.find((t) => t.id === printTemplateId);
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-base font-semibold">Export as PDF</DialogTitle>
-          <DialogDescription className="text-xs text-gray-500">
-            Choose a template — billing values and tables will be injected automatically.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-1">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-gray-700">Template</Label>
-            <SearchableSelect
-              options={printTemplates.map((t) => ({ value: t.id, label: t.title }))}
-              value={printTemplateId}
-              onChange={setPrintTemplateId}
-              placeholder="Select a template..."
-              searchPlaceholder="Search templates..."
-            />
-            {selectedTemplate && (
-              <p className="text-[11px] text-gray-400">{selectedTemplate.attribute_name}</p>
-            )}
-          </div>
-
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 space-y-2">
-            <p className="text-[11px] font-semibold text-gray-600">Available tokens</p>
-            <div>
-              <p className="text-[10px] text-gray-400 mb-1">Tables (full auto-generated)</p>
-              <div className="flex flex-wrap gap-1">
-                {["materials_table", "team_table", "taxes_table"].map((k) => (
-                  <span key={k} className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-mono">{`{${k}}`}</span>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-400 mb-1">Row tokens — place in a <code className="bg-gray-200 px-0.5 rounded">{"<td>"}</code>, row repeats per entry</p>
-              <div className="flex flex-wrap gap-1">
-                {[
-                  "materials.name","materials.variant","materials.price","materials.qty","materials.total","materials.group",
-                  "team.name","team.role","team.rate","team.hours","team.days","team.total","team.group",
-                  "taxes.label","taxes.rate_display","taxes.type","taxes.amount",
-                ].map((k) => (
-                  <span key={k} className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-mono">{`{${k}}`}</span>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-400 mb-1">Values</p>
-              <div className="flex flex-wrap gap-1">
-                {Object.keys(billingVars).map((k) => (
-                  <span key={k} className="text-[10px] px-1.5 py-0.5 rounded bg-sidebar-primary/10 text-sidebar-primary font-mono">{`{${k}}`}</span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button size="sm" onClick={triggerPrint} disabled={!printTemplateId || loading}
-            className="bg-sidebar-primary hover:bg-sidebar-primary/90 gap-1.5">
-            {loading ? (
-              <><FileText className="size-3.5 animate-pulse" /> Generating…</>
-            ) : (
-              <><Download className="size-3.5" /> Download PDF</>
-            )}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+function slugKey(s: string) {
+  return s.toLowerCase().replace(/\W+/g, "_");
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 export function BillingForm({
-  form, editingId, saving, materials, teamMembers, projects, projectDetail, attributes,
+  form, editingId, saving, projects, projectDetail,
   materialGroups, teamGroups, taxes,
   onMaterialGroupsChange, onTeamGroupsChange, onTaxesChange,
   onChange, onSave, onBack,
 }: Props) {
   const [printOpen, setPrintOpen] = useState(false);
+
+  const { data: materials = [] } = useQuery({
+    queryKey: queryKeys.materialList.list({}),
+    queryFn: async () => (await MaterialListAdmin.search({})).results ?? [],
+    staleTime: Infinity,
+  });
+
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: queryKeys.staff.list({}),
+    queryFn: async () => (await StaffAdmin.search({})).results ?? [],
+    staleTime: Infinity,
+  });
+
+  const { data: attributes = [] } = useAttributeOptions();
   const [pickerConfig, setPickerConfig] = useState<{
     type: "material" | "team" | "tax";
     open: boolean;
@@ -277,15 +86,30 @@ export function BillingForm({
 
   const clients = projectDetail?.clients ?? [];
   const contractValue = clients.reduce((sum, c) => sum + (c.contract_value || 0), 0);
-  const materialsGrand = materialGroups.reduce((s, g) => s + materialTotal(g.entries), 0);
-  const teamGrand = teamGroups.reduce((s, g) => s + teamTotal(g.entries), 0);
-  const taxTotal = taxes.reduce((s, t) => {
-    const amt = computeTaxAmount(t, materialsGrand + teamGrand);
-    return s + amt;
-  }, 0);
-  const grandTotal = materialsGrand + teamGrand + taxTotal;
-  const balance = contractValue - materialsGrand - teamGrand;
   const selectedProject = useMemo(() => projects.find((p) => p.id === form.project_id) ?? null, [form.project_id, projects]);
+
+  const materialsById = useMemo(() => new Map(materials.map(m => [m.id, m])), [materials]);
+  const teamMembersById = useMemo(() => new Map(teamMembers.map(m => [m.id, m])), [teamMembers]);
+
+  const groupTotals = useMemo(() => {
+    const mat = new Map(materialGroups.map(g => [g.id, materialTotal(g.entries)]));
+    const team = new Map(teamGroups.map(g => [g.id, teamTotal(g.entries)]));
+    const mMaterials = [...mat.values()].reduce((s, v) => s + v, 0);
+    const mTeam = [...team.values()].reduce((s, v) => s + v, 0);
+    return { matSubtotals: mat, teamSubtotals: team, materialsGrand: mMaterials, teamGrand: mTeam };
+  }, [materialGroups, teamGroups]);
+
+  const { materialsGrand, teamGrand, matSubtotals, teamSubtotals } = groupTotals;
+
+  const taxTotal = useMemo(() => taxes.reduce((s, t) => s + computeTaxAmount(t, materialsGrand + teamGrand), 0), [taxes, materialsGrand, teamGrand]);
+  const grandTotal = useMemo(() => materialsGrand + teamGrand + taxTotal, [materialsGrand, teamGrand, taxTotal]);
+  const balance = useMemo(() => contractValue - materialsGrand - teamGrand, [contractValue, materialsGrand, teamGrand]);
+
+  const [materialOptions, teamMemberOptions, projectOptions] = useMemo(() => [
+    materials.map(m => ({ value: m.id, label: m.name })),
+    teamMembers.map(m => ({ value: m.id, label: m.name })),
+    projects.map(p => ({ value: p.id, label: p.title })),
+  ], [materials, teamMembers, projects]);
 
   const billingVars = useMemo<Record<string, string>>(() => ({
     title: form.title,
@@ -297,19 +121,10 @@ export function BillingForm({
     contract_value: formatCurrency(contractValue),
     balance: formatCurrency(Math.abs(balance)),
     balance_status: balance >= 0 ? "Surplus" : "Deficit",
-    ...Object.fromEntries(
-      materialGroups.map((g) => [`mat_${g.groupLabel.toLowerCase().replace(/\W+/g, "_")}`, formatCurrency(materialTotal(g.entries))])
-    ),
-    ...Object.fromEntries(
-      teamGroups.map((g) => [`team_${g.groupLabel.toLowerCase().replace(/\W+/g, "_")}`, formatCurrency(teamTotal(g.entries))])
-    ),
-    ...Object.fromEntries(
-      taxes.map((t) => {
-        const amt = computeTaxAmount(t, materialsGrand + teamGrand);
-        return [`tax_${t.label.toLowerCase().replace(/\W+/g, "_")}`, formatCurrency(amt)];
-      })
-    ),
-  }), [form.title, selectedProject, materialsGrand, teamGrand, taxTotal, grandTotal, contractValue, balance, materialGroups, teamGroups, taxes]);
+    ...Object.fromEntries(materialGroups.map((g) => [`mat_${slugKey(g.groupLabel)}`, formatCurrency(matSubtotals.get(g.id) ?? 0)])),
+    ...Object.fromEntries(teamGroups.map((g) => [`team_${slugKey(g.groupLabel)}`, formatCurrency(teamSubtotals.get(g.id) ?? 0)])),
+    ...Object.fromEntries(taxes.map((t) => [`tax_${slugKey(t.label)}`, formatCurrency(computeTaxAmount(t, materialsGrand + teamGrand))])),
+  }), [form.title, selectedProject, materialsGrand, teamGrand, taxTotal, grandTotal, contractValue, balance, materialGroups, teamGroups, taxes, matSubtotals, teamSubtotals]);
 
   const billingData = useMemo<BillingDataPayload>(() => ({
     materials: materialGroups.flatMap((g) =>
@@ -341,37 +156,30 @@ export function BillingForm({
     return attributes.flatMap((a) => a.values.flatMap((v) => v.values)).filter(Boolean).sort();
   }, [attributes]);
 
+  const roleValueOptions = useMemo(() => allRoleValues.map(v => ({ value: v, label: v })), [allRoleValues]);
+
   const [roleEditTarget, setRoleEditTarget] = useState<{ groupId: string; entryId: string } | null>(null);
 
-  const handlePickerConfirm = (value: string) => {
+  const handlePickerConfirm = useCallback((value: string) => {
     if (pickerConfig.type === "material") {
-      onMaterialGroupsChange([
-        ...materialGroups,
-        { id: genId(), groupLabel: value, entries: [] },
-      ]);
+      onMaterialGroupsChange([...materialGroups, { id: genId(), groupLabel: value, entries: [] }]);
     } else if (pickerConfig.type === "team") {
-      onTeamGroupsChange([
-        ...teamGroups,
-        { id: genId(), groupLabel: value, entries: [] },
-      ]);
+      onTeamGroupsChange([...teamGroups, { id: genId(), groupLabel: value, entries: [] }]);
     } else if (pickerConfig.type === "tax") {
-      onTaxesChange([
-        ...taxes,
-        { id: genId(), label: value, rate: 0, tax_type: "percent" },
-      ]);
+      onTaxesChange([...taxes, { id: genId(), label: value, rate: 0, tax_type: "percent" }]);
     }
-  };
+  }, [pickerConfig.type, materialGroups, teamGroups, taxes, onMaterialGroupsChange, onTeamGroupsChange, onTaxesChange]);
 
   // ── Material group helpers ──────────────────────────────────────────────────
-  const addMaterialEntry = (groupId: string) => {
+  const addMaterialEntry = useCallback((groupId: string) => {
     onMaterialGroupsChange(materialGroups.map((g) =>
       g.id === groupId
         ? { ...g, entries: [...g.entries, { id: genId(), material_id: "", material_name: "", variant_id: "", variant_name: "", price: 0, quantity: 1, total: 0 }] }
         : g
     ));
-  };
+  }, [materialGroups, onMaterialGroupsChange]);
 
-  const updateMaterialEntry = (groupId: string, entryId: string, field: string, value: string | number) => {
+  const updateMaterialEntry = useCallback((groupId: string, entryId: string, field: string, value: string | number) => {
     onMaterialGroupsChange(materialGroups.map((g) =>
       g.id !== groupId ? g : {
         ...g,
@@ -379,7 +187,7 @@ export function BillingForm({
           if (e.id !== entryId) return e;
           const updated = { ...e, [field]: value };
           if (field === "material_id") {
-            const mat = materials.find((m) => m.id === value);
+            const mat = materialsById.get(value as string);
             if (mat) {
               updated.material_name = mat.name;
               updated.price = mat.price_per_unit;
@@ -388,7 +196,7 @@ export function BillingForm({
             }
           }
           if (field === "variant_id") {
-            const mat = materials.find((m) => m.id === e.material_id);
+            const mat = materialsById.get(e.material_id);
             if (mat) {
               const variant = mat.variants.find((v) => v.id === value);
               if (variant) {
@@ -398,34 +206,34 @@ export function BillingForm({
             }
           }
           if (field === "price" || field === "quantity") {
-            updated.total = Number(updated.price) * Number(updated.quantity);
+            updated.total = updated.price * updated.quantity;
           }
           return updated;
         }),
       }
     ));
-  };
+  }, [materialGroups, onMaterialGroupsChange, materialsById]);
 
-  const removeMaterialEntry = (groupId: string, entryId: string) => {
+  const removeMaterialEntry = useCallback((groupId: string, entryId: string) => {
     onMaterialGroupsChange(materialGroups.map((g) =>
       g.id !== groupId ? g : { ...g, entries: g.entries.filter((e) => e.id !== entryId) }
     ));
-  };
+  }, [materialGroups, onMaterialGroupsChange]);
 
-  const removeMaterialGroup = (groupId: string) => {
+  const removeMaterialGroup = useCallback((groupId: string) => {
     onMaterialGroupsChange(materialGroups.filter((g) => g.id !== groupId));
-  };
+  }, [materialGroups, onMaterialGroupsChange]);
 
   // ── Team group helpers ──────────────────────────────────────────────────────
-  const addTeamEntry = (groupId: string) => {
+  const addTeamEntry = useCallback((groupId: string) => {
     onTeamGroupsChange(teamGroups.map((g) =>
       g.id === groupId
         ? { ...g, entries: [...g.entries, { id: genId(), staff_member_id: "", member_name: "", role: "", price: 0, hours_per_day: 8, days: 1, total: 0 }] }
         : g
     ));
-  };
+  }, [teamGroups, onTeamGroupsChange]);
 
-  const updateTeamEntry = (groupId: string, entryId: string, field: string, value: string | number) => {
+  const updateTeamEntry = useCallback((groupId: string, entryId: string, field: string, value: string | number) => {
     onTeamGroupsChange(teamGroups.map((g) =>
       g.id !== groupId ? g : {
         ...g,
@@ -433,39 +241,39 @@ export function BillingForm({
           if (e.id !== entryId) return e;
           const updated = { ...e, [field]: value };
           if (field === "staff_member_id") {
-            const member = teamMembers.find((m) => m.id === value);
+            const member = teamMembersById.get(value as string);
             if (member) {
               updated.member_name = member.name;
               updated.role = member.designation || "";
             }
           }
           if (field === "price" || field === "hours_per_day" || field === "days") {
-            updated.total = Number(updated.price) * Number(updated.hours_per_day) * Number(updated.days);
+            updated.total = updated.price * updated.hours_per_day * updated.days;
           }
           return updated;
         }),
       }
     ));
-  };
+  }, [teamGroups, onTeamGroupsChange, teamMembersById]);
 
-  const removeTeamEntry = (groupId: string, entryId: string) => {
+  const removeTeamEntry = useCallback((groupId: string, entryId: string) => {
     onTeamGroupsChange(teamGroups.map((g) =>
       g.id !== groupId ? g : { ...g, entries: g.entries.filter((e) => e.id !== entryId) }
     ));
-  };
+  }, [teamGroups, onTeamGroupsChange]);
 
-  const removeTeamGroup = (groupId: string) => {
+  const removeTeamGroup = useCallback((groupId: string) => {
     onTeamGroupsChange(teamGroups.filter((g) => g.id !== groupId));
-  };
+  }, [teamGroups, onTeamGroupsChange]);
 
   // ── Tax helpers ─────────────────────────────────────────────────────────────
-  const updateTax = (id: string, field: "label" | "rate" | "tax_type", value: string | number) => {
+  const updateTax = useCallback((id: string, field: "label" | "rate" | "tax_type", value: string | number) => {
     onTaxesChange(taxes.map((t) => t.id === id ? { ...t, [field]: value } : t));
-  };
+  }, [taxes, onTaxesChange]);
 
-  const removeTax = (id: string) => {
+  const removeTax = useCallback((id: string) => {
     onTaxesChange(taxes.filter((t) => t.id !== id));
-  };
+  }, [taxes, onTaxesChange]);
 
   return (
     <div>
@@ -502,7 +310,7 @@ export function BillingForm({
                 <div className="space-y-1.5">
                   <Label>Project <span className="text-red-500">*</span></Label>
                   <SearchableSelect
-                    options={projects.map((p) => ({ value: p.id, label: p.title }))}
+                    options={projectOptions}
                     value={form.project_id}
                     onChange={(v) => onChange("project_id", v)}
                     placeholder="Select a project"
@@ -562,98 +370,7 @@ export function BillingForm({
               </FormCard>
             )}
 
-            {/* ── Template Token Reference ──────────────────── */}
-            <FormCard>
-              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Template Tokens</p>
-              <p className="text-xs text-gray-400 mb-3">Use these in billing templates — values update live as you fill in data.</p>
-              <div className="space-y-3">
-                {/* Table block tokens */}
-                <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Tables — auto-generated full tables</p>
-                  <p className="text-[10px] text-gray-400 mb-1.5">Place once in template; backend renders all rows with headers, subtotals, and pagination.</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[
-                      { k: "materials_table", label: "All material rows" },
-                      { k: "team_table", label: "All team entries" },
-                      { k: "taxes_table", label: "All tax rows" },
-                    ].map(({ k, label }) => (
-                      <span key={k} title={label} className="text-[11px] px-2 py-0.5 rounded bg-purple-100 text-purple-700 font-mono">{`{${k}}`}</span>
-                    ))}
-                  </div>
-                </div>
-                {/* Row template tokens */}
-                <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Row Template Tokens</p>
-                  <p className="text-[10px] text-gray-400 mb-1.5">Design your own table in the template editor. Place these in a <code className="bg-gray-100 px-0.5 rounded">{"<td>"}</code> — the row auto-repeats for each entry.</p>
-                  <div className="space-y-1.5">
-                    <div className="flex flex-wrap gap-1">
-                      {["materials.name","materials.variant","materials.price","materials.qty","materials.total","materials.group"].map((k) => (
-                        <span key={k} className="text-[11px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100 font-mono">{`{${k}}`}</span>
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {["team.name","team.role","team.rate","team.hours","team.days","team.total","team.group"].map((k) => (
-                        <span key={k} className="text-[11px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100 font-mono">{`{${k}}`}</span>
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {["taxes.label","taxes.rate_display","taxes.type","taxes.amount"].map((k) => (
-                        <span key={k} className="text-[11px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100 font-mono">{`{${k}}`}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Basic</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(["title", "project", "balance_status"] as const).map((k) => (
-                      <span key={k} className="text-[11px] px-2 py-0.5 rounded bg-gray-100 text-gray-700 font-mono">{`{${k}}`}</span>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Financials</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(["materials_total", "team_total", "tax_total", "grand_total", "contract_value", "balance"] as const).map((k) => (
-                      <span key={k} className="text-[11px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-mono">{`{${k}}`}</span>
-                    ))}
-                  </div>
-                </div>
-                {materialGroups.length > 0 && (
-                  <div>
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Materials by Group</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {materialGroups.map((g) => {
-                        const k = `mat_${g.groupLabel.toLowerCase().replace(/\W+/g, "_")}`;
-                        return <span key={k} className="text-[11px] px-2 py-0.5 rounded bg-green-50 text-green-700 font-mono">{`{${k}}`}</span>;
-                      })}
-                    </div>
-                  </div>
-                )}
-                {teamGroups.length > 0 && (
-                  <div>
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Team by Group</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {teamGroups.map((g) => {
-                        const k = `team_${g.groupLabel.toLowerCase().replace(/\W+/g, "_")}`;
-                        return <span key={k} className="text-[11px] px-2 py-0.5 rounded bg-purple-50 text-purple-700 font-mono">{`{${k}}`}</span>;
-                      })}
-                    </div>
-                  </div>
-                )}
-                {taxes.length > 0 && (
-                  <div>
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Taxes</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {taxes.map((t) => {
-                        const k = `tax_${t.label.toLowerCase().replace(/\W+/g, "_")}`;
-                        return <span key={k} className="text-[11px] px-2 py-0.5 rounded bg-amber-50 text-amber-700 font-mono">{`{${k}}`}</span>;
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </FormCard>
+            <TemplateTokensCard materialGroups={materialGroups} teamGroups={teamGroups} taxes={taxes} billingVars={billingVars} />
           </TabsContent>
 
           {/* ═══════════════ MATERIALS ═══════════════ */}
@@ -676,8 +393,8 @@ export function BillingForm({
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {materialGroups.map((group) => {
-                    const subTotal = materialTotal(group.entries);
+                    {materialGroups.map((group) => {
+                    const subTotal = matSubtotals.get(group.id) ?? 0;
                     return (
                       <div key={group.id} className="rounded-lg border border-gray-200 overflow-hidden">
                         <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200">
@@ -708,13 +425,13 @@ export function BillingForm({
                               </TableHeader>
                               <TableBody>
                                 {group.entries.map((entry) => {
-                                  const selectedMaterial = materials.find((m) => m.id === entry.material_id);
+                                  const selectedMaterial = materialsById.get(entry.material_id);
                                   const variants = selectedMaterial?.variants ?? [];
                                   return (
                                     <TableRow key={entry.id} className="border-gray-100 hover:bg-gray-50">
                                       <TableCell>
                                         <SearchableSelect
-                                          options={materials.map((m) => ({ value: m.id, label: m.name }))}
+                                          options={materialOptions}
                                           value={entry.material_id}
                                           onChange={(v) => updateMaterialEntry(group.id, entry.id, "material_id", v)}
                                           placeholder="Select..."
@@ -796,8 +513,8 @@ export function BillingForm({
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {teamGroups.map((group) => {
-                    const subTotal = teamTotal(group.entries);
+                    {teamGroups.map((group) => {
+                    const subTotal = teamSubtotals.get(group.id) ?? 0;
                     return (
                       <div key={group.id} className="rounded-lg border border-gray-200 overflow-hidden">
                         <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200">
@@ -832,7 +549,7 @@ export function BillingForm({
                                   <TableRow key={entry.id} className="border-gray-100 hover:bg-gray-50">
                                     <TableCell>
                                       <SearchableSelect
-                                        options={teamMembers.map((m) => ({ value: m.id, label: m.name }))}
+                                        options={teamMemberOptions}
                                         value={entry.staff_member_id}
                                         onChange={(v) => updateTeamEntry(group.id, entry.id, "staff_member_id", v)}
                                         placeholder="Select..."
@@ -853,7 +570,7 @@ export function BillingForm({
                                           </PopoverTrigger>
                                           <PopoverContent align="start" side="bottom" className="w-56 p-2">
                                             <SearchableSelect
-                                              options={allRoleValues.map((v) => ({ value: v, label: v }))}
+                                              options={roleValueOptions}
                                               value={entry.role}
                                               onChange={(v) => { updateTeamEntry(group.id, entry.id, "role", v); setRoleEditTarget(null); }}
                                               placeholder="Pick a role..."
@@ -1035,7 +752,7 @@ export function BillingForm({
       />
 
       {/* ── Print Dialog ────────────────────────────────────────────────── */}
-      <PrintExportDialog open={printOpen} onOpenChange={setPrintOpen} billingVars={billingVars} billingData={billingData} />
+      <BillingPrintDialog open={printOpen} onOpenChange={setPrintOpen} billingVars={billingVars} billingData={billingData} />
     </div>
   );
 }

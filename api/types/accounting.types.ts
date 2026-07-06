@@ -84,9 +84,7 @@ export interface ProjectAccountingSummary {
   entry_count: number;
 }
 
-export function genId() {
-  return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
-}
+export { genId } from "@/lib/utils";
 
 export function materialEntriesTotal(entries: AccountingMaterialEntry[]) {
   return entries.reduce((s, e) => s + e.quantity * e.unit_price, 0);

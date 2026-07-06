@@ -1,28 +1,25 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Calculator, Search } from "lucide-react";
 import { toast } from "sonner";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/api/query-keys";
 import { BillingAdmin } from "@/api/services/billing.service";
-import { MaterialListAdmin } from "@/api/services/material-list.service";
-import { StaffAdmin } from "@/api/services/staff.service";
 import { ProjectAdmin } from "@/api/services/project.service";
 import dynamic from "next/dynamic";
+import { genId } from "@/lib/utils";
+import { groupEntries, ungroupEntries } from "@/lib/groups";
 import type {
   BillingCalculation, BillingFormData,
-  BillingMaterialEntry, BillingTeamEntry,
   MaterialGroup, TeamGroup, TaxEntry,
 } from "@/api/types/billing.types";
-import type { ProjectListItem, Project } from "@/api/types/project.types";
 const BillingForm = dynamic(() => import("@/components/page_ui/billing-form").then((m) => m.BillingForm), { ssr: false });
 import { PageHeader } from "@/components/global_ui/page-header";
 import { DataTable } from "@/components/global_ui/data-table";
 import { StatusBadge, ACTIVE_STATUS } from "@/components/global_ui/status-badge";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import type { ColumnDef } from "@/components/global_ui/data-table";
-import { useAttributeOptions } from "@/api/hooks/use-attribute-query";
 import { useDebounce } from "@/api/hooks/use-debounce";
 
 type View = "list" | "form";
@@ -34,36 +31,6 @@ const EMPTY_FORM: BillingFormData = {
   materials_title: "", team_title: "",
 };
 
-function genId() { return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`; }
-
-function ungroupMaterials(groups: MaterialGroup[]): BillingMaterialEntry[] {
-  return groups.flatMap((g) => g.entries.map((e) => ({ ...e, group: g.groupLabel })));
-}
-
-function ungroupTeam(groups: TeamGroup[]): BillingTeamEntry[] {
-  return groups.flatMap((g) => g.entries.map((e) => ({ ...e, group: g.groupLabel })));
-}
-
-function groupMaterials(entries: BillingMaterialEntry[]): MaterialGroup[] {
-  const map = new Map<string, BillingMaterialEntry[]>();
-  for (const e of entries) {
-    const key = e.group || "General";
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push({ ...e });
-  }
-  return Array.from(map.entries()).map(([groupLabel, entries], i) => ({ id: `g-${i}`, groupLabel, entries }));
-}
-
-function groupTeam(entries: BillingTeamEntry[]): TeamGroup[] {
-  const map = new Map<string, BillingTeamEntry[]>();
-  for (const e of entries) {
-    const key = e.group || "General";
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push({ ...e });
-  }
-  return Array.from(map.entries()).map(([groupLabel, entries], i) => ({ id: `g-${i}`, groupLabel, entries }));
-}
-
 export function _Client() {
   const queryClient = useQueryClient();
 
@@ -73,7 +40,6 @@ export function _Client() {
   const [materialGroups, setMaterialGroups] = useState<MaterialGroup[]>([]);
   const [teamGroups, setTeamGroups] = useState<TeamGroup[]>([]);
   const [taxes, setTaxes] = useState<TaxEntry[]>([]);
-  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -95,25 +61,11 @@ export function _Client() {
   const total = billingData?.count ?? 0;
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
-  const { data: materials = [] } = useQuery({
-    queryKey: queryKeys.materialList.list({}),
-    queryFn: async () => (await MaterialListAdmin.search({})).results ?? [],
-    staleTime: Infinity,
-  });
-
-  const { data: teamMembers = [] } = useQuery({
-    queryKey: queryKeys.staff.list({}),
-    queryFn: async () => (await StaffAdmin.search({})).results ?? [],
-    staleTime: Infinity,
-  });
-
   const { data: projects = [] } = useQuery({
     queryKey: queryKeys.projects.list({}),
     queryFn: async () => (await ProjectAdmin.list()).results ?? [],
     staleTime: Infinity,
   });
-
-  const { data: attributes = [] } = useAttributeOptions();
 
   const selectedProject = useMemo(() => {
     if (!form.project_id) return null;
@@ -122,33 +74,48 @@ export function _Client() {
 
   const { data: projectDetail } = useQuery({
     queryKey: queryKeys.projects.detail(selectedProject?.slug ?? ""),
-    queryFn: () => ProjectAdmin.adminGet(selectedProject!.slug),
+    queryFn: () => ProjectAdmin.adminGet(selectedProject?.slug ?? ""),
     enabled: view === "form" && !!selectedProject?.slug,
     staleTime: 30000,
   });
 
-  // ponytail: preload BillingForm chunk while user browses list
-  useEffect(() => { import("@/components/page_ui/billing-form"); }, []);
-
-  const invalidateBilling = () =>
-    queryClient.invalidateQueries({ queryKey: queryKeys.billing.all, refetchType: "active" });
-
-  const openNew = () => {
+  const resetForm = () => {
     setForm(EMPTY_FORM);
     setMaterialGroups([]);
     setTeamGroups([]);
     setTaxes([]);
     setEditingId(null);
+  };
+
+  const invalidateBilling = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.billing.all, refetchType: "active" });
+
+  const createMutation = useMutation({
+    mutationFn: (payload: Record<string, unknown>) => BillingAdmin.create(payload),
+    onSuccess: () => { toast.success("Billing calculation created"); invalidateBilling(); },
+    onError: () => { toast.error("Something went wrong"); },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => BillingAdmin.update(id, data),
+    onSuccess: () => { toast.success("Billing calculation updated"); invalidateBilling(); },
+    onError: () => { toast.error("Something went wrong"); },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => BillingAdmin.delete(id),
+    onSuccess: () => { toast.success("Billing calculation deleted"); invalidateBilling(); },
+    onError: () => { toast.error("Failed to delete"); },
+  });
+
+  const saving = createMutation.isPending || updateMutation.isPending;
+
+  const openNew = () => {
+    resetForm();
     setView("form");
   };
 
   const openEdit = (item: BillingCalculation) => {
-    setForm(EMPTY_FORM);
-    setMaterialGroups([]);
-    setTeamGroups([]);
-    setTaxes([]);
-    setEditingId(item.id);
-    setView("form");
     BillingAdmin.adminGet(item.id).then((detail) => {
       setForm({
         title: detail.title,
@@ -157,18 +124,16 @@ export function _Client() {
         materials_title: detail.materials_title || "",
         team_title: detail.team_title || "",
       });
-      setMaterialGroups(groupMaterials(detail.material_entries ?? []));
-      setTeamGroups(groupTeam(detail.team_entries ?? []));
+      setMaterialGroups(groupEntries(detail.material_entries ?? []));
+      setTeamGroups(groupEntries(detail.team_entries ?? []));
       setTaxes(detail.taxes?.map((t) => ({ ...t, id: genId() })) ?? []);
+      setEditingId(item.id);
+      setView("form");
     }).catch(() => toast.error("Failed to load billing details"));
   };
 
   const back = () => {
-    setForm(EMPTY_FORM);
-    setMaterialGroups([]);
-    setTeamGroups([]);
-    setTaxes([]);
-    setEditingId(null);
+    resetForm();
     setView("list");
   };
 
@@ -183,38 +148,22 @@ export function _Client() {
 
   const save = async () => {
     if (!form.title) { toast.error("Title is required"); return; }
-    setSaving(true);
-    try {
-      const payload: Record<string, unknown> = {
-        ...form,
-        material_entries: ungroupMaterials(materialGroups),
-        team_entries: ungroupTeam(teamGroups),
-        taxes,
-      };
-      if (editingId) {
-        await BillingAdmin.update(editingId, payload);
-        toast.success("Billing calculation updated");
-      } else {
-        await BillingAdmin.create(payload);
-        toast.success("Billing calculation created");
-      }
-      await invalidateBilling();
-      back();
-    } catch {
-      toast.error("Something went wrong");
-    } finally {
-      setSaving(false);
+    const payload: Record<string, unknown> = {
+      ...form,
+      material_entries: ungroupEntries(materialGroups),
+      team_entries: ungroupEntries(teamGroups),
+      taxes,
+    };
+    if (editingId) {
+      await updateMutation.mutateAsync({ id: editingId, data: payload });
+    } else {
+      await createMutation.mutateAsync(payload);
     }
+    back();
   };
 
   const confirmDelete = async (id: string) => {
-    try {
-      await BillingAdmin.delete(id);
-      await invalidateBilling();
-      toast.success("Billing calculation deleted");
-    } catch {
-      toast.error("Failed to delete");
-    }
+    await deleteMutation.mutateAsync(id);
   };
 
   const columns: ColumnDef<BillingCalculation>[] = [
@@ -241,7 +190,7 @@ export function _Client() {
     {
       header: "Grand Total",
       render: (item) => {
-        const t = item.material_total + item.team_total + (item.tax_total || 0);
+        const t = item.grand_total;
         const fmt = t >= 100000 ? `Rs ${(t / 100000).toFixed(2)} L` : `Rs ${t.toLocaleString("en-IN")}`;
         return <span className="text-sm font-semibold text-gray-900">{fmt}</span>;
       },
@@ -295,11 +244,8 @@ export function _Client() {
             form={form}
             editingId={editingId}
             saving={saving}
-            materials={materials}
-            teamMembers={teamMembers}
             projects={projects}
             projectDetail={projectDetail ?? undefined}
-            attributes={attributes}
             materialGroups={materialGroups}
             teamGroups={teamGroups}
             taxes={taxes}
