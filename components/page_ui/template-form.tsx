@@ -183,14 +183,16 @@ export function TemplateForm({ form, editingId, saving, attributes, onChange, on
                 )}
               </div>
 
-              <DocumentPicker
-                open={docPickerOpen}
-                onOpenChange={setDocPickerOpen}
-                onSelect={(item) => {
-                  onChange("masterTemplateFile", item.url);
-                  setDocPickerOpen(false);
-                }}
-              />
+              {docPickerOpen && (
+                <DocumentPicker
+                  open={docPickerOpen}
+                  onOpenChange={setDocPickerOpen}
+                  onSelect={(item) => {
+                    onChange("masterTemplateFile", item.url);
+                    setDocPickerOpen(false);
+                  }}
+                />
+              )}
             </FormCard>
           </TabsContent>
 

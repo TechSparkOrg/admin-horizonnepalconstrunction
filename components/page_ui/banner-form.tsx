@@ -313,20 +313,22 @@ export function BannerForm({ editing, saving, onSave, onBack }: Props) {
         </DialogContent>
       </Dialog>
 
-      <MediaPickerDialog
-        open={pickerOpen}
-        onOpenChange={setPickerOpen}
-        mode="image"
-        defaultCategory="Banners"
-        multiSelect
-        onMultiSelect={(items) => {
-          setPickedLibraryImages(prev => {
-            const existing = new Set(prev.map(i => i.id));
-            const newItems = items.filter(i => !existing.has(i.id));
-            return [...prev, ...newItems];
-          });
-        }}
-      />
+      {pickerOpen && (
+        <MediaPickerDialog
+          open={pickerOpen}
+          onOpenChange={setPickerOpen}
+          mode="image"
+          defaultCategory="Banners"
+          multiSelect
+          onMultiSelect={(items) => {
+            setPickedLibraryImages(prev => {
+              const existing = new Set(prev.map(i => i.id));
+              const newItems = items.filter(i => !existing.has(i.id));
+              return [...prev, ...newItems];
+            });
+          }}
+        />
+      )}
     </div>
   );
 }
