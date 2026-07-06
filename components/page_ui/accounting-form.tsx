@@ -23,40 +23,8 @@ import type { AccountingEntry, AccountingEntryFormData, AccountingMaterialEntry,
 import { EXPENSE_CATEGORY_OPTIONS, EXPENSE_CATEGORY_STYLES, EMPTY_ENTRY_FORM, PAID_BY_OPTIONS, genId, materialEntriesTotal, teamEntriesTotal } from "@/api/types/accounting.types";
 import type { Project } from "@/api/types/project.types";
 import type { StaffMemberListItem } from "@/api/types/staff.types";
-
-function formatCurrency(n: number) {
-  if (n >= 10000000) return `Rs ${(n / 10000000).toFixed(2)} Cr`;
-  if (n >= 100000) return `Rs ${(n / 100000).toFixed(2)} L`;
-  return `Rs ${n.toLocaleString("en-IN")}`;
-}
-
-function NumericInput({ value, onCommit, className, min = 0, placeholder = "Enter value" }: {
-  value: number; onCommit: (n: number) => void;
-  className?: string; min?: number; placeholder?: string;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [text, setText] = useState("");
-  const displayed = editing ? text : (value === 0 ? "" : String(value));
-  return (
-    <Input
-      type="text"
-      inputMode="decimal"
-      className={className}
-      value={displayed}
-      placeholder={placeholder}
-      onChange={(e) => {
-        const v = e.target.value;
-        if (v === "" || /^-?\d*\.?\d*$/.test(v)) setText(v);
-      }}
-      onFocus={(e) => { setEditing(true); setText(value === 0 ? "" : String(value)); e.target.select(); }}
-      onBlur={() => {
-        setEditing(false);
-        const n = parseFloat(text);
-        onCommit(isNaN(n) ? 0 : Math.max(min, n));
-      }}
-    />
-  );
-}
+import { formatCurrency } from "@/lib/currency";
+import { NumericInput } from "@/components/global_ui/numeric-input";
 
 // ─── Entry Dialog ──────────────────────────────────────────────────────
 interface EntryDialogProps {

@@ -30,6 +30,7 @@ export interface StaffMemberListItem {
   photo: string;
   employee_id: string;
   joining_date: string | null;
+  created_at: string;
 }
 
 export interface StaffMember {

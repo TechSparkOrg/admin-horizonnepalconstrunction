@@ -25,37 +25,10 @@ import type { AttributeItem } from "@/api/types/attribute.types";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/api/query-keys";
 import { X } from "lucide-react";
+import { formatCurrency, computeTaxAmount } from "@/lib/currency";
+import { NumericInput } from "@/components/global_ui/numeric-input";
 
 function genId() { return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`; }
-
-// Allows empty string while typing; commits number on blur
-function NumericInput({ value, onCommit, className, min = 0, placeholder = "Enter value" }: {
-  value: number; onCommit: (n: number) => void;
-  className?: string; min?: number; placeholder?: string;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [text, setText] = useState("");
-  const displayed = editing ? text : (value === 0 ? "" : String(value));
-  return (
-    <Input
-      type="text"
-      inputMode="decimal"
-      className={className}
-      value={displayed}
-      placeholder={placeholder}
-      onChange={(e) => {
-        const v = e.target.value;
-        if (v === "" || /^-?\d*\.?\d*$/.test(v)) setText(v);
-      }}
-      onFocus={(e) => { setEditing(true); setText(value === 0 ? "" : String(value)); e.target.select(); }}
-      onBlur={() => {
-        setEditing(false);
-        const n = parseFloat(text);
-        onCommit(isNaN(n) ? 0 : Math.max(min, n));
-      }}
-    />
-  );
-}
 
 interface Props {
   form: BillingFormData;
@@ -75,12 +48,6 @@ interface Props {
   onChange: (key: string, value: string | boolean) => void;
   onSave: () => void;
   onBack: () => void;
-}
-
-function formatCurrency(n: number) {
-  if (n >= 10000000) return `Rs ${(n / 10000000).toFixed(2)} Cr`;
-  if (n >= 100000) return `Rs ${(n / 100000).toFixed(2)} L`;
-  return `Rs ${n.toLocaleString("en-IN")}`;
 }
 
 function materialTotal(entries: BillingMaterialEntry[]) {
@@ -313,7 +280,7 @@ export function BillingForm({
   const materialsGrand = materialGroups.reduce((s, g) => s + materialTotal(g.entries), 0);
   const teamGrand = teamGroups.reduce((s, g) => s + teamTotal(g.entries), 0);
   const taxTotal = taxes.reduce((s, t) => {
-    const amt = t.tax_type === "fixed" ? t.rate : (materialsGrand + teamGrand) * t.rate / 100;
+    const amt = computeTaxAmount(t, materialsGrand + teamGrand);
     return s + amt;
   }, 0);
   const grandTotal = materialsGrand + teamGrand + taxTotal;
@@ -338,7 +305,7 @@ export function BillingForm({
     ),
     ...Object.fromEntries(
       taxes.map((t) => {
-        const amt = t.tax_type === "fixed" ? t.rate : (materialsGrand + teamGrand) * t.rate / 100;
+        const amt = computeTaxAmount(t, materialsGrand + teamGrand);
         return [`tax_${t.label.toLowerCase().replace(/\W+/g, "_")}`, formatCurrency(amt)];
       })
     ),
@@ -360,7 +327,7 @@ export function BillingForm({
       }))
     ),
     taxes: taxes.map((t) => {
-      const amt = t.tax_type === "fixed" ? t.rate : (materialsGrand + teamGrand) * t.rate / 100;
+      const amt = computeTaxAmount(t, materialsGrand + teamGrand);
       return {
         label: t.label,
         rate_display: t.tax_type === "fixed" ? formatCurrency(t.rate) : `${t.rate}%`,
@@ -595,82 +562,6 @@ export function BillingForm({
               </FormCard>
             )}
 
-            {/* ── Billing Summary ──────────────────────────── */}
-            {(materialsGrand > 0 || teamGrand > 0 || taxTotal > 0) && (
-              <FormCard>
-                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Billing Summary</p>
-                <div className="space-y-0">
-                  {/* Material group subtotals */}
-                  {materialGroups.filter((g) => materialTotal(g.entries) > 0).map((g) => (
-                    <div key={g.id} className="flex justify-between items-center py-1.5">
-                      <span className="text-xs text-gray-500 flex items-center gap-1.5">
-                        <Building2 className="size-3 text-gray-300" />{g.groupLabel}
-                      </span>
-                      <span className="text-xs font-medium text-gray-700">{formatCurrency(materialTotal(g.entries))}</span>
-                    </div>
-                  ))}
-                  {materialsGrand > 0 && (
-                    <div className="flex justify-between items-center py-1.5 border-t border-gray-100">
-                      <span className="text-sm font-semibold text-gray-800">Materials Total</span>
-                      <span className="text-sm font-bold text-gray-900">{formatCurrency(materialsGrand)}</span>
-                    </div>
-                  )}
-                  {/* Team group subtotals */}
-                  {teamGroups.filter((g) => teamTotal(g.entries) > 0).map((g) => (
-                    <div key={g.id} className="flex justify-between items-center py-1.5">
-                      <span className="text-xs text-gray-500 flex items-center gap-1.5">
-                        <Users className="size-3 text-gray-300" />{g.groupLabel}
-                      </span>
-                      <span className="text-xs font-medium text-gray-700">{formatCurrency(teamTotal(g.entries))}</span>
-                    </div>
-                  ))}
-                  {teamGrand > 0 && (
-                    <div className="flex justify-between items-center py-1.5 border-t border-gray-100">
-                      <span className="text-sm font-semibold text-gray-800">Team Total</span>
-                      <span className="text-sm font-bold text-gray-900">{formatCurrency(teamGrand)}</span>
-                    </div>
-                  )}
-                  {/* Individual taxes */}
-                  {taxes.map((t) => {
-                    const amt = t.tax_type === "fixed" ? t.rate : (materialsGrand + teamGrand) * t.rate / 100;
-                    if (amt === 0) return null;
-                    return (
-                      <div key={t.id} className="flex justify-between items-center py-1.5">
-                        <span className="text-xs text-gray-500 flex items-center gap-1.5">
-                          <Banknote className="size-3 text-gray-300" />
-                          {t.label} {t.tax_type === "fixed" ? "(Fixed)" : `(${t.rate}%)`}
-                        </span>
-                        <span className="text-xs font-medium text-gray-700">{formatCurrency(amt)}</span>
-                      </div>
-                    );
-                  })}
-                  {taxTotal > 0 && (
-                    <div className="flex justify-between items-center py-1.5 border-t border-gray-100">
-                      <span className="text-sm font-semibold text-gray-800">Tax Total</span>
-                      <span className="text-sm font-bold text-gray-900">{formatCurrency(taxTotal)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center py-3 border-t-2 border-gray-200">
-                    <span className="text-base font-bold text-gray-900">Grand Total</span>
-                    <span className="text-base font-bold text-gray-900">{formatCurrency(grandTotal)}</span>
-                  </div>
-                  {contractValue > 0 && (
-                    <div className={`flex justify-between items-center px-3 py-2 rounded-lg mt-1 ${balance >= 0 ? "bg-green-50" : "bg-red-50"}`}>
-                      <div>
-                        <p className={`text-xs font-semibold ${balance >= 0 ? "text-green-700" : "text-red-700"}`}>
-                          Budget {balance >= 0 ? "Surplus" : "Deficit"}
-                        </p>
-                        <p className="text-[10px] text-gray-400">Contract: {formatCurrency(contractValue)} − Costs: {formatCurrency(grandTotal)}</p>
-                      </div>
-                      <span className={`text-sm font-bold ${balance >= 0 ? "text-green-700" : "text-red-700"}`}>
-                        {formatCurrency(Math.abs(balance))}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </FormCard>
-            )}
-
             {/* ── Template Token Reference ──────────────────── */}
             <FormCard>
               <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Template Tokens</p>
@@ -780,7 +671,7 @@ export function BillingForm({
               </div>
 
               {materialGroups.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-gray-200 py-10 flex flex-col items-center justify-center gap-2 text-gray-500">
+                <div className="rounded-lg border border-dashed border-gray-200 py-8 flex flex-col items-center justify-center gap-2 text-gray-500">
                   <span className="text-sm">No categories yet. Add one to start.</span>
                 </div>
               ) : (
@@ -789,7 +680,7 @@ export function BillingForm({
                     const subTotal = materialTotal(group.entries);
                     return (
                       <div key={group.id} className="rounded-lg border border-gray-200 overflow-hidden">
-                        <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
+                        <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200">
                           <p className="text-sm font-semibold text-gray-900">{group.groupLabel}</p>
                           <div className="flex items-center gap-2">
                             <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => addMaterialEntry(group.id)}>
@@ -865,7 +756,7 @@ export function BillingForm({
                             </Table>
                           </div>
                         )}
-                        <div className="flex justify-end px-4 py-2 bg-gray-50 border-t border-gray-200">
+                        <div className="flex justify-end px-3 py-1.5 border-t border-gray-200">
                           <p className="text-sm font-semibold text-gray-900">Subtotal: {formatCurrency(subTotal)}</p>
                         </div>
                       </div>
@@ -875,10 +766,10 @@ export function BillingForm({
               )}
 
               {materialGroups.length > 0 && (
-                <div className="flex justify-end pt-4 border-t border-gray-200 mt-4">
+                <div className="flex justify-end pt-3 border-t border-gray-200 mt-3">
                   <div className="text-right">
                     <p className="text-xs text-gray-500">Materials Grand Total</p>
-                    <p className="text-lg font-bold text-gray-900">{formatCurrency(materialsGrand)}</p>
+                    <p className="text-base font-semibold text-gray-900">{formatCurrency(materialsGrand)}</p>
                   </div>
                 </div>
               )}
@@ -900,7 +791,7 @@ export function BillingForm({
               </div>
 
               {teamGroups.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-gray-200 py-10 flex flex-col items-center justify-center gap-2 text-gray-500">
+                <div className="rounded-lg border border-dashed border-gray-200 py-8 flex flex-col items-center justify-center gap-2 text-gray-500">
                   <span className="text-sm">No role groups yet. Add one to start.</span>
                 </div>
               ) : (
@@ -909,7 +800,7 @@ export function BillingForm({
                     const subTotal = teamTotal(group.entries);
                     return (
                       <div key={group.id} className="rounded-lg border border-gray-200 overflow-hidden">
-                        <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
+                        <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200">
                           <p className="text-sm font-semibold text-gray-900">{group.groupLabel}</p>
                           <div className="flex items-center gap-2">
                             <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => addTeamEntry(group.id)}>
@@ -996,7 +887,7 @@ export function BillingForm({
                             </Table>
                           </div>
                         )}
-                        <div className="flex justify-end px-4 py-2 bg-gray-50 border-t border-gray-200">
+                        <div className="flex justify-end px-3 py-1.5 border-t border-gray-200">
                           <p className="text-sm font-semibold text-gray-900">Subtotal: {formatCurrency(subTotal)}</p>
                         </div>
                       </div>
@@ -1006,10 +897,10 @@ export function BillingForm({
               )}
 
               {teamGroups.length > 0 && (
-                <div className="flex justify-end pt-4 border-t border-gray-200 mt-4">
+                <div className="flex justify-end pt-3 border-t border-gray-200 mt-3">
                   <div className="text-right">
                     <p className="text-xs text-gray-500">Team Grand Total</p>
-                    <p className="text-lg font-bold text-gray-900">{formatCurrency(teamGrand)}</p>
+                    <p className="text-base font-semibold text-gray-900">{formatCurrency(teamGrand)}</p>
                   </div>
                 </div>
               )}
@@ -1031,7 +922,7 @@ export function BillingForm({
               </div>
 
               {taxes.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-gray-200 py-10 flex flex-col items-center justify-center gap-2 text-gray-500">
+                <div className="rounded-lg border border-dashed border-gray-200 py-8 flex flex-col items-center justify-center gap-2 text-gray-500">
                   <span className="text-sm">No taxes added yet</span>
                 </div>
               ) : (
@@ -1096,10 +987,10 @@ export function BillingForm({
               )}
 
               {taxes.length > 0 && (
-                <div className="flex justify-end pt-4 border-t border-gray-200 mt-4">
+                <div className="flex justify-end pt-3 border-t border-gray-200 mt-3">
                   <div className="text-right">
                     <p className="text-xs text-gray-500">Total Taxes</p>
-                    <p className="text-lg font-bold text-gray-900">{formatCurrency(taxTotal)}</p>
+                    <p className="text-base font-semibold text-gray-900">{formatCurrency(taxTotal)}</p>
                   </div>
                 </div>
               )}
@@ -1110,16 +1001,16 @@ export function BillingForm({
 
       {/* ── Grand Total ─────────────────────────────────────────────────── */}
       {(materialsGrand > 0 || teamGrand > 0 || taxTotal > 0) && (
-        <div className="mt-6 border-t border-gray-200 pt-4">
+        <div className="mt-4 border-t border-gray-200 pt-3">
           <div className="flex justify-end">
-            <div className="text-right space-y-1">
+            <div className="text-right space-y-0.5">
               {materialsGrand > 0 && <p className="text-xs text-gray-500">Materials: {formatCurrency(materialsGrand)}</p>}
               {teamGrand > 0 && <p className="text-xs text-gray-500">Team: {formatCurrency(teamGrand)}</p>}
               {taxTotal > 0 && <p className="text-xs text-gray-500">Taxes: {formatCurrency(taxTotal)}</p>}
-              <p className="text-xl font-bold text-gray-900 mt-1">Grand Total: {formatCurrency(grandTotal)}</p>
+              <p className="text-base font-semibold text-gray-900 pt-1">Grand Total: {formatCurrency(grandTotal)}</p>
               {contractValue > 0 && (
-                <p className={`text-xs font-medium ${balance >= 0 ? "text-green-600" : "text-red-600"}`}>
-                  Budget Balance: {balance >= 0 ? "Surplus" : "Deficit"} of {formatCurrency(Math.abs(balance))}
+                <p className={`text-xs ${balance >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  {balance >= 0 ? "Surplus" : "Deficit"} {formatCurrency(Math.abs(balance))}
                 </p>
               )}
             </div>

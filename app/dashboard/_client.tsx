@@ -4,7 +4,7 @@ import * as React from "react";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 import {
   FolderKanban, MessageSquare, Users,
-  ImageIcon, Film, Box, Star, ArrowRight,
+  ImageIcon, Film, Box, ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
 import { useAuthStore } from "@/app/store/auth-store";
@@ -15,6 +15,11 @@ import { StaffAdmin } from "@/api/services/staff.service";
 import { ConsultationAdmin } from "@/api/services/consultation.service";
 import { MediaService } from "@/api/services/media.service";
 import { ReviewAdmin } from "@/api/services/review.service";
+import { BlogAdmin } from "@/api/services/blog.service";
+import { MaterialListAdmin } from "@/api/services/material-list.service";
+import { TemplateAdmin } from "@/api/services/template.service";
+import { BillingAdmin } from "@/api/services/billing.service";
+import { AccountingAdmin } from "@/api/services/accounting.service";
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from "@/components/ui/card";
@@ -50,35 +55,9 @@ function greeting(): string {
   return "Good evening";
 }
 
-const REFERENCE_DATE = new Date();
-
-function buildDateRange(days: number): string[] {
-  const dates: string[] = [];
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(REFERENCE_DATE);
-    d.setDate(d.getDate() - i);
-    dates.push(d.toISOString().slice(0, 10));
-  }
-  return dates;
-}
-
-function fillSeries<T extends Record<string, number>>(
-  days: number,
-  data: { date: string; values: Partial<T> }[],
-  fields: (keyof T)[],
-): (T & { date: string })[] {
-  const map = new Map(data.map((d) => [d.date, d.values]));
-  return buildDateRange(days).map((date) => {
-    const row: Record<string, unknown> = { date: date.slice(5) };
-    const existing = map.get(date);
-    for (const f of fields) row[f as string] = existing?.[f] ?? 0;
-    return row as T & { date: string };
-  });
-}
-
 const chartConfig = {
-  reviews:   { label: "Reviews",   color: "var(--chart-1)" },
-  inquiries: { label: "Inquiries", color: "var(--chart-2)" },
+  income:  { label: "Income",  color: "var(--chart-1)" },
+  expense: { label: "Expense", color: "var(--chart-2)" },
 } satisfies ChartConfig;
 
 const STAT_CARDS = [
@@ -92,21 +71,32 @@ export function _Client() {
   const user = useAuthStore((s) => s.user);
   const [timeRange, setTimeRange] = React.useState("30d");
 
-  const { data: projects }     = useQuery({ queryKey: queryKeys.projects.list({ page_size: 1 }),  queryFn: () => ProjectAdmin.list({ page_size: 1 }) });
-  const { data: team }         = useQuery({ queryKey: queryKeys.staff.list({ page_size: 1 }),     queryFn: () => StaffAdmin.search({ page_size: 1 }) });
-  const { data: consultations }= useQuery({ queryKey: ["dash","consult","count"],                  queryFn: () => ConsultationAdmin.list({ page_size: 1 }) });
-  const { data: mediaTotal }   = useQuery({ queryKey: queryKeys.media.list({ page_size: 1 }),     queryFn: () => MediaService.list({ page_size: 1 }) });
-  const { data: mediaImgs }    = useQuery({ queryKey: ["dash","media","imgs"],                     queryFn: () => MediaService.list({ page_size: 1, group_title: "Images" }) });
-  const { data: mediaVids }    = useQuery({ queryKey: ["dash","media","vids"],                     queryFn: () => MediaService.list({ page_size: 1, group_title: "Videos" }) });
-  const { data: mediaModels }  = useQuery({ queryKey: ["dash","media","models"],                   queryFn: () => MediaService.list({ page_size: 1, group_title: "3D Models" }) });
-  const { data: reviewsData }  = useQuery({ queryKey: ["dash","reviews","all"],                    queryFn: () => ReviewAdmin.list({ page_size: 100 }) });
-  const { data: allInquiries } = useQuery({ queryKey: ["dash","consult","all"],                    queryFn: () => ConsultationAdmin.list({ page_size: 100 }) });
-  const { data: recentInq }    = useQuery({ queryKey: ["dash","inq","recent"],                     queryFn: () => ConsultationAdmin.list({ page_size: 5 }) });
-  const { data: recentProj }   = useQuery({ queryKey: ["dash","proj","recent"],                    queryFn: () => ProjectAdmin.list({ page_size: 5 }) });
-  const { data: recentRev }    = useQuery({ queryKey: ["dash","rev","recent"],                     queryFn: () => ReviewAdmin.list({ page_size: 5 }) });
+  const { data: projects }        = useQuery({ queryKey: queryKeys.projects.list({ page_size: 1 }), queryFn: () => ProjectAdmin.list({ page_size: 1 }) });
+  const { data: team }            = useQuery({ queryKey: queryKeys.staff.list({ page_size: 1 }),    queryFn: () => StaffAdmin.search({ page_size: 1 }) });
+  const { data: consultations }   = useQuery({ queryKey: ["dash","consult","count"],                queryFn: () => ConsultationAdmin.list({ page_size: 1 }) });
+  const { data: mediaTotal }      = useQuery({ queryKey: queryKeys.media.list({ page_size: 1 }),    queryFn: () => MediaService.list({ page_size: 1 }) });
+  const { data: mediaImgs }       = useQuery({ queryKey: ["dash","media","imgs"],                   queryFn: () => MediaService.list({ page_size: 1, group_title: "Images" }) });
+  const { data: mediaVids }       = useQuery({ queryKey: ["dash","media","vids"],                   queryFn: () => MediaService.list({ page_size: 1, group_title: "Videos" }) });
+  const { data: mediaModels }     = useQuery({ queryKey: ["dash","media","models"],                 queryFn: () => MediaService.list({ page_size: 1, group_title: "3D Models" }) });
+
+  const days = timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : 90;
+  const { data: dashboardData, isLoading: chartLoading } = useQuery({
+    queryKey: ["dash","accounting", days],
+    queryFn: () => AccountingAdmin.dashboard(days),
+    staleTime: 60000,
+  });
+
+  const { data: recentProj }      = useQuery({ queryKey: ["dash","proj","recent"],   queryFn: () => ProjectAdmin.list({ page_size: 5 }) });
+  const { data: recentRev }       = useQuery({ queryKey: ["dash","rev","recent"],    queryFn: () => ReviewAdmin.list({ page_size: 5 }) });
+  const { data: recentInq }       = useQuery({ queryKey: ["dash","inq","recent"],    queryFn: () => ConsultationAdmin.list({ page_size: 5 }) });
+  const { data: recentStaff }     = useQuery({ queryKey: ["dash","staff","recent"],  queryFn: () => StaffAdmin.search({ page_size: 5 }) });
+  const { data: recentBlogs }     = useQuery({ queryKey: ["dash","blogs","recent"],  queryFn: () => BlogAdmin.list({ page_size: 5 }) });
+  const { data: recentMedia }     = useQuery({ queryKey: ["dash","media","recent"],  queryFn: () => MediaService.list({ page_size: 5 }) });
+  const { data: recentMaterials } = useQuery({ queryKey: ["dash","materials","recent"], queryFn: () => MaterialListAdmin.search({ page_size: 5 }) });
+  const { data: recentTemplates } = useQuery({ queryKey: ["dash","templates","recent"], queryFn: () => TemplateAdmin.search({ page_size: 5 }) });
+  const { data: recentBills }     = useQuery({ queryKey: ["dash","bills","recent"],  queryFn: () => BillingAdmin.list({ page_size: 5 }) });
 
   const loading = !projects || !team || !consultations || !mediaTotal;
-  const days = timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : 90;
 
   const statValues: Record<string, number | undefined> = {
     projects:  projects?.count,
@@ -115,31 +105,23 @@ export function _Client() {
     media:     mediaTotal?.count,
   };
 
-  const chartData = React.useMemo(() => {
-    const reviewCounts: Record<string, number> = {};
-    for (const r of reviewsData?.results ?? []) {
-      const d = r.created_at?.slice(0, 10);
-      if (d) reviewCounts[d] = (reviewCounts[d] || 0) + 1;
-    }
-    const inqCounts: Record<string, number> = {};
-    for (const c of allInquiries?.results ?? []) {
-      const d = c.created_at?.slice(0, 10);
-      if (d) inqCounts[d] = (inqCounts[d] || 0) + 1;
-    }
-    return fillSeries<{ reviews: number; inquiries: number }>(days, [
-      ...Object.entries(reviewCounts).map(([date, count]) => ({ date, values: { reviews: count, inquiries: 0 } })),
-      ...Object.entries(inqCounts).map(([date, count]) => ({ date, values: { reviews: 0, inquiries: count } })),
-    ], ["reviews", "inquiries"]);
-  }, [reviewsData, allInquiries, days]);
+  const chartData = dashboardData?.data ?? [];
 
   const activities = React.useMemo(() => {
-    const items: { id: string; type: "project" | "review" | "inquiry"; title: string; desc: string; time: string }[] = [];
+    type ActivityItem = { id: string; type: string; title: string; desc: string; time: string };
+    const items: ActivityItem[] = [];
     for (const p of recentProj?.results ?? []) items.push({ id: p.id, type: "project", title: p.title, desc: `Status: ${p.status}`, time: p.created_at });
-    for (const r of recentRev?.results ?? []) items.push({ id: r.id, type: "review", title: `${r.name}`, desc: `${r.rating} star review`, time: r.created_at });
+    for (const r of recentRev?.results ?? []) items.push({ id: r.id, type: "review", title: r.name, desc: `${r.rating}\u2605 review`, time: r.created_at });
     for (const c of recentInq?.results ?? []) items.push({ id: c.id, type: "inquiry", title: c.name, desc: c.service || "General inquiry", time: c.created_at });
+    for (const s of recentStaff?.results ?? []) items.push({ id: s.id, type: "staff", title: s.name, desc: s.designation || "New team member", time: s.created_at });
+    for (const b of recentBlogs?.results ?? []) items.push({ id: b.slug, type: "blog", title: b.title, desc: "Blog post published", time: b.created_at });
+    for (const m of recentMedia?.results ?? []) items.push({ id: m.id, type: "media", title: m.title || "Media", desc: m.group_title || "Uploaded", time: m.created_at });
+    for (const m of recentMaterials?.results ?? []) items.push({ id: m.slug, type: "material", title: m.name, desc: `Rs ${m.price_per_unit}/unit`, time: m.created_at });
+    for (const t of recentTemplates?.results ?? []) items.push({ id: t.id, type: "template", title: t.title, desc: t.attribute_name || "Template", time: t.created_at });
+    for (const b of recentBills?.results ?? []) items.push({ id: b.id, type: "billing", title: b.title || b.project_title || "Billing", desc: `Rs ${b.grand_total}`, time: b.created_at });
     items.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
-    return items.slice(0, 10);
-  }, [recentProj, recentRev, recentInq]);
+    return items.slice(0, 15);
+  }, [recentProj, recentRev, recentInq, recentStaff, recentBlogs, recentMedia, recentMaterials, recentTemplates, recentBills]);
 
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
@@ -183,11 +165,11 @@ export function _Client() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 items-start">
         <div className="space-y-5">
 
-          {/* Chart */}
+          {/* Chart — Income vs Expense */}
           <Card className="pt-0">
             <CardHeader className="flex items-center gap-2 space-y-0 border-b py-4 sm:flex-row">
               <div className="flex-1">
-                <CardTitle className="text-sm font-semibold">Reviews & Inquiries</CardTitle>
+                <CardTitle className="text-sm font-semibold">Financial Overview</CardTitle>
                 <CardDescription className="text-xs mt-0.5">
                   {timeRange === "7d" ? "Last 7 days" : timeRange === "30d" ? "Last 30 days" : "Last 3 months"}
                 </CardDescription>
@@ -204,19 +186,19 @@ export function _Client() {
               </Select>
             </CardHeader>
             <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-              {!reviewsData || !allInquiries ? (
+              {chartLoading ? (
                 <Skeleton className="h-[220px] w-full" />
               ) : (
                 <ChartContainer config={chartConfig} className="aspect-auto h-[220px] w-full">
                   <AreaChart data={chartData}>
                     <defs>
-                      <linearGradient id="fillReviews" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="var(--color-reviews)"   stopOpacity={0.7} />
-                        <stop offset="95%" stopColor="var(--color-reviews)"   stopOpacity={0.05} />
+                      <linearGradient id="fillIncome" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor="var(--color-income)" stopOpacity={0.7} />
+                        <stop offset="95%" stopColor="var(--color-income)" stopOpacity={0.05} />
                       </linearGradient>
-                      <linearGradient id="fillInquiries" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="var(--color-inquiries)" stopOpacity={0.7} />
-                        <stop offset="95%" stopColor="var(--color-inquiries)" stopOpacity={0.05} />
+                      <linearGradient id="fillExpense" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor="var(--color-expense)" stopOpacity={0.7} />
+                        <stop offset="95%" stopColor="var(--color-expense)" stopOpacity={0.05} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
@@ -234,8 +216,8 @@ export function _Client() {
                         }}
                       />
                     } />
-                    <Area dataKey="inquiries" type="natural" fill="url(#fillInquiries)" stroke="var(--color-inquiries)" strokeWidth={1.5} stackId="a" />
-                    <Area dataKey="reviews"   type="natural" fill="url(#fillReviews)"   stroke="var(--color-reviews)"   strokeWidth={1.5} stackId="a" />
+                    <Area dataKey="income" type="natural" fill="url(#fillIncome)" stroke="var(--color-income)" strokeWidth={1.5} stackId="a" />
+                    <Area dataKey="expense" type="natural" fill="url(#fillExpense)" stroke="var(--color-expense)" strokeWidth={1.5} stackId="a" />
                     <ChartLegend content={<ChartLegendContent />} />
                   </AreaChart>
                 </ChartContainer>
@@ -294,11 +276,15 @@ export function _Client() {
             ) : (
               <div className="space-y-0">
                 {activities.map((a) => {
-                  const dot = a.type === "project" ? "bg-blue-400" : a.type === "review" ? "bg-amber-400" : "bg-emerald-400";
-                  const badge = a.type === "project" ? "Project" : a.type === "review" ? "Review" : "Inquiry";
+                  const dot: Record<string, string> = {
+                    project: "bg-blue-400", review: "bg-amber-400", inquiry: "bg-emerald-400",
+                    staff: "bg-violet-400", blog: "bg-rose-400", media: "bg-orange-400",
+                    material: "bg-cyan-400", template: "bg-gray-400", billing: "bg-indigo-400",
+                  };
+                  const badge = a.type.charAt(0).toUpperCase() + a.type.slice(1);
                   return (
                     <div key={`${a.type}-${a.id}`} className="flex items-start gap-2.5 py-2 border-b last:border-0">
-                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 ${dot}`} />
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 ${dot[a.type] || "bg-gray-400"}`} />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs text-foreground truncate leading-snug">{a.title}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">{badge} · {a.desc}</p>

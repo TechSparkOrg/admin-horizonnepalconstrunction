@@ -69,6 +69,12 @@ export interface AccountingEntryFormData {
   entered_by: string;
 }
 
+export interface DashboardDataPoint {
+  date: string;
+  income: number;
+  expense: number;
+}
+
 export interface ProjectAccountingSummary {
   project_id: string;
   project_title: string;

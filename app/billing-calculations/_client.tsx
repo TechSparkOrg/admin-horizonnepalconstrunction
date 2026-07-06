@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Calculator, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -98,21 +98,18 @@ export function _Client() {
   const { data: materials = [] } = useQuery({
     queryKey: queryKeys.materialList.list({}),
     queryFn: async () => (await MaterialListAdmin.search({})).results ?? [],
-    enabled: view === "form",
     staleTime: Infinity,
   });
 
   const { data: teamMembers = [] } = useQuery({
     queryKey: queryKeys.staff.list({}),
     queryFn: async () => (await StaffAdmin.search({})).results ?? [],
-    enabled: view === "form",
     staleTime: Infinity,
   });
 
   const { data: projects = [] } = useQuery({
     queryKey: queryKeys.projects.list({}),
     queryFn: async () => (await ProjectAdmin.list()).results ?? [],
-    enabled: view === "form",
     staleTime: Infinity,
   });
 
@@ -130,6 +127,9 @@ export function _Client() {
     staleTime: 30000,
   });
 
+  // ponytail: preload BillingForm chunk while user browses list
+  useEffect(() => { import("@/components/page_ui/billing-form"); }, []);
+
   const invalidateBilling = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.billing.all, refetchType: "active" });
 
@@ -142,25 +142,25 @@ export function _Client() {
     setView("form");
   };
 
-  const openEdit = async (item: BillingCalculation) => {
-    let detail = item;
-    try {
-      detail = await BillingAdmin.adminGet(item.id);
-    } catch {
-      toast.error("Failed to load billing details");
-    }
-    setForm({
-      title: detail.title,
-      project_id: detail.project_id,
-      is_active: detail.is_active,
-      materials_title: detail.materials_title || "",
-      team_title: detail.team_title || "",
-    });
-    setMaterialGroups(groupMaterials(detail.material_entries ?? []));
-    setTeamGroups(groupTeam(detail.team_entries ?? []));
-    setTaxes(detail.taxes?.map((t) => ({ ...t, id: genId() })) ?? []);
+  const openEdit = (item: BillingCalculation) => {
+    setForm(EMPTY_FORM);
+    setMaterialGroups([]);
+    setTeamGroups([]);
+    setTaxes([]);
     setEditingId(item.id);
     setView("form");
+    BillingAdmin.adminGet(item.id).then((detail) => {
+      setForm({
+        title: detail.title,
+        project_id: detail.project_id,
+        is_active: detail.is_active,
+        materials_title: detail.materials_title || "",
+        team_title: detail.team_title || "",
+      });
+      setMaterialGroups(groupMaterials(detail.material_entries ?? []));
+      setTeamGroups(groupTeam(detail.team_entries ?? []));
+      setTaxes(detail.taxes?.map((t) => ({ ...t, id: genId() })) ?? []);
+    }).catch(() => toast.error("Failed to load billing details"));
   };
 
   const back = () => {
