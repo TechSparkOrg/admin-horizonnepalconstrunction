@@ -8,11 +8,11 @@ import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useCategoryOptions } from "@/api/hooks/use-category-query";
+import { useFaqSelector } from "@/api/hooks/use-faq-selector";
 import { MaterialListOverviewTab } from "@/components/page_ui/material-list-overview-tab";
 import { MaterialListVariantsTab } from "@/components/page_ui/material-list-variants-tab";
 import { MaterialListMediaTab } from "@/components/page_ui/material-list-media-tab";
 import { MaterialListSeoTab } from "@/components/page_ui/material-list-seo-tab";
-import { Input } from "@/components/ui/input";
 import type { BannerImage, VariantItem } from "@/api/types/material-list.types";
 
 interface MaterialListFormData {
@@ -80,6 +80,7 @@ export function MaterialListForm({
   onBack,
 }: Props) {
   const { data: serviceCategories = [] } = useCategoryOptions("services");
+  const { data: faqOptions = [] } = useFaqSelector();
 
   return (
     <div>
@@ -182,14 +183,16 @@ export function MaterialListForm({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label>FAQ Title / Slug</Label>
-                  <Input
+                  <Label>FAQ Group</Label>
+                  <SearchableSelect
+                    options={faqOptions}
                     value={form.faqGroupSlug}
-                    onChange={(e) => onChange("faqGroupSlug", e.target.value)}
-                    placeholder="e.g. cement-faq"
+                    onChange={(v) => onChange("faqGroupSlug", v)}
+                    placeholder="Select a FAQ group"
+                    searchPlaceholder="Search FAQ groups..."
                   />
-                  <p className="text-[11px] text-amber-600 leading-relaxed mt-1">
-                    Slug must be exactly as you type in Faq section with selected category to get specific Q&amp;A
+                  <p className="text-[11px] text-muted-foreground">
+                    Select a FAQ group to display related Q&amp;A
                   </p>
                 </div>
               </div>

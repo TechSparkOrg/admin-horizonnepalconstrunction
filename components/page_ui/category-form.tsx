@@ -27,7 +27,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { MediaPickerDialog } from "@/components/global_ui/media-handler-picker";
+import { useFaqSelector } from "@/api/hooks/use-faq-selector";
 import type { PickerMediaItem } from "@/components/global_ui/media-handler-picker";
 import { CategoryAdmin } from "@/api/services/category.service";
 import type { Category } from "@/api/types/category.types";
@@ -84,6 +86,8 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
         ...defaultValues,
       },
   });
+
+  const { data: faqOptions = [] } = useFaqSelector();
 
   const nameValue = watch("name");
   const parentIdValue = watch("parent_id");
@@ -387,14 +391,16 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
                 />
 
                 <div className="space-y-1.5 mt-5">
-                  <Label>FAQ Title / Slug</Label>
-                  <Input
+                  <Label>FAQ Group</Label>
+                  <SearchableSelect
+                    options={faqOptions}
                     value={watch("faq_group_slug") || ""}
-                    onChange={(e) => setValue("faq_group_slug", e.target.value)}
-                    placeholder="e.g. cement-faq"
+                    onChange={(v) => setValue("faq_group_slug", v)}
+                    placeholder="Select a FAQ group"
+                    searchPlaceholder="Search FAQ groups..."
                   />
-                  <p className="text-[11px] text-amber-600 leading-relaxed mt-1">
-                    Slug must be exactly as typed in the FAQ section to display related Q&amp;A
+                  <p className="text-[11px] text-muted-foreground">
+                    Select a FAQ group to display related Q&amp;A
                   </p>
                 </div>
 

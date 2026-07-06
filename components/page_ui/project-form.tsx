@@ -21,6 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/
 import {  Pagination,  PaginationContent,  PaginationItem,  PaginationLink,  PaginationPrevious,  PaginationNext} from "@/components/ui/pagination";
 import { MediaPickerDialog } from "@/components/global_ui/media-handler-picker";
 import type { PickerMediaItem } from "@/components/global_ui/media-handler-picker";
+import { useFaqSelector } from "@/api/hooks/use-faq-selector";
 import type { Category } from "@/api/types/category.types";
 import type { StaffMemberListItem } from "@/api/types/staff.types";
 import type { MaterialItem } from "@/api/types/material-list.types";
@@ -119,6 +120,8 @@ export function ProjectForm({
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [authorPreview, setAuthorPreview] = useState<string | null>(form.author_image || null);
   const [authorMediaPickerOpen, setAuthorMediaPickerOpen] = useState(false);
+
+  const { data: faqOptions = [] } = useFaqSelector();
 
   const addMilestoneImage = (msId: string, item: PickerMediaItem) => {
     const newImage: ProjectMilestoneImage = {
@@ -721,14 +724,16 @@ export function ProjectForm({
                 <p className="text-sm font-semibold text-gray-900">Slugs</p>
                 <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <Label>FAQ Title / Slug</Label>
-                    <Input
+                    <Label>FAQ Group</Label>
+                    <SearchableSelect
+                      options={faqOptions}
                       value={form.faqGroupSlug}
-                      onChange={(e) => onChange("faqGroupSlug", e.target.value)}
-                      placeholder="e.g. cement-faq"
+                      onChange={(v) => onChange("faqGroupSlug", v)}
+                      placeholder="Select a FAQ group"
+                      searchPlaceholder="Search FAQ groups..."
                     />
-                    <p className="text-[11px] text-amber-600 leading-relaxed mt-1">
-                      Slug must be exactly as you type in Faq section with selected category to get specific Q&amp;A
+                    <p className="text-[11px] text-muted-foreground">
+                      Select a FAQ group to display related Q&amp;A
                     </p>
                   </div>
               

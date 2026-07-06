@@ -1,5 +1,5 @@
 import { apiPrivate } from '../ServiceHelper/index';
-import type { FaqGroup, FaqGroupCreate, FaqGroupUpdate } from '../types/faq.types';
+import type { FaqGroup, FaqGroupCreate, FaqGroupUpdate, FaqSelectorItem } from '../types/faq.types';
 import type { PaginatedResponse } from '../types/consultation.types';
 
 export const FaqAdmin = {
@@ -13,4 +13,6 @@ export const FaqAdmin = {
     apiPrivate.put<FaqGroup>(`/admin/faq/${id}`, data),
   delete: (id: string) =>
     apiPrivate.delete<{ ok: boolean }>(`/admin/faq/${id}`),
+  selector: () =>
+    apiPrivate.get<FaqSelectorItem[]>('/admin/faq/selector'),
 };

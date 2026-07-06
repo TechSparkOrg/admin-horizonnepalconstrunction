@@ -7,6 +7,7 @@ import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
 import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useFaqSelector } from "@/api/hooks/use-faq-selector";
 import {
   Select,
   SelectContent,
@@ -83,6 +84,7 @@ export function UnitConverterForm({
   onBack,
 }: Props) {
   const { data: attributes = [] } = useAttributeOptions();
+  const { data: faqOptions = [] } = useFaqSelector();
 
   const selectedAttribute = attributes.find((a) => a.id === form.attributeId);
 
@@ -314,14 +316,16 @@ export function UnitConverterForm({
 
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <Label>FAQ Title / Slug</Label>
-                    <Input
+                    <Label>FAQ Group</Label>
+                    <SearchableSelect
+                      options={faqOptions}
                       value={form.faqGroupSlug}
-                      onChange={(e) => onChange("faqGroupSlug", e.target.value)}
-                      placeholder="e.g. cement-faq"
+                      onChange={(v) => onChange("faqGroupSlug", v)}
+                      placeholder="Select a FAQ group"
+                      searchPlaceholder="Search FAQ groups..."
                     />
-                    <p className="text-[11px] text-amber-600 leading-relaxed mt-1">
-                      Slug must be exactly as you type in Faq section with selected category to get specific Q&amp;A
+                    <p className="text-[11px] text-muted-foreground">
+                      Select a FAQ group to display related Q&amp;A
                     </p>
                   </div>
                 </div>

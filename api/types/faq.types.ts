@@ -24,3 +24,9 @@ export interface FaqGroup {
 export type FaqGroupCreate = Omit<FaqGroup, 'id' | 'created_at' | 'updated_at'>;
 
 export type FaqGroupUpdate = Partial<FaqGroupCreate>;
+
+export interface FaqSelectorItem {
+  id: string;
+  title: string;
+  slug: string;
+}

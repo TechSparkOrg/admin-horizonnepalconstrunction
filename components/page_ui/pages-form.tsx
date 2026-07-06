@@ -6,6 +6,7 @@ import { FormTabs } from "@/components/global_ui/form-tabs";
 import { useState } from "react";
 import { RichEditor } from "@/components/page_ui/rich-editor";
 import { SeoFields } from "@/components/global_ui/seo-fields";
+import { useFaqSelector } from "@/api/hooks/use-faq-selector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -88,6 +89,8 @@ export function PagesForm({
   const [authorPickerOpen, setAuthorPickerOpen] = useState(false);
   const [editingBannerId, setEditingBannerId] = useState<string | null>(null);
   const [bannerPage, setBannerPage] = useState(1);
+
+  const { data: faqOptions = [] } = useFaqSelector();
 
   const BANNER_PER_PAGE = 5;
   const totalBannerPages = Math.ceil(bannerImages.length / BANNER_PER_PAGE);
@@ -359,14 +362,16 @@ export function PagesForm({
                   </div>
                 </div>
                 <div className="space-y-1.5 mt-5">
-                  <Label>FAQ Title / Slug</Label>
-                  <Input
+                  <Label>FAQ Group</Label>
+                  <SearchableSelect
+                    options={faqOptions}
                     value={form.faqGroupSlug}
-                    onChange={(e) => onChange("faqGroupSlug", e.target.value)}
-                    placeholder="e.g. cement-faq"
+                    onChange={(v) => onChange("faqGroupSlug", v)}
+                    placeholder="Select a FAQ group"
+                    searchPlaceholder="Search FAQ groups..."
                   />
-                  <p className="text-[11px] text-amber-600 leading-relaxed mt-1">
-                    Slug must be exactly as typed in the FAQ section to display related Q&amp;A
+                  <p className="text-[11px] text-muted-foreground">
+                    Select a FAQ group to display related Q&amp;A
                   </p>
                 </div>
               </div>
