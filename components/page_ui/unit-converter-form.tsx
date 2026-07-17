@@ -165,9 +165,7 @@ export function UnitConverterForm({
                 <div className="space-y-1.5">
                   <Label>Slug <span className="text-red-500">*</span></Label>
                   <div className="flex rounded-md border border-gray-200 overflow-hidden">
-                    <span className="px-3 flex items-center text-xs text-gray-500 bg-gray-100 border-r border-gray-200 shrink-0">
-                      /convert/
-                    </span>
+         
                     <Input
                       value={form.slug}
                       onChange={(e) => onChange("slug", e.target.value)}
@@ -202,24 +200,6 @@ export function UnitConverterForm({
                   />
                 </div>
 
-                {selectedAttribute && (
-                  <div className="space-y-1.5">
-                    <Label>Field Label</Label>
-                    <Select
-                      value={form.fieldLabel}
-                      onValueChange={handleFieldLabelChange}
-                    >
-                      <SelectTrigger className="w-full h-9 text-sm">
-                        <SelectValue placeholder="Pick a field" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fieldLabels.map((l) => (
-                          <SelectItem key={l} value={l}>{l}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
 
                 {selectedField && (
                   <div className="space-y-1.5">
