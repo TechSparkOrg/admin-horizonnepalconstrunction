@@ -810,11 +810,10 @@ export function ProjectForm({
       </Tabs>
 
       {mediaPickerOpen && (
-        <MediaPickerDialog
+          <MediaPickerDialog
           open={mediaPickerOpen}
           onOpenChange={(o) => setMediaPickerOpen(o)}
           mode="image"
-          defaultCategory="Images"
           title="Select Banner Image"
           onSelect={(item, altText, file) => { handleBannerSelect(item, altText, file); setMediaPickerOpen(false); }}
         />
@@ -824,13 +823,11 @@ export function ProjectForm({
         <MediaPickerDialog
           open={milestonePickerOpen}
           onOpenChange={(o) => { setMilestonePickerOpen(o); if (!o) setMilestonePickerTarget(null); }}
-          mode={milestonePickerMode === "model" ? "model" : "image"}
-          title={
-            milestonePickerMode === "image" ? "Select Milestone Image" :
+          mode={milestonePickerMode}
+          title={milestonePickerMode === "image" ? "Select Milestone Image" :
             milestonePickerMode === "model" ? "Select 3D Model" :
             "Select Video"
           }
-          defaultCategory={milestonePickerMode === "video" ? "Videos" : milestonePickerMode === "model" ? "3D Models" : "Images"}
           onSelect={(item) => {
             if (!milestonePickerTarget) return;
             if (milestonePickerMode === "image") {
@@ -855,7 +852,6 @@ export function ProjectForm({
           open={authorMediaPickerOpen}
           onOpenChange={(o) => setAuthorMediaPickerOpen(o)}
           mode="image"
-          defaultCategory="Images"
           title="Select Author Image"
           onSelect={(item) => {
             onChange("author_image", item.url);

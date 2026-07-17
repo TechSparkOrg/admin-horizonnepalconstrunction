@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import {
-  Image as ImageIcon, UploadCloud, Search, Box, Check, Loader2, X,
+  Image as ImageIcon, UploadCloud, Search, Box, Check, Loader2, X, FileVideoCameraIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -39,6 +39,12 @@ const UPLOAD_SPEC = {
     exts: ["glb", "gltf", "obj"],
     maxBytes: null,
     hint: "GLB, GLTF or OBJ",
+  },
+  video: {
+    accept: ".mp4,.webm,.mov",
+    exts: ["mp4", "webm", "mov"],
+    maxBytes: null,
+    hint: "MP4, WEBM or MOV",
   },
 } as const;
 
@@ -108,7 +114,7 @@ export type PickerMediaItem = {
   type?: string;
 };
 
-type MediaPickerMode = "image" | "model";
+type MediaPickerMode = "image" | "model" | "video";
 
 interface MediaPickerDialogProps {
   open: boolean;
@@ -125,8 +131,28 @@ export function MediaPickerDialog({
   open, onOpenChange, mode = "image", title, defaultCategory,
   onSelect, multiSelect = false, onMultiSelect,
 }: MediaPickerDialogProps) {
-  const isModel = mode === "model";
-  const spec = isModel ? UPLOAD_SPEC.model : UPLOAD_SPEC.image;
+  const modeInfo = {
+    spec: mode === "model" ? UPLOAD_SPEC.model : mode === "video" ? UPLOAD_SPEC.video : UPLOAD_SPEC.image,
+    title: mode === "model" ? "Select 3D Model" : mode === "video" ? "Select Video" : "Select Image",
+    description:
+      mode === "model"
+        ? "Pick a 3D model from your library. Use models for AR/3D viewer elements."
+        : mode === "video"
+          ? "Pick a video from your library. Use videos for backgrounds or media elements."
+          : "Pick an image from your library. PNG, JPG, WEBP, AVIF, or SVG supported.",
+    searchPlaceholder:
+      mode === "model" ? "Search models…" : mode === "video" ? "Search videos…" : "Search images…",
+    emptyIcon: mode === "model" ? "CubeIcon" : mode === "video" ? "VideoCameraIcon" : "PhotoIcon",
+    emptyDesc:
+      mode === "model"
+        ? "No models found. Upload a GLB/GLTF/OBJ model."
+        : mode === "video"
+          ? "No videos found. Upload a MP4/WEBM/MOV video."
+          : "No images found. Upload a PNG, JPG or SVG image.",
+    fileIcon: mode === "model" ? "CubeIcon" : mode === "video" ? "VideoCameraIcon" : "PhotoIcon",
+    counterLabel: mode === "model" ? "model" : mode === "video" ? "video" : "image",
+  };
+  const spec = modeInfo.spec;
   const { data: usageTypes } = useUsageTypes();
   const { uploadMutation } = useMediaMutations();
 
@@ -151,39 +177,47 @@ export function MediaPickerDialog({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const filtersRef = useRef({ search: "", usageFilter: undefined as string | undefined, defaultCategory, isModel });
+  const filtersRef = useRef({ search: "", usageFilter: undefined as string | undefined, mode });
   const fetchingRef = useRef(false);
   const hasMoreRef = useRef(true);
   const hasScrolledRef = useRef(false);
 
   useEffect(() => {
-    filtersRef.current = { search, usageFilter, defaultCategory, isModel };
-  }, [search, usageFilter, defaultCategory, isModel]);
+    filtersRef.current = { search, usageFilter, mode };
+  }, [search, usageFilter, mode]);
 
   useEffect(() => {
     let cancelled = false;
-    const { search, usageFilter, defaultCategory, isModel } = filtersRef.current;
+    const { search, usageFilter, mode: fetchMode } = filtersRef.current;
     const isAppend = page > 1;
     fetchingRef.current = true;
     if (isAppend) setIsLoadingMore(true); else setIsLoading(true);
 
     const params: Record<string, unknown> = { page, page_size: 12 };
     if (search) params.search = search;
-    if (defaultCategory) params.group_title = defaultCategory;
+    const groupTitle =
+      fetchMode === "video" ? "Videos" :
+      fetchMode === "model" ? "3D Models" :
+      "Images";
+    params.group_title = groupTitle;
     if (usageFilter) params.usage_filter = usageFilter;
 
     MediaService.list(params)
       .then((res) => {
         if (cancelled) return;
         const mapped = (res.results ?? [])
-          .filter((a) => isModel ? true : !isModelUrl(a.url))
+          .filter((a) => {
+            if (fetchMode === "model") return isModelUrl(a.url);
+            if (fetchMode === "video") return isVideoUrl(a.url);
+            return isImageUrl(a.url) || isSvgUrl(a.url);
+          })
           .map((a) => ({
             id: a.id,
             name: a.alt || a.title || "",
             url: a.url,
             thumbnail: a.url,
             category: a.group_title || "General",
-            type: a.url.split(".").pop()?.toLowerCase(),
+            type: a.url.split(".").pop()?.split("?")[0]?.toLowerCase(),
           }));
         setAllItems((prev) => isAppend ? [...prev, ...mapped] : mapped);
         setTotalCount(res.count ?? 0);
@@ -284,7 +318,7 @@ export function MediaPickerDialog({
         if (media) onMultiSelect?.([...multiSelected, {
           id: media.id, name: media.alt || media.title || uploadFile.name,
           url: media.url, thumbnail: media.url, category: media.group_title || "General",
-          type: isModel ? uploadFile.name.split(".").pop() : undefined,
+          type: mode === "model" ? uploadFile.name.split(".").pop() : undefined,
         }]);
       } else { onMultiSelect?.(multiSelected); }
       reset(); onOpenChange(false); return;
@@ -301,7 +335,7 @@ export function MediaPickerDialog({
       if (media) onSelect?.({
         id: media.id, name: media.alt || media.title || uploadFile.name,
         url: media.url, thumbnail: media.url, category: media.group_title || "General",
-        type: isModel ? uploadFile.name.split(".").pop() : undefined,
+        type: mode === "model" ? uploadFile.name.split(".").pop() : undefined,
       }, altText);
     }
     reset(); onOpenChange(false);
@@ -331,11 +365,9 @@ export function MediaPickerDialog({
       >
         {/* ── Header ── */}
         <DialogHeader className="shrink-0 px-4 py-3 border-b border-gray-100">
-          <DialogTitle>{title ?? (isModel ? "Choose a 3D Model" : "Choose an Image")}</DialogTitle>
+          <DialogTitle>{title ?? modeInfo.title}</DialogTitle>
           <DialogDescription>
-            {isModel
-              ? "Pick a model from the library or upload a new one."
-              : "Pick from the library or upload a new file."}
+            {modeInfo.description}
           </DialogDescription>
         </DialogHeader>
 
@@ -363,7 +395,7 @@ export function MediaPickerDialog({
                     <Input
                       value={search}
                       onChange={(e) => handleSearchChange(e.target.value)}
-                      placeholder={`Search ${isModel ? "models" : "images"}...`}
+                      placeholder={modeInfo.searchPlaceholder}
                       className="pl-7 pr-7"
                     />
                     {search && (
@@ -406,9 +438,9 @@ export function MediaPickerDialog({
                     </div>
                   ) : allItems.length === 0 ? (
                     <EmptyState
-                      icon={isModel ? Box : ImageIcon}
+                      icon={modeInfo.emptyIcon === "CubeIcon" ? Box : modeInfo.emptyIcon === "VideoCameraIcon" ? FileVideoCameraIcon : ImageIcon}
                       title="No media found"
-                      description={`No ${isModel ? "models" : "images"} match your search.`}
+                      description={modeInfo.emptyDesc}
                     />
                   ) : (
                     <div className="grid grid-cols-4 gap-2">
@@ -449,7 +481,7 @@ export function MediaPickerDialog({
                             )}
 
                             {/* Model type badge */}
-                            {isModel && item.type && (
+                            {mode === "model" && item.type && (
                               <span className="absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1 py-0.5 text-[9px] font-medium uppercase text-white">
                                 {item.type}
                               </span>
@@ -568,7 +600,7 @@ export function MediaPickerDialog({
 
               {uploadFile && (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 bg-white">
-                  {isModel ? <Box className="size-3.5 text-gray-400 shrink-0" /> : <ImageIcon className="size-3.5 text-gray-400 shrink-0" />}
+                  {modeInfo.fileIcon === "CubeIcon" ? <Box className="size-3.5 text-gray-400 shrink-0" /> : modeInfo.fileIcon === "VideoCameraIcon" ? <FileVideoCameraIcon className="size-3.5 text-gray-400 shrink-0" /> : <ImageIcon className="size-3.5 text-gray-400 shrink-0" />}
                   <div className="flex-1 min-w-0">
                     <p className="text-xs/relaxed font-medium text-gray-700 truncate">{uploadFile.name}</p>
                     <p className="text-xs text-gray-500">{formatSize(uploadFile.size)}</p>
@@ -600,7 +632,7 @@ export function MediaPickerDialog({
         {/* ── Footer ── */}
         <DialogFooter className="shrink-0 flex-row items-center justify-between sm:justify-between border-t border-gray-100 px-4 py-3">
           <span className="text-xs text-gray-500">
-            {tab === "existing" ? `${allItems.length} of ${totalCount} ${isModel ? "models" : "images"}` : ""}
+            {tab === "existing" ? `${allItems.length} of ${totalCount} ${modeInfo.counterLabel}${allItems.length !== 1 ? "s" : ""}` : ""}
           </span>
 
           <div className="flex items-center gap-2">

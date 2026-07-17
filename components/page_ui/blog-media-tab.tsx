@@ -396,14 +396,13 @@ export function BlogMediaTab({
         <MediaPickerDialog
           open={mediaPickerOpen}
           onOpenChange={(o) => { setMediaPickerOpen(o); if (!o) setEditingBannerId(null); }}
-          mode={mediaPickerMode === "model3d" ? "model" : "image"}
+          mode={mediaPickerMode === "model3d" ? "model" : mediaPickerMode === "video" ? "video" : "image"}
           title={
             mediaPickerMode === "model3d" ? "Select 3D Model"
             : mediaPickerMode === "video" ? "Select Video"
             : editingBannerId ? "Update Banner Image"
             : "Select Banner Image"
           }
-          defaultCategory={mediaPickerMode === "model3d" ? "3D Models" : mediaPickerMode === "video" ? "Videos" : "Images"}
           onSelect={handleMediaSelect}
         />
       )}

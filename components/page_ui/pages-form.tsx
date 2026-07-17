@@ -435,6 +435,7 @@ export function PagesForm({
                             item={item}
                             onToggle={toggleLazySpinner}
                             onRemove={removeSvgItem}
+                            onPreview={setPreviewUrl}
                           />
                         ))}
                       </TableBody>
@@ -638,10 +639,12 @@ function SortableSvgItem({
   item,
   onToggle,
   onRemove,
+  onPreview,
 }: {
   item: PageSvgItem;
   onToggle: (id: string) => void;
   onRemove: (id: string) => void;
+  onPreview: (url: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const style = {
@@ -666,9 +669,13 @@ function SortableSvgItem({
         </button>
       </TableCell>
       <TableCell>
-        <div className="size-10 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
+        <button
+          type="button"
+          onClick={() => onPreview(item.url)}
+          className="size-10 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-sidebar-primary/30 transition-all"
+        >
           <img src={item.url} alt={item.name} className="w-full h-full object-contain" />
-        </div>
+        </button>
       </TableCell>
       <TableCell className="text-sm text-gray-900 truncate max-w-[200px]">
         {item.name}
@@ -691,14 +698,24 @@ function SortableSvgItem({
         </button>
       </TableCell>
       <TableCell className="text-right">
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-red-500 border-red-200 hover:bg-red-50"
-          onClick={() => onRemove(item.id)}
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </Button>
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-gray-500 border-gray-200 hover:bg-gray-100"
+            onClick={() => onPreview(item.url)}
+          >
+            <Eye className="w-3.5 h-3.5" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-red-500 border-red-200 hover:bg-red-50"
+            onClick={() => onRemove(item.id)}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        </div>
       </TableCell>
     </TableRow>
   );
