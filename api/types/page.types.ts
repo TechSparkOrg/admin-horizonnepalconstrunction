@@ -21,34 +21,35 @@ export interface PageSvgItem {
   sort_order: number;
 }
 
-export interface Page {
+export interface BannerImage {
+  id: string;
+  url: string;
+  name: string;
+  isPrimary?: boolean;
+}
+
+export interface PageListItem {
   id: string;
   title: string;
-  title_np?: string;
   slug: string;
-  content: string;
-  content_np?: string;
-  icon_name: string;
-  meta_title: string;
-  meta_title_np?: string;
-  meta_description: string;
-  meta_description_np?: string;
-  meta_keywords?: string;
-  featured_image?: string;
   is_active?: boolean;
   is_published?: boolean;
-  faq_group_slug?: string;
-  author_name?: string;
-  author_image?: string;
-  author_team_id?: string;
-  banner_images?: { id: string; url: string; name: string; isPrimary?: boolean }[];
-  svg_items?: PageSvgItem[];
-  sections: PageSection[];
   created_at: string;
   updated_at: string;
 }
 
-export type PageCreate = Omit<Page, 'id' | 'sections' | 'created_at' | 'updated_at'>;
+export interface PageDetail extends PageListItem {
+  content: string;
+  meta_title: string;
+  meta_description: string;
+  meta_keywords?: string;
+  faq_group_slug?: string;
+  author_name?: string;
+  author_image?: string;
+  author_team_id?: string;
+  banner_images?: BannerImage[];
+  svg_items?: PageSvgItem[];
+}
+
+export type PageCreate = Omit<PageDetail, 'id' | 'created_at' | 'updated_at'>;
 export type PageUpdate = Partial<PageCreate>;
-
-

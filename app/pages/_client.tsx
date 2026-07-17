@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageAdmin } from "@/api/services/page.service";
 import { StaffAdmin as StaffC } from "@/api/services/staff.service";
-import type { Page as ApiPage, PageCreate, PageUpdate, PageSvgItem } from "@/api/types/page.types";
+import type { PageListItem, PageDetail, PageCreate, PageUpdate, PageSvgItem } from "@/api/types/page.types";
 import { pageSchema } from "@/api/validation/page";
 import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
 import { PagesTable } from "@/components/page_ui/pages-table";
@@ -27,11 +27,9 @@ interface PageFormData {
   title: string;
   slug: string;
   content: string;
-  iconName: string;
   metaTitle: string;
   metaDescription: string;
   metaKeywords: string;
-  featuredImage: string;
   isActive: boolean;
   isPublished: boolean;
   faqGroupSlug: string;
@@ -42,8 +40,8 @@ interface PageFormData {
 }
 
 const EMPTY: PageFormData = {
-  title: "", slug: "", content: "", iconName: "",
-  metaTitle: "", metaDescription: "", metaKeywords: "", featuredImage: "",
+  title: "", slug: "", content: "",
+  metaTitle: "", metaDescription: "", metaKeywords: "",
   isActive: true, isPublished: false, faqGroupSlug: "",
   authorMode: "manual", authorName: "", authorImage: "", authorTeamId: "",
 };
@@ -52,16 +50,14 @@ const ITEMS_PER_PAGE = 10;
 
 type View = "list" | "form";
 
-function apiToForm(p: ApiPage): PageFormData {
+function apiToForm(p: PageDetail): PageFormData {
   return {
     title: p.title,
     slug: p.slug,
     content: p.content ?? "",
-    iconName: p.icon_name ?? "",
     metaTitle: stripHtml(p.meta_title ?? ""),
     metaDescription: stripHtml(p.meta_description ?? ""),
     metaKeywords: stripHtml(p.meta_keywords ?? ""),
-    featuredImage: p.featured_image ?? "",
     isActive: p.is_active ?? true,
     isPublished: p.is_published ?? false,
     faqGroupSlug: p.faq_group_slug ?? "",
@@ -81,6 +77,7 @@ export function _Client() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [loadingDetail, setLoadingDetail] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queryClient = useQueryClient();
 
@@ -158,12 +155,24 @@ export function _Client() {
     setView("form");
   };
 
-  const openEdit = (item: ApiPage) => {
-    setForm(apiToForm(item));
-    setBannerImages(item.banner_images ?? []);
-    setSvgItems(item.svg_items ?? []);
+  const openEdit = async (item: PageListItem) => {
     setEditingSlug(item.slug);
     setView("form");
+    setLoadingDetail(true);
+    try {
+      const detail = await PageAdmin.adminGet(item.slug);
+      setForm(apiToForm(detail));
+      setBannerImages((detail.banner_images ?? []).map((b) => ({
+        id: b.id, url: b.url, name: b.name, isPrimary: b.isPrimary,
+      })));
+      setSvgItems(detail.svg_items ?? []);
+    } catch {
+      toast.error("Failed to load page details");
+      setView("list");
+      setEditingSlug(null);
+    } finally {
+      setLoadingDetail(false);
+    }
   };
 
   const back = () => {
@@ -207,11 +216,9 @@ export function _Client() {
       title: form.title,
       slug: form.slug,
       content: form.content,
-      icon_name: form.iconName,
       meta_title: stripHtml(form.metaTitle),
       meta_description: stripHtml(form.metaDescription),
       meta_keywords: stripHtml(form.metaKeywords),
-      featured_image: form.featuredImage,
       is_active: form.isActive,
       is_published: form.isPublished,
       faq_group_slug: form.faqGroupSlug || "",
@@ -281,6 +288,7 @@ export function _Client() {
             form={form}
             editingSlug={editingSlug}
             saving={createMutation.isPending || updateMutation.isPending}
+            loading={loadingDetail}
             errors={errors}
             teamMembers={teamMembers}
             bannerImages={bannerImages}

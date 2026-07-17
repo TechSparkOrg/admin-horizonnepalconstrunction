@@ -61,11 +61,9 @@ interface PageFormData {
   title: string;
   slug: string;
   content: string;
-  iconName: string;
   metaTitle: string;
   metaDescription: string;
   metaKeywords: string;
-  featuredImage: string;
   isActive: boolean;
   isPublished: boolean;
   faqGroupSlug: string;
@@ -79,6 +77,7 @@ interface Props {
   form: PageFormData;
   editingSlug: string | null;
   saving: boolean;
+  loading?: boolean;
   errors?: Record<string, string>;
   teamMembers?: StaffMember[];
   bannerImages: { id: string; url: string; name: string; isPrimary?: boolean }[];
@@ -94,6 +93,7 @@ export function PagesForm({
   form,
   editingSlug,
   saving,
+  loading = false,
   errors = {},
   teamMembers = [],
   bannerImages,
@@ -125,39 +125,44 @@ export function PagesForm({
   );
 
   const handleBannerSelect = async (item: PickerMediaItem, altText: string, file?: File) => {
-    let newItem: PickerMediaItem;
+    let newId: string;
+    let newUrl: string;
     if (file) {
       try {
         const uploaded = await MediaService.uploadImage(file, { alt: altText });
-        newItem = {
-          id: uploaded.id,
-          name: uploaded.alt || file.name,
-          url: uploaded.url,
-          thumbnail: uploaded.url,
-          category: uploaded.group_title || "General",
-        };
+        newId = uploaded.id;
+        newUrl = uploaded.url;
         toast.success("Image uploaded");
       } catch {
         toast.error("Failed to upload image");
         return;
       }
     } else {
-      newItem = item;
+      newId = item.id;
+      newUrl = item.url;
     }
+
+    const name = altText || item.name;
 
     if (editingBannerId) {
       onBannerImagesChange(
         bannerImages.map((img) =>
           img.id === editingBannerId
-            ? { ...img, name: altText || img.name }
+            ? { id: img.id, url: img.url, name }
             : img
         )
       );
       setEditingBannerId(null);
     } else {
+      const exists = bannerImages.some((img) => img.id === newId);
+      if (exists) {
+        toast.error("This image is already in the banner list");
+        return;
+      }
+      const isFirst = bannerImages.length === 0;
       onBannerImagesChange([
         ...bannerImages,
-        { ...newItem, name: altText || newItem.name },
+        { id: newId, url: newUrl, name, ...(isFirst ? { isPrimary: true } : {}) },
       ]);
     }
   };
@@ -166,7 +171,11 @@ export function PagesForm({
     onBannerImagesChange(bannerImages.filter((img) => img.id !== id));
   };
 
-  const handleSvgSelect = (item: PickerMediaItem, altText: string, file?: File) => {
+  const handleSvgSelect = (item: PickerMediaItem, altText: string) => {
+    if (svgItems.some((s) => s.id === item.id)) {
+      toast.error("This SVG is already in the list");
+      return;
+    }
     const newItem: PageSvgItem = {
       id: item.id,
       url: item.url,
@@ -183,7 +192,10 @@ export function PagesForm({
 
   const toggleLazySpinner = (id: string) => {
     onSvgItemsChange(
-      svgItems.map((s) => (s.id === id ? { ...s, lazy_spinner: !s.lazy_spinner } : s))
+      svgItems.map((s) => ({
+        ...s,
+        lazy_spinner: s.id === id ? !s.lazy_spinner : false,
+      }))
     );
   };
 
@@ -201,7 +213,15 @@ export function PagesForm({
   };
 
   return (
-    <div>
+    <div className="relative">
+      {loading && (
+        <div className="absolute inset-0 z-50 bg-white/80 flex items-center justify-center rounded-lg">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-white shadow-sm border border-gray-100">
+            <div className="size-5 animate-spin rounded-full border-2 border-sidebar-primary border-t-transparent" />
+            <span className="text-sm text-gray-600">Loading page details…</span>
+          </div>
+        </div>
+      )}
       <FormHeader
         breadcrumb="Pages"
         title={editingSlug ? form.title || "Edit Page" : "New Page"}

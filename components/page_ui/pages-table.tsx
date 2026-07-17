@@ -1,14 +1,14 @@
 "use client";
 
 import { FileText } from "lucide-react";
-import type { Page as ApiPage } from "@/api/types/page.types";
+import type { PageListItem } from "@/api/types/page.types";
 import { formatDate } from "@/lib/dates";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/global_ui/data-table";
 
 interface Props {
-  pages: ApiPage[];
-  onEdit: (item: ApiPage) => void;
+  pages: PageListItem[];
+  onEdit: (item: PageListItem) => void;
   onDelete: (slug: string) => void;
   page: number;
   totalPages: number;
@@ -17,17 +17,13 @@ interface Props {
 }
 
 export function PagesTable({ pages, onEdit, onDelete, page, totalPages, totalCount, onPageChange }: Props) {
-  const columns: ColumnDef<ApiPage>[] = [
+  const columns: ColumnDef<PageListItem>[] = [
     {
       header: "Title",
       render: (item) => (
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
-            {item?.featured_image ? (
-              <img src={item.featured_image} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <FileText className="w-4 h-4 text-gray-400" />
-            )}
+            <FileText className="w-4 h-4 text-gray-400" />
           </div>
           <span className="text-sm text-gray-900">{item.title}</span>
         </div>
