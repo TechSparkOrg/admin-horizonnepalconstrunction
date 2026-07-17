@@ -98,8 +98,8 @@ export function _Client() {
   }, [searchParams]);
 
   useEffect(() => {
-    PermissionAdmin.search().then((roles) => {
-      setRoleOptions(roles.map((r) => ({ value: r.name, label: r.name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) })));
+    PermissionAdmin.getRoleOptions().then((options) => {
+      setRoleOptions(options);
     }).catch(() => {});
   }, []);
 

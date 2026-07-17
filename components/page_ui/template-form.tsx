@@ -3,7 +3,8 @@
 import { Minus, Eye, FileText, ExternalLink } from "lucide-react";
 import { FormHeader } from "@/components/global_ui/form-header";
 import { FormTabs } from "@/components/global_ui/form-tabs";
-import { useMemo, useState } from "react";
+import { useState, useMemo } from "react";
+import { toast } from "sonner";
 import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { RichEditor } from "@/components/page_ui/rich-editor";
 import { Button } from "@/components/ui/button";
@@ -69,7 +70,7 @@ export function TemplateForm({ form, editingId, saving, attributes, onChange, on
       };
       iframe.srcdoc = html;
     } catch {
-      // ignore
+      toast.error("Failed to generate preview");
     }
   };
 

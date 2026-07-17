@@ -1,9 +1,15 @@
 import { apiPrivate } from '../ServiceHelper/index';
-import type { PermissionGroup, RoleItem, RoleDetail } from '../types/permission.types';
+import type { PermissionGroup, RoleItem, RoleDetail, RoleConfig, RoleOptionItem } from '../types/permission.types';
 
 export const PermissionAdmin = {
   listPermissions: () =>
     apiPrivate.get<PermissionGroup[]>('/admin/permissions'),
+
+  getRoleConfig: () =>
+    apiPrivate.get<RoleConfig[]>('/admin/role-config'),
+
+  getRoleOptions: () =>
+    apiPrivate.get<RoleOptionItem[]>('/admin/role-options'),
 
   search: () =>
     apiPrivate.get<RoleItem[]>('/admin/roles'),

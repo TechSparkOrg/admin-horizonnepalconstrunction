@@ -235,7 +235,9 @@ export function _Client() {
         await createMutation.mutateAsync(payload);
       }
       back();
-    } catch {}
+    } catch {
+      // error toast handled by mutation's onError
+    }
   };
 
   const confirmDelete = async (slug: string) => {

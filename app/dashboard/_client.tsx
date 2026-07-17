@@ -116,7 +116,7 @@ export function _Client() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground">
-            {greeting()}{user?.first_name ? `, ${user.first_name}` : ""}
+            {greeting()}{user?.name ? `, ${user.name}` : ""}
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">{today}</p>
         </div>

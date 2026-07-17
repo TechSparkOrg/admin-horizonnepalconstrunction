@@ -57,6 +57,7 @@ export function AdminUserTable({ items, onEdit, onDelete, deleteId, setDeleteId,
             { label: "Name" },
             { label: "Email" },
             { label: "Role" },
+            { label: "Staff" },
             { label: "Status" },
             { label: "Actions", className: "text-right" },
           ]} />
@@ -87,6 +88,9 @@ export function AdminUserTable({ items, onEdit, onDelete, deleteId, setDeleteId,
                     <Badge variant="outline" className={`font-normal ${roleBadge}`}>
                       {roleLabel}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm text-gray-600">{item.staff_member_name || "—"}</span>
                   </TableCell>
                   <TableCell>
                     <Badge

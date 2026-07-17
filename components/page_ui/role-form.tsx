@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import type { PermissionGroup } from "@/api/types/permission.types";
+import type { PermissionGroup, RoleConfig } from "@/api/types/permission.types";
 
 interface RoleFormData {
   name: string;
@@ -19,7 +19,9 @@ interface Props {
   form: RoleFormData;
   editingId: number | null;
   saving: boolean;
+  readOnly?: boolean;
   permissionGroups: PermissionGroup[];
+  roleConfigs: RoleConfig[];
   onChange: (field: string, value: string | number[]) => void;
   onSave: () => void;
   onBack: () => void;
@@ -29,12 +31,17 @@ export function RoleForm({
   form,
   editingId,
   saving,
+  readOnly = false,
   permissionGroups,
+  roleConfigs,
   onChange,
   onSave,
   onBack,
 }: Props) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  const activeConfig = roleConfigs.find((c) => c.role === form.name);
+  const defaultCodenames = new Set(activeConfig?.permissions.map((p) => p.codename) ?? []);
 
   const toggleCollapse = (resource: string) => {
     setCollapsed((prev) => {
@@ -56,6 +63,7 @@ export function RoleForm({
     allPermIds(group).some((id) => ids.includes(id)) && !groupFullySelected(group);
 
   const toggleGroup = (group: PermissionGroup) => {
+    if (readOnly) return;
     const groupIds = allPermIds(group);
     if (groupFullySelected(group)) {
       onChange("permission_ids", ids.filter((id) => !groupIds.includes(id)));
@@ -67,13 +75,30 @@ export function RoleForm({
   };
 
   const togglePermission = (permId: number) => {
+    if (readOnly) return;
     const set = new Set(ids);
     if (set.has(permId)) set.delete(permId);
     else set.add(permId);
     onChange("permission_ids", Array.from(set));
   };
 
-  const canSave = form.name.trim() && !saving;
+  const canSave = form.name.trim() && !saving && !readOnly;
+
+  const resetToDefaults = () => {
+    if (!activeConfig) return;
+    const ids = roleConfigs
+      .find((c) => c.role === form.name)
+      ?.permissions.map((p) => {
+        for (const group of permissionGroups) {
+          for (const perm of group.permissions) {
+            if (perm.codename === p.codename) return perm.id;
+          }
+        }
+        return undefined;
+      })
+      .filter((id): id is number => id !== undefined) ?? [];
+    onChange("permission_ids", ids);
+  };
 
   return (
     <div>
@@ -81,7 +106,7 @@ export function RoleForm({
         breadcrumb="Roles & Permissions"
         title={editingId ? form.name || "Edit Role" : "New Role"}
         onBack={onBack}
-        onSave={onSave}
+        onSave={readOnly ? undefined : onSave}
         saving={saving}
         saveDisabled={!canSave}
         saveLabel={editingId ? "Update" : "Create"}
@@ -96,6 +121,7 @@ export function RoleForm({
                 value={form.name}
                 onChange={(e) => onChange("name", e.target.value)}
                 placeholder="e.g. editor, moderator"
+                disabled={readOnly}
               />
             </div>
           </CardContent>
@@ -104,7 +130,23 @@ export function RoleForm({
         <Card className="bg-white border border-gray-200 rounded-xl">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <Label className="text-base font-semibold">Permissions</Label>
+              <div className="flex items-center gap-2">
+                <Label className="text-base font-semibold">Permissions</Label>
+                {activeConfig && (
+                  <>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">
+                      {activeConfig.label} defaults
+                    </span>
+                    <button
+                      type="button"
+                      onClick={resetToDefaults}
+                      className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 font-medium transition"
+                    >
+                      Reset to defaults
+                    </button>
+                  </>
+                )}
+              </div>
               <span className="text-xs text-gray-400">{ids.length} selected</span>
             </div>
             <ScrollArea className="h-[500px] pr-3">
@@ -162,19 +204,27 @@ export function RoleForm({
                           {group.permissions.map((perm) => {
                             const isSelected = ids.includes(perm.id);
                             return (
-                              <button
+                              <span
                                 key={perm.id}
-                                type="button"
-                                onClick={() => togglePermission(perm.id)}
+                                onClick={() => !readOnly && togglePermission(perm.id)}
+                                onKeyDown={(e) => !readOnly && e.key === "Enter" && togglePermission(perm.id)}
+                                role={readOnly ? undefined : "button"}
+                                tabIndex={readOnly ? -1 : 0}
                                 className={cn(
-                                  "text-xs px-2.5 py-1 rounded-lg border transition text-left",
+                                  "inline-flex items-center text-xs px-2.5 py-1 rounded-lg border transition",
+                                  readOnly ? "cursor-default" : "cursor-pointer",
                                   isSelected
                                     ? "border-sidebar-primary/30 bg-sidebar-primary/5 text-sidebar-primary font-medium"
-                                    : "border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600"
+                                    : "border-gray-200 text-gray-400"
                                 )}
                               >
                                 {perm.name}
-                              </button>
+                                {defaultCodenames.has(perm.codename) && (
+                                  <span className="ml-1 text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-semibold whitespace-nowrap">
+                                    Default
+                                  </span>
+                                )}
+                              </span>
                             );
                           })}
                         </div>

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { PermissionAdmin } from "@/api/services/permission.service";
-import type { RoleItem, PermissionGroup } from "@/api/types/permission.types";
+import type { RoleItem, PermissionGroup, RoleConfig } from "@/api/types/permission.types";
 import { RoleTable } from "@/components/page_ui/role-table";
 import dynamic from "next/dynamic";
 const RoleForm = dynamic(() => import("@/components/page_ui/role-form").then((m) => m.RoleForm), { ssr: false });
@@ -38,6 +38,7 @@ export function _Client() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [readOnly, setReadOnly] = useState(false);
 
   const loadData = () =>
     PermissionAdmin.search()
@@ -51,6 +52,22 @@ export function _Client() {
     staleTime: Infinity,
   });
 
+  const { data: roleConfigs = [] } = useQuery({
+    queryKey: ["roles", "config"],
+    queryFn: async () => (await PermissionAdmin.getRoleConfig()) ?? [],
+    staleTime: Infinity,
+  });
+
+  const codenameToId = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const group of permissionGroups) {
+      for (const perm of group.permissions) {
+        map[perm.codename] = perm.id;
+      }
+    }
+    return map;
+  }, [permissionGroups]);
+
   useEffect(() => {
     loadData().finally(() => setLoading(false));
   }, []);
@@ -58,14 +75,28 @@ export function _Client() {
   const openNew = () => {
     setForm(EMPTY_FORM);
     setEditingId(null);
+    setReadOnly(false);
     setView("form");
   };
 
   const openEdit = async (item: RoleItem) => {
+    if (item.is_system) {
+      const config = roleConfigs.find((c) => c.role === item.name);
+      if (config) {
+        const ids = config.permissions
+          .map((p) => codenameToId[p.codename])
+          .filter((id): id is number => id !== undefined);
+        setForm({ name: item.name, permission_ids: ids });
+        setReadOnly(true);
+        setView("form");
+      }
+      return;
+    }
     try {
-      const detail = await PermissionAdmin.get(item.id);
+      const detail = await PermissionAdmin.get(item.id!);
       setForm({ name: detail.name, permission_ids: detail.permissions.map((p) => p.id) });
       setEditingId(item.id);
+      setReadOnly(false);
       setView("form");
     } catch {
       toast.error("Failed to load role details");
@@ -75,15 +106,26 @@ export function _Client() {
   const back = () => {
     setForm(EMPTY_FORM);
     setDeleteId(null);
+    setReadOnly(false);
     setView("list");
   };
 
   const handleChange = (field: string, value: string | number[]) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [field]: value };
+      if (editingId !== null) return next;
+      if (field !== "name" || typeof value !== "string") return next;
+      const config = roleConfigs.find((c) => c.role === value);
+      if (!config) return next;
+      const ids = config.permissions
+        .map((p) => codenameToId[p.codename])
+        .filter((id): id is number => id !== undefined);
+      return { ...next, permission_ids: ids };
+    });
   };
 
   const save = async () => {
-    if (!form.name.trim()) return;
+    if (readOnly || !form.name.trim()) return;
     setSaving(true);
     try {
       if (editingId) {
@@ -180,7 +222,9 @@ export function _Client() {
             form={form}
             editingId={editingId}
             saving={saving}
+            readOnly={readOnly}
             permissionGroups={permissionGroups}
+            roleConfigs={roleConfigs}
             onChange={handleChange}
             onSave={save}
             onBack={back}

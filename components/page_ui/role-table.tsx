@@ -1,7 +1,8 @@
 "use client";
 
-import { Shield, Pencil, Trash2 } from "lucide-react";
+import { Shield, Pencil, Trash2, Lock, Eye } from "lucide-react";
 import type { RoleItem } from "@/api/types/permission.types";
+import { ROLE_LABELS } from "@/api/types/admin-user.types";
 import {
   Table,
   TableBody,
@@ -62,15 +63,21 @@ export function RoleTable({ items, onEdit, onDelete, deleteId, setDeleteId }: Pr
               const colorClass = ROLE_COLORS[item.name] || "border-gray-200 bg-gray-50 text-gray-600";
               return (
                 <TableRow
-                  key={item.id}
+                  key={item.id ?? item.name}
                   className="border-gray-200 cursor-pointer hover:bg-gray-50"
                   onClick={() => onEdit(item)}
                 >
                   <TableCell>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <Badge variant="outline" className={`font-medium ${colorClass}`}>
-                        {item.name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                        {ROLE_LABELS[item.name] || item.name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                       </Badge>
+                      {item.is_system && (
+                        <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-500 font-medium text-[10px] px-1.5 py-0">
+                          <Lock className="w-2.5 h-2.5 mr-0.5" />
+                          System
+                        </Badge>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -81,24 +88,38 @@ export function RoleTable({ items, onEdit, onDelete, deleteId, setDeleteId }: Pr
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-sidebar-primary border-sidebar-primary/20 hover:bg-sidebar-primary/5"
-                        onClick={(e) => { e.stopPropagation(); onEdit(item); }}
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-red-500 border-red-200 hover:bg-red-50"
-                        onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Delete
-                      </Button>
+                      {item.is_system ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-slate-500 border-slate-200 hover:bg-slate-50"
+                          onClick={(e) => { e.stopPropagation(); onEdit(item); }}
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          View
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-sidebar-primary border-sidebar-primary/20 hover:bg-sidebar-primary/5"
+                            onClick={(e) => { e.stopPropagation(); onEdit(item); }}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-500 border-red-200 hover:bg-red-50"
+                            onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

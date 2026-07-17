@@ -5,7 +5,6 @@ import { Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { useMediaList, useMediaMutations, useUsageTypes } from "@/api/hooks/use-media-query";
-import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
 import type { MediaItem } from "@/api/types/media.types";
 import { MediaTable } from "@/components/page_ui/media-table";
 import { MediaForm, type MediaFormData } from "@/components/page_ui/media-form";
@@ -63,7 +62,6 @@ export function MediaListClient({ groupTitle, labelSingular, subtitle, accept }:
       const payload = toMediaPayload(formData);
       if (editing) {
         await updateMutation.mutateAsync({ id: editing.id, data: payload });
-        toast.success("Media updated");
       } else {
         const list = files && files.length > 0 ? files : [];
         for (const f of list) {
@@ -74,9 +72,8 @@ export function MediaListClient({ groupTitle, labelSingular, subtitle, accept }:
       }
       setView("list");
       setEditing(null);
-    } catch (err) {
-      const parsed = ErrorHandler.parse(err);
-      ErrorHandler.toast(parsed.message);
+    } catch {
+      // error toast handled by hook's onError
     } finally {
       setSaving(false);
     }

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Plus, Search, X } from "lucide-react";
-import { toast } from "sonner";
 import { useAttributeList, useAttributeMutations } from "@/api/hooks/use-attribute-query";
 import { AttributeTable } from "@/components/page_ui/attribute-table";
 import { PageHeader } from "@/components/global_ui/page-header";
@@ -104,14 +103,12 @@ export function AttributeSectionPage() {
       };
       if (editId) {
         await updateMutation.mutateAsync({ id: editId, data: payload });
-        toast.success("Attribute updated");
       } else {
         await createMutation.mutateAsync(payload);
-        toast.success("Attribute created");
       }
       setDialogOpen(false);
     } catch {
-      toast.error("Something went wrong");
+      // error toast handled by hook's onError
     } finally {
       setSaving(false);
     }

@@ -11,11 +11,28 @@ export interface PermissionGroup {
   permissions: PermissionItem[];
 }
 
+export interface RoleConfigPermission {
+  codename: string;
+  label: string;
+}
+
+export interface RoleConfig {
+  role: string;
+  label: string;
+  permissions: RoleConfigPermission[];
+}
+
 export interface RoleItem {
-  id: number;
+  id: number | null;
   name: string;
   permission_count: number;
   user_count: number;
+  is_system: boolean;
+}
+
+export interface RoleOptionItem {
+  value: string;
+  label: string;
 }
 
 export interface RoleDetail {
@@ -23,4 +40,5 @@ export interface RoleDetail {
   name: string;
   permissions: PermissionItem[];
   permission_ids: number[];
+  is_system: boolean;
 }
