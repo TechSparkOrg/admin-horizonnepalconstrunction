@@ -25,7 +25,6 @@ import { useFaqSelector } from "@/api/hooks/use-faq-selector";
 import type { Category } from "@/api/types/category.types";
 import type { StaffMemberListItem } from "@/api/types/staff.types";
 import type { MaterialItem } from "@/api/types/material-list.types";
-import type { DocumentItem } from "@/api/types/document.types";
 import type { Client, ProjectMilestone as Milestone, ProjectMilestoneImage, ProjectMilestoneEmbed } from "@/api/types/project.types";
 import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { ImagePreviewDialog } from "@/components/global_ui/image-preview-dialog";
@@ -63,7 +62,6 @@ interface Props {
   onBannerImagesChange: (images: { id: string; url: string; name: string; isPrimary?: boolean }[]) => void;
   staffMembers: StaffMemberListItem[];
   materials: MaterialItem[];
-  documents: DocumentItem[];
   onChange: (key: string, value: string | boolean | null) => void;
   onSave: () => void;
   onBack: () => void;
@@ -104,7 +102,7 @@ export function ProjectForm({
   client, onClientChange,
   milestones, onMilestonesChange,
   bannerImages, onBannerImagesChange,
-  staffMembers, materials, documents,
+  staffMembers, materials,
   onChange, onSave, onBack,
 }: Props) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);

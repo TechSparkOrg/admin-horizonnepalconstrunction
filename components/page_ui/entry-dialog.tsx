@@ -9,13 +9,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { NumericInput } from "@/components/global_ui/numeric-input";
-import { useQuery } from "@tanstack/react-query";
-import { MaterialListAdmin } from "@/api/services/material-list.service";
-import { EmiBankAdmin } from "@/api/services/emi.service";
-import { VendorAdmin } from "@/api/services/vendor.service";
 import { useAuthStore } from "@/app/store/auth-store";
 import type { AccountingEntryFormData, AccountingMaterialEntry, EntryType } from "@/api/types/accounting.types";
 import { EMPTY_ENTRY_FORM, genId, materialEntriesTotal } from "@/api/types/accounting.types";
+import type { Bank } from "@/api/types/emi.types";
+import type { MaterialItem } from "@/api/types/material-list.types";
+import type { Vendor } from "@/api/types/vendor.types";
 import { formatCurrency } from "@/lib/currency";
 
 const PAYMENT_METHOD_OPTIONS = [
@@ -41,33 +40,15 @@ interface EntryDialogProps {
   onChange: (key: string, value: string) => void;
   onMaterialEntriesChange: (entries: AccountingMaterialEntry[]) => void;
   onSave: () => void;
+  banks: Bank[];
+  materials: MaterialItem[];
+  vendors: Vendor[];
 }
 
-export function EntryDialog({ open, onOpenChange, entryType, form, onChange, onMaterialEntriesChange, onSave }: EntryDialogProps) {
+export function EntryDialog({ open, onOpenChange, entryType, form, onChange, onMaterialEntriesChange, onSave, banks, materials, vendors }: EntryDialogProps) {
   const isExpense = entryType === "expense";
   const title = isExpense ? "New Expense" : "New Income";
   const user = useAuthStore((s) => s.user);
-
-  const { data: materials = [] } = useQuery({
-    queryKey: ["accounting", "materials"],
-    queryFn: async () => (await MaterialListAdmin.search({})).results ?? [],
-    enabled: open && isExpense,
-    staleTime: 60000,
-  });
-
-  const { data: banks = [] } = useQuery({
-    queryKey: ["accounting", "banks"],
-    queryFn: async () => (await EmiBankAdmin.search({})).results ?? [],
-    enabled: open,
-    staleTime: 60000,
-  });
-
-  const { data: vendors = [] } = useQuery({
-    queryKey: ["accounting", "vendors"],
-    queryFn: async () => (await VendorAdmin.search({})).results ?? [],
-    enabled: open && isExpense,
-    staleTime: 60000,
-  });
 
   const materialsById = useMemo(() => new Map(materials.map((m) => [m.id, m])), [materials]);
   const vendorsById = useMemo(() => new Map(vendors.map((v) => [v.id, v])), [vendors]);
@@ -302,7 +283,7 @@ export function EntryDialog({ open, onOpenChange, entryType, form, onChange, onM
 
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">Entered By</Label>
-            <Input value={user?.name || ""} disabled className="bg-muted/40 text-muted-foreground font-medium" />
+            <Input value={form.entered_by || user?.name || ""} disabled className="bg-muted/40 text-muted-foreground font-medium" />
           </div>
 
           <div className="space-y-1.5">

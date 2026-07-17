@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { Plus, Search } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useProjectStore } from "@/api/zustand/use-project-store";
 import { ProjectTable } from "@/components/page_ui/project-table";
@@ -15,17 +15,13 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { queryKeys } from "@/api/query-keys";
 import { CategoryAdmin } from "@/api/services/category.service";
 import { StaffAdmin } from "@/api/services/staff.service";
 import { MaterialListAdmin } from "@/api/services/material-list.service";
-import { DocumentAdmin } from "@/api/services/document.service";
 import { ProjectAdmin } from "@/api/services/project.service";
 import { projectSchema } from "@/api/validation/project";
 import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
-import type { Category } from "@/api/types/category.types";
-import type { StaffMemberListItem } from "@/api/types/staff.types";
-import type { MaterialItem } from "@/api/types/material-list.types";
-import type { DocumentItem } from "@/api/types/document.types";
 const ProjectForm = dynamic(() => import("@/components/page_ui/project-form").then((m) => m.ProjectForm), { ssr: false });
 const ITEMS_PER_PAGE = 10;
 
@@ -39,12 +35,29 @@ export function _Client() {
     confirmDelete,
   } = useProjectStore();
 
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [staffMembers, setStaffMembers] = useState<StaffMemberListItem[]>([]);
-  const [materials, setMaterials] = useState<MaterialItem[]>([]);
-  const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [inputSearch, setInputSearch] = useState(search);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { data: categories = [] } = useQuery({
+    queryKey: queryKeys.categories.list("project"),
+    queryFn: async () => (await CategoryAdmin.listProject({ page_size: 1000 })).results ?? [],
+    staleTime: Infinity,
+    gcTime: 600_000,
+  });
+
+  const { data: staffMembers = [] } = useQuery({
+    queryKey: queryKeys.staff.all,
+    queryFn: async () => (await StaffAdmin.search({})).results ?? [],
+    staleTime: Infinity,
+    gcTime: 600_000,
+  });
+
+  const { data: materials = [] } = useQuery({
+    queryKey: queryKeys.materialList.all,
+    queryFn: async () => (await MaterialListAdmin.search({})).results ?? [],
+    staleTime: Infinity,
+    gcTime: 600_000,
+  });
 
   const handleSearchChange = (value: string) => {
     setInputSearch(value);
@@ -53,24 +66,6 @@ export function _Client() {
   };
 
   useEffect(() => { fetchAll(); }, [currentPage, search]);
-
-  useEffect(() => {
-    if (view !== "form") return;
-    if (categories.length > 0) return;
-    Promise.all([
-      CategoryAdmin.listProject(),
-      StaffAdmin.search({}),
-      MaterialListAdmin.search({}),
-      DocumentAdmin.search({}),
-    ])
-      .then(([catRes, staffRes, matRes, docRes]) => {
-        setCategories(catRes.results ?? []);
-        setStaffMembers(staffRes.results ?? []);
-        setMaterials(matRes.results ?? []);
-        setDocuments(docRes.results ?? []);
-      })
-      .catch((err) => ErrorHandler.toast(ErrorHandler.parse(err).message));
-  }, [view]);
 
   const createMutation = useMutation({
     mutationFn: (payload: Parameters<typeof ProjectAdmin.create>[0]) =>
@@ -164,7 +159,6 @@ export function _Client() {
             onBannerImagesChange={setBannerImages}
             staffMembers={staffMembers}
             materials={materials}
-            documents={documents}
             onChange={setFormField}
             onSave={save}
             onBack={back}

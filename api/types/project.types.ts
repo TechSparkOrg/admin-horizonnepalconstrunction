@@ -4,7 +4,6 @@ export interface Client {
   location: string;
   contract_value: number;
   profession: string;
-  document_id: string | null;
 }
 
 export interface ProjectMilestoneImage {

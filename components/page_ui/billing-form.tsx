@@ -361,7 +361,7 @@ export function BillingForm({
                       <div key={c.id || i} className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50">
                         <div>
                           <p className="text-sm font-medium text-gray-900">{c.name}</p>
-                          {c.location && <p className="text-xs text-gray-400">{c.location}{c.document_id ? ` · ${c.document_id}` : ""}</p>}
+                          {c.location && <p className="text-xs text-gray-400">{c.location}</p>}
                         </div>
                         <p className="text-sm font-semibold text-gray-700">{formatCurrency(c.contract_value || 0)}</p>
                       </div>

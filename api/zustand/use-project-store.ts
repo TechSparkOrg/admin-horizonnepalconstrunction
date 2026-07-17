@@ -34,7 +34,7 @@ export const EMPTY_FORM: ProjectFormData = {
   authorMode: "manual",
 };
 
-export const EMPTY_CLIENT: Client = { id: "", name: "", location: "", contract_value: 0, profession: "", document_id: null };
+export const EMPTY_CLIENT: Client = { id: "", name: "", location: "", contract_value: 0, profession: "" };
 export const EMPTY_MILESTONE: ProjectMilestone = { id: "", date_started: "", estimated_end: "", completed_date: null, description: "", images: [], model_3d_url: "", video_url: "", video_embed_urls: [] };
 
 function genId() { return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`; }

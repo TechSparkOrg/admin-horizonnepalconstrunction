@@ -5,6 +5,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import AppShell from "./app-shell";
 import { QueryProvider } from "./query-provider";
+import { AuthProvider } from "./auth-provider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -31,7 +32,9 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-background text-foreground antialiased font-sans">
         <QueryProvider>
-          <AppShell>{children}</AppShell>
+          <AuthProvider>
+            <AppShell>{children}</AppShell>
+          </AuthProvider>
         </QueryProvider>
         <Toaster richColors position="top-right" />
       </body>

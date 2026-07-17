@@ -7,10 +7,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/api/query-keys";
 import { ProjectAdmin } from "@/api/services/project.service";
 import { AccountingAdmin } from "@/api/services/accounting.service";
+import { MaterialListAdmin } from "@/api/services/material-list.service";
+import { EmiBankAdmin } from "@/api/services/emi.service";
+import { VendorAdmin } from "@/api/services/vendor.service";
 import { AccountingForm } from "@/components/page_ui/accounting-form";
 import { PageHeader } from "@/components/global_ui/page-header";
 import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import type { AccountingEntryFormData } from "@/api/types/accounting.types";
+import type { Bank } from "@/api/types/emi.types";
+import type { MaterialItem } from "@/api/types/material-list.types";
+import type { Vendor } from "@/api/types/vendor.types";
 
 export function _Client() {
   const queryClient = useQueryClient();
@@ -44,8 +50,29 @@ export function _Client() {
     enabled: !!projectId,
   });
 
+  const { data: banks = [] } = useQuery<Bank[]>({
+    queryKey: ["accounting", "banks"],
+    queryFn: async () => (await EmiBankAdmin.search({})).results ?? [],
+    staleTime: Infinity,
+    gcTime: 600_000,
+  });
+
+  const { data: materials = [] } = useQuery<MaterialItem[]>({
+    queryKey: queryKeys.materialList.all,
+    queryFn: async () => (await MaterialListAdmin.search({})).results ?? [],
+    staleTime: Infinity,
+    gcTime: 600_000,
+  });
+
+  const { data: vendors = [] } = useQuery<Vendor[]>({
+    queryKey: queryKeys.vendors.all,
+    queryFn: async () => (await VendorAdmin.search({})).results ?? [],
+    staleTime: Infinity,
+    gcTime: 600_000,
+  });
+
   const invalidateEntries = () =>
-    queryClient.invalidateQueries({ queryKey: queryKeys.accounting.all, refetchType: "active" });
+    queryClient.invalidateQueries({ queryKey: queryKeys.accounting.list({ project_id: projectId }), refetchType: "active" });
 
   const createMutation = useMutation({
     mutationFn: (payload: Record<string, unknown>) => AccountingAdmin.create(payload),
@@ -119,6 +146,9 @@ export function _Client() {
         <AccountingForm
           entries={entries}
           project={projectDetail ?? null}
+          banks={banks}
+          materials={materials}
+          vendors={vendors}
           onEntrySave={handleEntrySave}
           onEntryDelete={handleEntryDelete}
         />
