@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { ImageIcon, Box, Eye } from "lucide-react";
 import type { MediaItem } from "@/api/types/media.types";
-import { isVideoUrl, isModelUrl, isImageUrl } from "@/lib/media";
+import { isVideoUrl, isModelUrl, isImageUrl, isSvgUrl } from "@/lib/media";
 import { ModelViewer } from "@/components/global_ui/ModelViewer";
 import { formatDate } from "@/lib/dates";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +46,9 @@ export function MediaTable({ items, page, totalPages, totalCount, onPageChange, 
       header: "Preview",
       render: (item) => (
         <div className="size-11 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center">
-          {isImageUrl(item.url) ? (
+          {isSvgUrl(item.url) ? (
+            <img src={item.url} alt={item.alt} className="w-full h-full object-contain" />
+          ) : isImageUrl(item.url) ? (
             <Image src={item.url} alt={item.alt} width={44} height={44} className="w-full h-full object-cover" />
           ) : isVideoUrl(item.url) ? (
             <video src={item.url} className="w-full h-full object-cover" muted />

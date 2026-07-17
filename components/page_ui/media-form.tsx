@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/tabs";
 import type { MediaItem } from "@/api/types/media.types";
 import { toSlug } from "@/lib/slug";
-import { isVideoUrl, isModelUrl } from "@/lib/media";
+import { isVideoUrl, isModelUrl, isImageUrl, isSvgUrl } from "@/lib/media";
 import { ModelViewer } from "@/components/global_ui/ModelViewer";
 import { FormCard } from "@/components/global_ui/form-card";
 import { FormTabs } from "@/components/global_ui/form-tabs";
@@ -156,6 +156,9 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
         </div>
       );
     }
+    if (isSvgUrl(preview)) {
+      return <img src={preview} alt="Full preview" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg" onClick={(e) => e.stopPropagation()} />;
+    }
     return (
       <div className="relative w-full h-full max-w-[90vw] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
         <Image src={preview} alt="Full preview" fill className="object-contain rounded-lg" sizes="90vw" />
@@ -232,7 +235,9 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
                     <div className="mb-3 space-y-2">
                       <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                         <div className="size-14 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 shrink-0 flex items-center justify-center">
-                          {editing.url.match(/\.(jpe?g|png|webp|gif|svg|bmp|ico|tiff?)/i) ? (
+                          {isSvgUrl(editing.url) ? (
+                            <img src={editing.url} alt={editing.alt} className="w-full h-full object-contain" />
+                          ) : editing.url.match(/\.(jpe?g|png|webp|gif|svg|bmp|ico|tiff?)/i) ? (
                             <Image src={editing.url} alt={editing.alt} width={56} height={56} className="w-full h-full object-cover" />
                           ) : isVideoUrl(editing.url) ? (
                             <video src={editing.url} className="w-full h-full object-cover" muted />
@@ -261,7 +266,9 @@ export function MediaForm({ editing, saving, onSave, onBack, groupTitle, accept 
                     <div className="mb-3 space-y-2">
                       <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                         <div className="size-14 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 shrink-0 flex items-center justify-center">
-                          {files[0].type.startsWith("image/") ? (
+                          {files[0].type === "image/svg+xml" ? (
+                            <img src={preview} alt="Preview" className="w-full h-full object-contain" />
+                          ) : files[0].type.startsWith("image/") ? (
                             <Image src={preview} alt="Preview" width={56} height={56} className="w-full h-full object-cover" />
                           ) : files[0].type.startsWith("video/") ? (
                             <video src={preview} className="w-full h-full object-cover" muted />

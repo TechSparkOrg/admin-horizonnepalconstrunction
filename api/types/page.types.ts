@@ -13,6 +13,14 @@ export interface PageSection {
   updated_at: string;
 }
 
+export interface PageSvgItem {
+  id: string;
+  url: string;
+  name: string;
+  lazy_spinner: boolean;
+  sort_order: number;
+}
+
 export interface Page {
   id: string;
   title: string;
@@ -34,6 +42,7 @@ export interface Page {
   author_image?: string;
   author_team_id?: string;
   banner_images?: { id: string; url: string; name: string; isPrimary?: boolean }[];
+  svg_items?: PageSvgItem[];
   sections: PageSection[];
   created_at: string;
   updated_at: string;

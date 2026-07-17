@@ -16,6 +16,12 @@ export function isVideoUrl(url: string | undefined): boolean {
   return ext ? VIDEO_EXTS.includes(`.${ext}`) : false;
 }
 
+export function isSvgUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  const ext = url.toLowerCase().split(".").pop();
+  return ext === "svg";
+}
+
 export function isModelUrl(url: string | undefined): boolean {
   if (!url) return false;
   const ext = url.toLowerCase().split(".").pop();

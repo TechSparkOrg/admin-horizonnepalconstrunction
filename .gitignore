@@ -9,6 +9,8 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+package-lock.json
+
 
 # testing
 /coverage
@@ -19,7 +21,9 @@
 
 # production
 /build
-
+graphify-out/*
+graphify-out
+backend
 # misc
 .DS_Store
 *.pem
@@ -39,3 +43,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# OpenNext / Cloudflare
+.open-next/
+.wrangler/
+cloudflare-env.d.ts
+
+# AI / coder agent files
+AGENTS.md
+CLAUDE.md
+agent-profile.xml

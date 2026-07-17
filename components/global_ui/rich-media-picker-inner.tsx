@@ -17,7 +17,7 @@ import { MediaService } from "@/api/services/media.service";
 import { EmptyState } from "@/components/global_ui/empty-state";
 import { FormTabs } from "@/components/global_ui/form-tabs";
 import { SegmentedToggle } from "@/components/global_ui/segmented-toggle";
-import { isImageUrl, isVideoUrl } from "@/lib/media";
+import { isImageUrl, isVideoUrl, isSvgUrl } from "@/lib/media";
 
 export type PickerMediaItem = {
   id: string;
@@ -338,7 +338,9 @@ export function RichMediaPicker({
                             )}
                           >
                             <div className="absolute inset-0 bg-gray-100">
-                              {isImageUrl(thumb) ? (
+                              {isSvgUrl(thumb) ? (
+                                <img src={thumb} alt={item.name} className="w-full h-full object-cover" />
+                              ) : isImageUrl(thumb) ? (
                                 <Image src={thumb} alt={item.name} fill sizes="200px" className="object-cover" loading="lazy" />
                               ) : (
                                 <video src={thumb} preload="metadata" muted playsInline className="w-full h-full object-cover" />
@@ -378,7 +380,9 @@ export function RichMediaPicker({
                 <div className="p-4">
                   <div className="aspect-square w-full rounded-lg border border-gray-200 bg-white overflow-hidden flex items-center justify-center relative">
                     {previewSrc ? (
-                      isImageUrl(previewSrc) ? (
+                      isSvgUrl(previewSrc) ? (
+                        <img src={previewSrc} alt={selected!.name} className="w-full h-full object-contain p-2" />
+                      ) : isImageUrl(previewSrc) ? (
                         <Image src={previewSrc} alt={selected!.name} fill sizes="256px" className="object-contain p-2" loading="lazy" />
                       ) : (
                         <video src={previewSrc} preload="metadata" muted playsInline className="w-full h-full object-contain" />
@@ -460,14 +464,19 @@ export function RichMediaPicker({
                           <p className="text-sm font-medium text-gray-700">
                             {isDragging ? "Drop your file here" : "Click to browse or drag & drop"}
                           </p>
-                          <p className="text-xs text-gray-400">PNG · JPG · WEBP · up to 5 MB</p>
+                            <p className="text-xs text-gray-400">PNG · JPG · WEBP · SVG · up to 5 MB</p>
                         </div>
                       </>
                     );
-                    if (uploadFile.type.startsWith("image/")) return (
-                      <Image src={uploadPreview} alt="Preview" width={600} height={400}
-                        className="max-h-full max-w-full object-contain rounded-lg" unoptimized />
-                    );
+                    if (uploadFile.type.startsWith("image/")) {
+                      if (uploadFile.type === "image/svg+xml") return (
+                        <img src={uploadPreview} alt="Preview" className="max-h-full max-w-full object-contain rounded-lg" />
+                      );
+                      return (
+                        <Image src={uploadPreview} alt="Preview" width={600} height={400}
+                          className="max-h-full max-w-full object-contain rounded-lg" unoptimized />
+                      );
+                    }
                     return (
                       <>
                         <UploadCloud className="size-6 text-gray-400" />
@@ -500,7 +509,11 @@ export function RichMediaPicker({
               <div className="shrink-0 w-64 flex flex-col bg-gray-50/40 p-4 gap-4">
                 <div className="aspect-square w-full rounded-lg border border-gray-200 bg-white overflow-hidden flex items-center justify-center relative">
                   {uploadPreview && uploadFile?.type.startsWith("image/") ? (
-                    <Image src={uploadPreview} alt="Preview" fill sizes="256px" className="object-contain p-2" unoptimized />
+                    uploadFile.type === "image/svg+xml" ? (
+                      <img src={uploadPreview} alt="Preview" className="w-full h-full object-contain p-2" />
+                    ) : (
+                      <Image src={uploadPreview} alt="Preview" fill sizes="256px" className="object-contain p-2" unoptimized />
+                    )
                   ) : (
                     <div className="text-center">
                       <ImageIcon className="size-8 mx-auto mb-2 text-gray-200" />

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageAdmin } from "@/api/services/page.service";
 import { StaffAdmin as StaffC } from "@/api/services/staff.service";
-import type { Page as ApiPage, PageCreate, PageUpdate } from "@/api/types/page.types";
+import type { Page as ApiPage, PageCreate, PageUpdate, PageSvgItem } from "@/api/types/page.types";
 import { pageSchema } from "@/api/validation/page";
 import { ErrorHandler } from "@/api/ServiceHelper/errorhandler";
 import { PagesTable } from "@/components/page_ui/pages-table";
@@ -77,6 +77,7 @@ export function _Client() {
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [form, setForm] = useState<PageFormData>(EMPTY);
   const [bannerImages, setBannerImages] = useState<{ id: string; url: string; name: string; isPrimary?: boolean }[]>([]);
+  const [svgItems, setSvgItems] = useState<PageSvgItem[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -152,6 +153,7 @@ export function _Client() {
   const openNew = () => {
     setForm(EMPTY);
     setBannerImages([]);
+    setSvgItems([]);
     setEditingSlug(null);
     setView("form");
   };
@@ -159,6 +161,7 @@ export function _Client() {
   const openEdit = (item: ApiPage) => {
     setForm(apiToForm(item));
     setBannerImages(item.banner_images ?? []);
+    setSvgItems(item.svg_items ?? []);
     setEditingSlug(item.slug);
     setView("form");
   };
@@ -166,6 +169,7 @@ export function _Client() {
   const back = () => {
     setForm(EMPTY);
     setBannerImages([]);
+    setSvgItems([]);
     setEditingSlug(null);
     setView("list");
   };
@@ -215,6 +219,7 @@ export function _Client() {
       author_image: form.authorImage,
       author_team_id: form.authorTeamId,
       banner_images: bannerImages,
+      svg_items: svgItems,
     } as PageCreate;
     try {
       if (editingSlug) {
@@ -280,6 +285,8 @@ export function _Client() {
             teamMembers={teamMembers}
             bannerImages={bannerImages}
             onBannerImagesChange={setBannerImages}
+            svgItems={svgItems}
+            onSvgItemsChange={setSvgItems}
             onChange={handleChange}
             onSave={save}
             onBack={back}

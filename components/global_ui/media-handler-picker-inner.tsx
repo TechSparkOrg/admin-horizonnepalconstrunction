@@ -16,7 +16,7 @@ import { useMediaMutations, useUsageTypes } from "@/api/hooks/use-media-query";
 import { MediaService } from "@/api/services/media.service";
 import { EmptyState } from "@/components/global_ui/empty-state";
 import { FormTabs } from "@/components/global_ui/form-tabs";
-import { isImageUrl, isVideoUrl, isModelUrl } from "@/lib/media";
+import { isImageUrl, isVideoUrl, isModelUrl, isSvgUrl } from "@/lib/media";
 import { useModelViewer } from "@/lib/model-viewer";
 
 function ModelThumbnail({ src, lazy = true }: { src: string; lazy?: boolean }) {
@@ -69,7 +69,7 @@ export function MediaPickerDialog({
   const isModel = mode === "model";
   const acceptTypes = isModel ? ".glb,.gltf,.obj" : "image/*";
   const { data: usageTypes } = useUsageTypes();
-  const { uploadMutation, duplicateMutation } = useMediaMutations();
+  const { uploadMutation } = useMediaMutations();
 
   const [tab, setTab] = useState<"existing" | "upload">("existing");
   const [search, setSearch] = useState("");
@@ -79,7 +79,6 @@ export function MediaPickerDialog({
   const [altText, setAltText] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
-  const [duplicating, setDuplicating] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -220,15 +219,11 @@ export function MediaPickerDialog({
     }
 
     if (tab === "existing" && selected) {
-      setDuplicating(true);
-      try {
-        const copy = await duplicateMutation.mutateAsync(selected.id);
-        onSelect?.({
-          id: copy.id, name: copy.alt || copy.title || selected.name,
-          url: copy.url, thumbnail: copy.url,
-          category: copy.group_title || selected.category, type: selected.type,
-        }, altText || selected.name);
-      } finally { setDuplicating(false); }
+      onSelect?.({
+        id: selected.id, name: selected.name,
+        url: selected.url, thumbnail: selected.thumbnail ?? selected.url,
+        category: selected.category, type: selected.type,
+      }, altText || selected.name);
     } else if (tab === "upload" && uploadFile) {
       const media = await handleUpload(uploadFile, altText);
       if (media) onSelect?.({
@@ -361,7 +356,9 @@ export function MediaPickerDialog({
                           >
                             {/* Thumbnail */}
                             <div className="absolute inset-0 bg-gray-100">
-                              {isImageUrl(thumb) ? (
+                              {isSvgUrl(thumb) ? (
+                                <img src={thumb} alt={item.name} className="w-full h-full object-cover" />
+                              ) : isImageUrl(thumb) ? (
                                 <Image src={thumb} alt={item.name} fill sizes="200px" className="object-cover" loading="lazy" />
                               ) : isVideoUrl(thumb) ? (
                                 <video src={thumb} preload="metadata" muted playsInline className="w-full h-full object-cover" />
@@ -425,7 +422,9 @@ export function MediaPickerDialog({
                         </p>
                       </div>
                     ) : previewSrc ? (
-                      isImageUrl(previewSrc) ? (
+                      isSvgUrl(previewSrc) ? (
+                        <img src={previewSrc} alt={selected!.name} className="w-full h-full object-contain p-2" />
+                      ) : isImageUrl(previewSrc) ? (
                         <Image src={previewSrc} alt={selected!.name} fill sizes="256px" className="object-contain p-2" loading="lazy" />
                       ) : isVideoUrl(previewSrc) ? (
                         <video src={previewSrc} preload="metadata" muted playsInline className="w-full h-full object-contain" />
@@ -506,15 +505,20 @@ export function MediaPickerDialog({
                             {isDragging ? "Drop your file here" : "Click to browse or drag & drop"}
                           </p>
                           <p className="text-xs text-gray-400">
-                            {isModel ? "GLB · GLTF · OBJ files" : "PNG · JPG · WEBP · up to 5 MB"}
+                            {isModel ? "GLB · GLTF · OBJ files" : "PNG · JPG · WEBP · SVG · up to 5 MB"}
                           </p>
                         </div>
                       </>
                     );
-                    if (uploadFile.type.startsWith("image/")) return (
-                      <Image src={uploadPreview} alt="Preview" width={600} height={400}
-                        className="max-h-full max-w-full object-contain rounded-lg" unoptimized />
-                    );
+                    if (uploadFile.type.startsWith("image/")) {
+                      if (uploadFile.type === "image/svg+xml") return (
+                        <img src={uploadPreview} alt="Preview" className="max-h-full max-w-full object-contain rounded-lg" />
+                      );
+                      return (
+                        <Image src={uploadPreview} alt="Preview" width={600} height={400}
+                          className="max-h-full max-w-full object-contain rounded-lg" unoptimized />
+                      );
+                    }
                     if (uploadFile.type.startsWith("video/")) return (
                       <video src={uploadPreview} muted controls className="max-h-full max-w-full object-contain rounded-lg" />
                     );
@@ -553,7 +557,11 @@ export function MediaPickerDialog({
               <div className="shrink-0 w-64 flex flex-col bg-gray-50/40 p-4 gap-4">
                 <div className="aspect-square w-full rounded-lg border border-gray-200 bg-white overflow-hidden flex items-center justify-center relative">
                   {uploadPreview && uploadFile?.type.startsWith("image/") ? (
-                    <Image src={uploadPreview} alt="Preview" fill sizes="256px" className="object-contain p-2" unoptimized />
+                    uploadFile.type === "image/svg+xml" ? (
+                      <img src={uploadPreview} alt="Preview" className="w-full h-full object-contain p-2" />
+                    ) : (
+                      <Image src={uploadPreview} alt="Preview" fill sizes="256px" className="object-contain p-2" unoptimized />
+                    )
                   ) : (
                     <div className="text-center">
                       <ImageIcon className="size-8 mx-auto mb-2 text-gray-200" />
@@ -597,14 +605,12 @@ export function MediaPickerDialog({
             )}
             <Button
               onClick={handleConfirm}
-              disabled={!canConfirm || duplicating || uploadProgress !== null}
+              disabled={!canConfirm || uploadProgress !== null}
               size="sm"
               className="h-9 px-5 text-sm bg-sidebar-primary hover:bg-sidebar-primary/90 disabled:opacity-40 gap-2"
             >
               {uploadProgress !== null ? (
                 <><Loader2 className="size-3.5 animate-spin" /> Uploading…</>
-              ) : duplicating ? (
-                <><Loader2 className="size-3.5 animate-spin" /> Working…</>
               ) : multiSelect ? (
                 tab === "upload" ? "Upload & Add" : `Add${multiSelected.length > 0 ? ` (${multiSelected.length})` : ""}`
               ) : tab === "existing" ? "Select" : "Upload & Select"}

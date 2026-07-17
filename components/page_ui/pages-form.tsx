@@ -1,6 +1,6 @@
 "use client";
 
-import { ImagePlus, User, Eye, Pencil, Trash2, X } from "lucide-react";
+import { ImagePlus, User, Eye, Pencil, Trash2, X, GripVertical } from "lucide-react";
 import { FormHeader } from "@/components/global_ui/form-header";
 import { FormTabs } from "@/components/global_ui/form-tabs";
 import { useState } from "react";
@@ -34,6 +34,22 @@ import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { MediaService } from "@/api/services/media.service";
 import { toast } from "sonner";
 import { ImagePreviewDialog } from "@/components/global_ui/image-preview-dialog";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import type { PageSvgItem } from "@/api/types/page.types";
 
 interface StaffMember {
   id: string;
@@ -67,6 +83,8 @@ interface Props {
   teamMembers?: StaffMember[];
   bannerImages: { id: string; url: string; name: string; isPrimary?: boolean }[];
   onBannerImagesChange: (images: { id: string; url: string; name: string; isPrimary?: boolean }[]) => void;
+  svgItems: PageSvgItem[];
+  onSvgItemsChange: (items: PageSvgItem[]) => void;
   onChange: (key: string, value: string | boolean) => void;
   onSave: () => void;
   onBack: () => void;
@@ -80,6 +98,8 @@ export function PagesForm({
   teamMembers = [],
   bannerImages,
   onBannerImagesChange,
+  svgItems,
+  onSvgItemsChange,
   onChange,
   onSave,
   onBack,
@@ -89,6 +109,11 @@ export function PagesForm({
   const [authorPickerOpen, setAuthorPickerOpen] = useState(false);
   const [editingBannerId, setEditingBannerId] = useState<string | null>(null);
   const [bannerPage, setBannerPage] = useState(1);
+  const [svgPickerOpen, setSvgPickerOpen] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
 
   const { data: faqOptions = [] } = useFaqSelector();
 
@@ -139,6 +164,40 @@ export function PagesForm({
 
   const removeBannerImage = (id: string) => {
     onBannerImagesChange(bannerImages.filter((img) => img.id !== id));
+  };
+
+  const handleSvgSelect = (item: PickerMediaItem, altText: string, file?: File) => {
+    const newItem: PageSvgItem = {
+      id: item.id,
+      url: item.url,
+      name: altText || item.name,
+      lazy_spinner: false,
+      sort_order: svgItems.length,
+    };
+    onSvgItemsChange([...svgItems, newItem]);
+  };
+
+  const removeSvgItem = (id: string) => {
+    onSvgItemsChange(svgItems.filter((s) => s.id !== id));
+  };
+
+  const toggleLazySpinner = (id: string) => {
+    onSvgItemsChange(
+      svgItems.map((s) => (s.id === id ? { ...s, lazy_spinner: !s.lazy_spinner } : s))
+    );
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = svgItems.findIndex((s) => s.id === active.id);
+    const newIndex = svgItems.findIndex((s) => s.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(svgItems, oldIndex, newIndex).map((s, i) => ({
+      ...s,
+      sort_order: i,
+    }));
+    onSvgItemsChange(reordered);
   };
 
   return (
@@ -316,6 +375,54 @@ export function PagesForm({
                 </div>
               )}
             </div>
+
+            <div className="bg-white rounded-xl border border-gray-200 p-5 w-full mt-5">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-semibold text-gray-900">SVG Graphics</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSvgPickerOpen(true)}
+                >
+                  <ImagePlus className="size-4" />
+                  Add SVG
+                </Button>
+              </div>
+
+              {svgItems.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-200 py-10 flex flex-col items-center justify-center gap-2 text-gray-500">
+                  <ImagePlus className="size-6" />
+                  <span className="text-sm">No SVG graphics added yet</span>
+                </div>
+              ) : (
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={svgItems.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-gray-200 hover:bg-transparent">
+                          <TableHead className="w-10" />
+                          <TableHead className="text-gray-900 font-semibold">SVG</TableHead>
+                          <TableHead className="text-gray-900 font-semibold">Name</TableHead>
+                          <TableHead className="text-gray-900 font-semibold">Lazy Spinner</TableHead>
+                          <TableHead className="text-gray-900 font-semibold text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {svgItems.map((item) => (
+                          <SortableSvgItem
+                            key={item.id}
+                            item={item}
+                            onToggle={toggleLazySpinner}
+                            onRemove={removeSvgItem}
+                          />
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </SortableContext>
+                </DndContext>
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="seo" className="mt-4">
@@ -477,6 +584,17 @@ export function PagesForm({
         />
       )}
       
+      {svgPickerOpen && (
+        <MediaPickerDialog
+          open={svgPickerOpen}
+          onOpenChange={setSvgPickerOpen}
+          mode="image"
+          defaultCategory="SVGs"
+          title="Select SVG Graphic"
+          onSelect={handleSvgSelect}
+        />
+      )}
+
       {authorPickerOpen && (
         <MediaPickerDialog
           open={authorPickerOpen}
@@ -493,5 +611,75 @@ export function PagesForm({
 
       <ImagePreviewDialog url={previewUrl} onClose={() => setPreviewUrl(null)} />
     </div>
+  );
+}
+
+function SortableSvgItem({
+  item,
+  onToggle,
+  onRemove,
+}: {
+  item: PageSvgItem;
+  onToggle: (id: string) => void;
+  onRemove: (id: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={style}
+      className="border-gray-200 hover:bg-gray-50"
+    >
+      <TableCell className="w-10 p-0 pl-2">
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-gray-700 transition-colors"
+        >
+          <GripVertical className="size-4" />
+        </button>
+      </TableCell>
+      <TableCell>
+        <div className="size-10 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
+          <img src={item.url} alt={item.name} className="w-full h-full object-contain" />
+        </div>
+      </TableCell>
+      <TableCell className="text-sm text-gray-900 truncate max-w-[200px]">
+        {item.name}
+      </TableCell>
+      <TableCell>
+        <button
+          type="button"
+          onClick={() => onToggle(item.id)}
+          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+            item.lazy_spinner ? "bg-sidebar-primary" : "bg-gray-200"
+          }`}
+          role="switch"
+          aria-checked={item.lazy_spinner}
+        >
+          <span
+            className={`pointer-events-none block size-4 rounded-full bg-white shadow ring-0 transition-transform ${
+              item.lazy_spinner ? "translate-x-4" : "translate-x-0"
+            }`}
+          />
+        </button>
+      </TableCell>
+      <TableCell className="text-right">
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-red-500 border-red-200 hover:bg-red-50"
+          onClick={() => onRemove(item.id)}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </Button>
+      </TableCell>
+    </TableRow>
   );
 }

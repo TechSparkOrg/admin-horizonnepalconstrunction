@@ -46,28 +46,30 @@ export const MediaService = {
     apiPrivate.delete(`/admin/media/delete/${id}`),
 
   requestUpload: async (filename: string, metadata?: Partial<MediaItemCreate>) => {
-    return await apiPrivate.post<{ upload_url: string; media: MediaItem }>(
+    return await apiPrivate.post<{ upload_url: string; upload_secret: string; media: MediaItem }>(
       '/admin/media/request-upload',
       { filename, ...metadata }
     );
   },
 
-  uploadToWorker: (uploadUrl: string, file: File, onProgress?: (pct: number) => void) =>
+  uploadToWorker: (uploadUrl: string, uploadSecret: string, file: File, onProgress?: (pct: number) => void) =>
     new Promise<Response>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('PUT', uploadUrl);
-      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+      const form = new FormData();
+      form.append("token", uploadSecret);
+      form.append("file", file);
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) onProgress?.(Math.round((e.loaded / e.total) * 100));
       };
       xhr.onload = () => resolve(new Response(null, { status: xhr.status }));
       xhr.onerror = () => reject(new Error('Upload to Worker failed'));
-      xhr.send(file);
+      xhr.send(form);
     }),
 
   uploadImage: async (file: File, metadata?: Partial<MediaItemCreate>, onProgress?: (pct: number) => void) => {
-    const { upload_url, media } = await MediaService.requestUpload(file.name, metadata);
-    const res = await MediaService.uploadToWorker(upload_url, file, onProgress);
+    const { upload_url, upload_secret, media } = await MediaService.requestUpload(file.name, metadata);
+    const res = await MediaService.uploadToWorker(upload_url, upload_secret, file, onProgress);
     if (!res.ok) throw new Error(`Upload to Worker failed: ${res.status}`);
     return media;
   },
