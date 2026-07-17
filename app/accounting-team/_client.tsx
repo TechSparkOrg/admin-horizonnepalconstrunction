@@ -69,14 +69,23 @@ export function _Client() {
   const handleSave = (form: TeamPaymentFormData, editingId: string | null) => {
     if (!staffId) { toast.error("Select a staff member first"); return; }
     if (!form.date) { toast.error("Date is required"); return; }
-    if (!form.amount || Number(form.amount) <= 0) { toast.error("Amount is required"); return; }
-    if (form.payment_type === "commission" && form.commission_type === "percentage" && (!form.commission_percentage || !form.base_amount)) {
-      toast.error("Enter both percentage and base amount"); return;
+
+    let amount: number;
+    if (form.payment_type === "commission" && form.commission_type === "percentage") {
+      if (!form.commission_percentage || !form.base_amount) {
+        toast.error("Enter both percentage and base amount"); return;
+      }
+      amount = (Number(form.base_amount) * Number(form.commission_percentage)) / 100;
+    } else {
+      if (!form.amount || Number(form.amount) <= 0) {
+        toast.error("Amount is required"); return;
+      }
+      amount = Number(form.amount);
     }
 
     const payload: Record<string, unknown> = {
       ...form,
-      amount: Number(form.amount),
+      amount,
       staff_member_id: staffId,
       staff_member_name: selectedStaff?.name ?? "",
       project_id: form.project_id || null,

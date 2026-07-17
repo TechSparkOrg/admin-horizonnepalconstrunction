@@ -51,7 +51,7 @@ export function _Client() {
   });
 
   const { data: banks = [] } = useQuery<Bank[]>({
-    queryKey: ["accounting", "banks"],
+    queryKey: queryKeys.banks.all,
     queryFn: async () => (await EmiBankAdmin.search({})).results ?? [],
     staleTime: Infinity,
     gcTime: 600_000,

@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useEffect } from "react";
 import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/api/query-keys";
 import { ProjectAdmin } from "@/api/services/project.service";
 import { EmiBankAdmin } from "@/api/services/emi.service";
 import { useAuthStore } from "@/app/store/auth-store";
@@ -52,7 +53,7 @@ export function TeamEntryDialog({ open, onOpenChange, form, onChange, onSave, ed
   );
 
   const { data: banks = [] } = useQuery({
-    queryKey: ["accounting", "team-banks"],
+    queryKey: queryKeys.banks.all,
     queryFn: async () => (await EmiBankAdmin.search({ page_size: 5 })).results ?? [],
     enabled: open,
     staleTime: 60000,
@@ -63,12 +64,39 @@ export function TeamEntryDialog({ open, onOpenChange, form, onChange, onSave, ed
     [banks]
   );
 
+  const selectedProjectSlug = useMemo(() => {
+    const p = projects.find((p) => p.id === form.project_id);
+    return p?.slug ?? null;
+  }, [projects, form.project_id]);
+
+  const isCommission = form.payment_type === "commission";
+
+  const { data: selectedProjectDetail } = useQuery({
+    queryKey: ["team-accounting", "project-detail", selectedProjectSlug],
+    queryFn: () => ProjectAdmin.adminGet(selectedProjectSlug ?? ""),
+    enabled: !!selectedProjectSlug && isCommission,
+    staleTime: 60000,
+  });
+
+  useEffect(() => {
+    if (!selectedProjectDetail || !isCommission || form.commission_type !== "fixed" || !form.project_id) return;
+    const totalContract = selectedProjectDetail.clients?.reduce(
+      (sum, c) => sum + (c.contract_value || 0), 0
+    ) ?? 0;
+    if (totalContract > 0) {
+      onChange("base_amount", String(totalContract));
+    }
+  }, [selectedProjectDetail, form.project_id, isCommission, form.commission_type, onChange]);
+
   const handleTypeChange = useCallback((type: string) => {
     onChange("payment_type", type);
     if (type === "salary") {
       onChange("amount", salaryAmount > 0 ? String(salaryAmount) : "");
       onChange("project_id", "");
       onChange("project_name", "");
+      onChange("commission_type", "fixed");
+      onChange("commission_percentage", "");
+      onChange("base_amount", "");
     } else {
       onChange("amount", "");
       onChange("commission_type", "fixed");
@@ -84,7 +112,6 @@ export function TeamEntryDialog({ open, onOpenChange, form, onChange, onSave, ed
   const showBank = form.payment_method === "cheque" || form.payment_method === "bank_transfer";
   const showCheque = form.payment_method === "cheque";
   const showTransactionId = form.payment_method === "bank_transfer";
-  const isCommission = form.payment_type === "commission";
 
   const canSave = form.date && displayAmount > 0;
 

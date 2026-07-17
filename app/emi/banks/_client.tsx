@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Plus, Search, Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/api/query-keys";
 import { EmiBankAdmin } from "@/api/services/emi.service";
 import type { Bank, BankCreate } from "@/api/types/emi.types";
 import { BankTable } from "@/components/page_ui/bank-table";
@@ -48,8 +50,7 @@ interface BankFormData {
 const EMPTY: BankFormData = { name: "", slug: "", logo: "", code: "", isActive: true, tenureOptions: [] };
 
 export function _Client() {
-  const [banks, setBanks] = useState<Bank[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -58,10 +59,19 @@ export function _Client() {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(t);
   }, [search]);
+
+  const { data, isLoading } = useQuery({
+    queryKey: queryKeys.banks.list({ search: debouncedSearch || undefined, page: currentPage, page_size: ITEMS_PER_PAGE }),
+    queryFn: () => EmiBankAdmin.search({ search: debouncedSearch || undefined, page: currentPage, page_size: ITEMS_PER_PAGE }),
+    staleTime: 60000,
+  });
+
+  const banks = data?.results ?? [];
+  const totalCount = data?.count ?? 0;
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<BankFormData>(EMPTY);
-  const [saving, setSaving] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [deleteItem, setDeleteItem] = useState<Bank | null>(null);
   const [customTenure, setCustomTenure] = useState("");
@@ -103,19 +113,39 @@ export function _Client() {
   const slugEdited = useRef(false);
 
   useEffect(() => {
-    EmiBankAdmin.search({ search: debouncedSearch || undefined, page: currentPage, page_size: ITEMS_PER_PAGE })
-      .then((res) => {
-        setBanks(res.results ?? []);
-        setTotalCount(res.count ?? 0);
-      })
-      .catch(() => toast.error("Failed to load banks"));
-  }, [debouncedSearch, currentPage]);
-
-  useEffect(() => {
     if (!slugEdited.current && form.name) {
       setForm((prev) => ({ ...prev, slug: toSlug(form.name) }));
     }
   }, [form.name]);
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.banks.all, refetchType: "active" });
+
+  const saveMutation = useMutation({
+    mutationFn: async (payload: BankCreate) => {
+      if (editingId) {
+        await EmiBankAdmin.update(editingId, payload);
+      } else {
+        await EmiBankAdmin.create(payload);
+      }
+    },
+    onSuccess: () => {
+      toast.success(editingId ? "Bank updated" : "Bank created");
+      setCurrentPage(1);
+      invalidate();
+      closeDialog();
+    },
+    onError: () => toast.error("Something went wrong"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => EmiBankAdmin.delete(id),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Bank deleted");
+    },
+    onError: () => toast.error("Failed to delete"),
+  });
 
   const openNew = () => {
     setForm(EMPTY);
@@ -146,50 +176,24 @@ export function _Client() {
     setPickerOpen(false);
   };
 
-  const save = async () => {
+  const save = () => {
     if (!form.name.trim() || !form.code.trim()) return;
-    setSaving(true);
-    try {
-      const payload: BankCreate = {
-        name: form.name,
-        slug: form.slug || toSlug(form.name),
-        logo: form.logo,
-        code: form.code,
-        is_active: form.isActive,
-        tenure_options: form.tenureOptions,
-      };
-      if (editingId) {
-        await EmiBankAdmin.update(editingId, payload);
-        toast.success("Bank updated");
-      } else {
-        await EmiBankAdmin.create(payload);
-        toast.success("Bank created");
-      }
-      setCurrentPage(1);
-      const res = await EmiBankAdmin.search({ search: debouncedSearch || undefined, page: 1, page_size: ITEMS_PER_PAGE });
-      setBanks(res.results ?? []);
-      setTotalCount(res.count ?? 0);
-      closeDialog();
-    } catch {
-      toast.error("Something went wrong");
-    } finally {
-      setSaving(false);
-    }
+    const payload: BankCreate = {
+      name: form.name,
+      slug: form.slug || toSlug(form.name),
+      logo: form.logo,
+      code: form.code,
+      is_active: form.isActive,
+      tenure_options: form.tenureOptions,
+    };
+    saveMutation.mutate(payload);
   };
 
-  const confirmDelete = async () => {
+  const confirmDelete = () => {
     if (!deleteItem) return;
     const id = deleteItem.id;
     setDeleteItem(null);
-    try {
-      await EmiBankAdmin.delete(id);
-      const res = await EmiBankAdmin.search({ search: debouncedSearch || undefined, page: currentPage, page_size: ITEMS_PER_PAGE });
-      setBanks(res.results ?? []);
-      setTotalCount(res.count ?? 0);
-      toast.success("Bank deleted");
-    } catch {
-      toast.error("Failed to delete");
-    }
+    deleteMutation.mutate(id);
   };
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
@@ -218,7 +222,7 @@ export function _Client() {
           />
         </InputGroup>
         <p className="text-sm text-sidebar-primary font-medium whitespace-nowrap">
-          Total: {totalCount} {totalCount === 1 ? "item" : "items"} found.
+          {isLoading ? "Loading..." : `Total: ${totalCount} ${totalCount === 1 ? "item" : "items"} found.`}
         </p>
       </div>
 
@@ -380,11 +384,11 @@ export function _Client() {
       <Button
         type="submit"
         form="bank-form"
-        disabled={!form.name.trim() || !form.code.trim() || saving}
+        disabled={!form.name.trim() || !form.code.trim() || saveMutation.isPending}
         className="bg-sidebar-primary hover:bg-sidebar-primary/90 text-white"
       >
-        {saving && <Loader2 className="size-4 animate-spin" />}
-        {saving ? "Saving…" : editingId ? "Update" : "Create"}
+        {saveMutation.isPending && <Loader2 className="size-4 animate-spin" />}
+        {saveMutation.isPending ? "Saving\u2026" : editingId ? "Update" : "Create"}
       </Button>
     </DialogFooter>
   </DialogContent>

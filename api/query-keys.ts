@@ -15,6 +15,7 @@ export const queryKeys = {
   attributes: resource("attributes"),
   staff: resource("staff"),
   vendors: resource("vendors"),
+  banks: resource("banks"),
   settings: {
     all: ["settings"] as const,
   },
