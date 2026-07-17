@@ -153,7 +153,7 @@ const createAxiosClient = (isPrivate = false): AxiosInstance => {
 
             if (status === 401) {
                 await TokenManager.clearTokens();
-                if (!isServer()) {
+                if (!isServer() && !window.location.pathname.startsWith('/login')) {
                     window.location.href = '/login';
                 }
             }

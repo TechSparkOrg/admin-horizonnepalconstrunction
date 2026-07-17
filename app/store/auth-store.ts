@@ -43,7 +43,6 @@ export const useAuthStore = create<AuthState>()(
         deleteCookie("access_token");
         deleteCookie("refresh_token");
         set({ user: null, isAuthenticated: false });
-        window.location.href = "/login";
       },
     }),
     {
