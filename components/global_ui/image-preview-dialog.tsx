@@ -26,7 +26,9 @@ export function ImagePreviewDialog({ url, onClose }: ImagePreviewDialogProps) {
 
         <div className="flex items-center justify-center p-8 min-h-[50vh]">
           {isSvgUrl(url) && (
-            <img src={url} alt="Preview" className="max-w-full max-h-[80vh] w-auto h-auto object-contain" />
+            <div className="relative max-w-full max-h-[80vh] w-full h-full flex items-center justify-center">
+              <img src={url} alt="Preview" className="w-full h-full object-contain" />
+            </div>
           )}
           {isImageUrl(url) && !isSvgUrl(url) && (
             <Image src={url} alt="Preview" width={0} height={0} sizes="100vw" className="max-w-full max-h-[80vh] w-auto h-auto object-contain" />

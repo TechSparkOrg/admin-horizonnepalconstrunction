@@ -45,11 +45,11 @@ export function MediaTable({ items, page, totalPages, totalCount, onPageChange, 
     {
       header: "Preview",
       render: (item) => (
-        <div className="size-11 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center">
+        <div className="size-11 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center relative">
           {isSvgUrl(item.url) ? (
             <img src={item.url} alt={item.alt} className="w-full h-full object-contain" />
           ) : isImageUrl(item.url) ? (
-            <Image src={item.url} alt={item.alt} width={44} height={44} className="w-full h-full object-cover" />
+            <Image src={item.url} alt={item.alt} fill className="object-cover" sizes="44px" />
           ) : isVideoUrl(item.url) ? (
             <video src={item.url} className="w-full h-full object-cover" muted />
           ) : isModelUrl(item.url) ? (

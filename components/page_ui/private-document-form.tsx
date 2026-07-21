@@ -579,7 +579,7 @@ export function PrivateDocumentForm({
           <div className="p-4 flex items-center justify-center min-h-[300px]">
             {previewUrl && (
               previewUrl.match(/\.(jpg|jpeg|png|webp|gif|svg)(\?|$)/i)
-                ? <img src={previewUrl} alt="Preview" className="max-w-full max-h-[80vh] object-contain rounded-lg" />
+                ? <div className="relative max-w-full max-h-[80vh] w-full h-full flex items-center justify-center"><Image src={previewUrl} alt="Preview" fill className="object-contain rounded-lg" sizes="80vw" unoptimized /></div>
                 : <iframe src={previewUrl} className="w-full h-[80vh] rounded-lg" />
             )}
           </div>

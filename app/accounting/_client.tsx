@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, useMemo } from "react";
 import { Wallet } from "lucide-react";
 import { toast } from "sonner";
@@ -10,7 +11,8 @@ import { AccountingAdmin } from "@/api/services/accounting.service";
 import { MaterialListAdmin } from "@/api/services/material-list.service";
 import { EmiBankAdmin } from "@/api/services/emi.service";
 import { VendorAdmin } from "@/api/services/vendor.service";
-import { AccountingForm } from "@/components/page_ui/accounting-form";
+
+const AccountingForm = dynamic(() => import("@/components/page_ui/accounting-form").then((m) => m.AccountingForm), { ssr: false });
 import { PageHeader } from "@/components/global_ui/page-header";
 import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import type { AccountingEntryFormData } from "@/api/types/accounting.types";

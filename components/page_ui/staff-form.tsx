@@ -1,6 +1,6 @@
 "use client";
 
-import { RiImageAddLine, RiCloseLine, RiAddLine, RiDeleteBinLine } from "@remixicon/react";
+import { ImagePlus, X, Plus, Trash2 } from "lucide-react";
 import { FormHeader } from "@/components/global_ui/form-header";
 import { FormTabs } from "@/components/global_ui/form-tabs";
 import { useState, useMemo } from "react";
@@ -318,7 +318,7 @@ export function StaffForm({
           onClick={() => onChange("photo", "")}
           className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full bg-gray-900 text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100"
         >
-          <RiCloseLine className="size-3" />
+          <X className="size-3" />
         </button>
       )}
     </div>
@@ -331,7 +331,7 @@ export function StaffForm({
         className="rounded-lg"
         onClick={() => setMediaPickerOpen(true)}
       >
-        <RiImageAddLine data-icon="inline-start" />
+        <ImagePlus data-icon="inline-start" />
         {form.photo ? "Change Image" : "Choose Image"}
       </Button>
       <p className="text-[11px] text-gray-400">PNG, JPG up to 5MB</p>
@@ -369,7 +369,7 @@ export function StaffForm({
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Social Links</p>
                     <Button type="button" variant="outline" size="sm" onClick={addSocialLink}>
-                      <RiAddLine data-icon="inline-start" />
+                      <Plus data-icon="inline-start" />
                       Add Platform
                     </Button>
                   </div>
@@ -405,7 +405,7 @@ export function StaffForm({
                             onClick={() => removeSocialLink(i)}
                             className="size-9 flex items-center justify-center rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 shrink-0"
                           >
-                            <RiDeleteBinLine className="size-4" />
+                            <Trash2 className="size-4" />
                           </button>
                         </div>
                       ))}

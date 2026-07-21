@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, useMemo } from "react";
 import { Users } from "lucide-react";
 import { toast } from "sonner";
@@ -7,7 +8,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/api/query-keys";
 import { StaffAdmin } from "@/api/services/staff.service";
 import { TeamAccountingAdmin } from "@/api/services/team-accounting.service";
-import { TeamAccountingForm } from "@/components/page_ui/team-accounting-form";
+
+const TeamAccountingForm = dynamic(() => import("@/components/page_ui/team-accounting-form").then((m) => m.TeamAccountingForm), { ssr: false });
 import { PageHeader } from "@/components/global_ui/page-header";
 import { SearchableSelect } from "@/components/global_ui/searchable-select";
 import { FormCard } from "@/components/global_ui/form-card";
