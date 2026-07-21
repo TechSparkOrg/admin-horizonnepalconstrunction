@@ -28,9 +28,11 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       className={cn("h-full", instrumentSerif.variable, inter.variable)}
     >
       <body className="min-h-full bg-background text-foreground antialiased font-sans">
+        <link rel="preconnect" href="https://assets.horizonnepalconstruction.com" />
         <QueryProvider>
           <AuthProvider>
             <AppShell>{children}</AppShell>

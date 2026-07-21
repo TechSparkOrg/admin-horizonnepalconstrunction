@@ -1,5 +1,6 @@
 "use client";
 import { memo, useMemo } from "react";
+import Image from "next/image";
 import { FolderOpen, ChevronRight } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableRow,
@@ -79,9 +80,11 @@ export const CategoryTable = memo(function CategoryTable({
                 <TableCell style={{ paddingLeft: `${item._depth * 24 + 16}px` }}>
                   <div className="flex items-center gap-3">
                     {item._depth > 0 && <ChevronRight className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
-                    {item.image ? (
-                      <img src={item.image} alt={item.name} className="w-8 h-8 rounded-lg object-cover border border-gray-200 shrink-0" />
-                    ) : (
+                      {item.image ? (
+                        <div className="w-8 h-8 rounded-lg overflow-hidden border border-gray-200 shrink-0 relative">
+                          <Image src={item.image} alt={item.name} fill className="object-cover" sizes="32px" unoptimized />
+                        </div>
+                      ) : (
                       <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
                         <FolderOpen className="w-4 h-4 text-gray-400" />
                       </div>

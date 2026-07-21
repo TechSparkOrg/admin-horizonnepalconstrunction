@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { ImagePlus, Eye, Star } from "lucide-react";
 import { FormHeader } from "@/components/global_ui/form-header";
 import { useForm } from "react-hook-form";
@@ -330,8 +331,8 @@ export function CategoryForm({ editing, saving, defaultValues, onSave, onBack, p
                               </button>
                             </TableCell>
                             <TableCell>
-                              <div className="size-10 rounded-md overflow-hidden bg-gray-100">
-                                <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
+                              <div className="size-10 rounded-md overflow-hidden bg-gray-100 relative">
+                                <Image src={img.url} alt={img.name} fill className="object-cover" sizes="40px" unoptimized />
                               </div>
                             </TableCell>
                             <TableCell className="text-sm text-gray-900 truncate max-w-[220px]">

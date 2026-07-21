@@ -339,7 +339,7 @@ export function RichMediaPicker({
                           >
                             <div className="absolute inset-0 bg-gray-100">
                               {isSvgUrl(thumb) ? (
-                                <img src={thumb} alt={item.name} className="w-full h-full object-cover" />
+                                <img src={thumb} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
                               ) : isImageUrl(thumb) ? (
                                 <Image src={thumb} alt={item.name} fill sizes="200px" className="object-cover" loading="lazy" />
                               ) : (
@@ -381,7 +381,7 @@ export function RichMediaPicker({
                   <div className="aspect-square w-full rounded-lg border border-gray-200 bg-white overflow-hidden flex items-center justify-center relative">
                     {previewSrc ? (
                       isSvgUrl(previewSrc) ? (
-                        <img src={previewSrc} alt={selected!.name} className="w-full h-full object-contain p-2" />
+                        <img src={previewSrc} alt={selected!.name} className="w-full h-full object-contain p-2" loading="lazy" />
                       ) : isImageUrl(previewSrc) ? (
                         <Image src={previewSrc} alt={selected!.name} fill sizes="256px" className="object-contain p-2" loading="lazy" />
                       ) : (
@@ -470,7 +470,9 @@ export function RichMediaPicker({
                     );
                     if (uploadFile.type.startsWith("image/")) {
                       if (uploadFile.type === "image/svg+xml") return (
-                        <img src={uploadPreview} alt="Preview" className="max-h-full max-w-full object-contain rounded-lg" />
+                        <div className="relative w-full h-full max-h-full max-w-full flex items-center justify-center">
+                          <Image src={uploadPreview} alt="Preview" fill className="object-contain rounded-lg" sizes="100vw" unoptimized />
+                        </div>
                       );
                       return (
                         <Image src={uploadPreview} alt="Preview" width={600} height={400}
@@ -510,7 +512,7 @@ export function RichMediaPicker({
                 <div className="aspect-square w-full rounded-lg border border-gray-200 bg-white overflow-hidden flex items-center justify-center relative">
                   {uploadPreview && uploadFile?.type.startsWith("image/") ? (
                     uploadFile.type === "image/svg+xml" ? (
-                      <img src={uploadPreview} alt="Preview" className="w-full h-full object-contain p-2" />
+                      <Image src={uploadPreview} alt="Preview" fill sizes="256px" className="object-contain p-2" unoptimized />
                     ) : (
                       <Image src={uploadPreview} alt="Preview" fill sizes="256px" className="object-contain p-2" unoptimized />
                     )

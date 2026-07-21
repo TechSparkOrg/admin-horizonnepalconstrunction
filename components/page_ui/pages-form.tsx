@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { ImagePlus, User, Eye, Pencil, Trash2, X, GripVertical } from "lucide-react";
 import { FormHeader } from "@/components/global_ui/form-header";
 import { FormTabs } from "@/components/global_ui/form-tabs";
@@ -316,8 +317,8 @@ export function PagesForm({
                       {paginatedBanners.map((img, idx) => (
                         <TableRow key={`${img.id}-${idx}`} className="border-gray-200 hover:bg-gray-50">
                           <TableCell>
-                            <div className="size-10 rounded-md overflow-hidden bg-gray-100">
-                              <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
+                            <div className="size-10 rounded-md overflow-hidden bg-gray-100 relative">
+                              <Image src={img.url} alt={img.name} fill className="object-cover" sizes="40px" unoptimized />
                             </div>
                           </TableCell>
                           <TableCell className="text-sm text-gray-900 truncate max-w-[280px]">
@@ -672,9 +673,9 @@ function SortableSvgItem({
         <button
           type="button"
           onClick={() => onPreview(item.url)}
-          className="size-10 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-sidebar-primary/30 transition-all"
+          className="size-10 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-sidebar-primary/30 transition-all relative"
         >
-          <img src={item.url} alt={item.name} className="w-full h-full object-contain" />
+          <Image src={item.url} alt={item.name} fill className="object-contain" sizes="40px" unoptimized />
         </button>
       </TableCell>
       <TableCell className="text-sm text-gray-900 truncate max-w-[200px]">

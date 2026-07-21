@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
+import dynamic from "next/dynamic";
 import {
   FolderKanban, MessageSquare, Users,
   ImageIcon, Film, Box,
@@ -13,10 +13,7 @@ import { ENTITY_COLORS, ENTITY_LABELS } from "@/api/types/activities.types";
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from "@/components/ui/card";
-import {
-  ChartContainer, ChartLegend, ChartLegendContent,
-  ChartTooltip, ChartTooltipContent, type ChartConfig,
-} from "@/components/ui/chart";
+import type { ChartConfig } from "@/components/ui/chart";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -25,6 +22,11 @@ import { toast } from "sonner";
 import { ConsultationAdmin } from "@/api/services/consultation.service";
 import type { ConsultationSubmission } from "@/api/types/consultation.types";
 import { EnquiryDetailDialog } from "@/components/global_ui/enquiry-detail-dialog";
+
+const FinancialChart = dynamic(() => import("./financial-chart").then((m) => m.FinancialChart), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[220px] w-full" />,
+});
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -178,38 +180,7 @@ export function _Client() {
               {chartLoading ? (
                 <Skeleton className="h-[220px] w-full" />
               ) : (
-                <ChartContainer config={chartConfig} className="aspect-auto h-[220px] w-full">
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="fillIncome" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="var(--color-income)" stopOpacity={0.7} />
-                        <stop offset="95%" stopColor="var(--color-income)" stopOpacity={0.05} />
-                      </linearGradient>
-                      <linearGradient id="fillExpense" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="var(--color-expense)" stopOpacity={0.7} />
-                        <stop offset="95%" stopColor="var(--color-expense)" stopOpacity={0.05} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} minTickGap={32}
-                      tickFormatter={(v: string) => { const [m, d] = v.split("-"); return `${parseInt(m)}/${parseInt(d)}`; }}
-                      className="text-[11px]"
-                    />
-                    <ChartTooltip cursor={false} content={
-                      <ChartTooltipContent indicator="dot"
-                        labelFormatter={(_l: any, p: any) => {
-                          const v = p?.[0]?.payload?.date;
-                          if (!v) return "";
-                          const [m, d] = v.split("-");
-                          return `${parseInt(m)}/${parseInt(d)}`;
-                        }}
-                      />
-                    } />
-                    <Area dataKey="income" type="natural" fill="url(#fillIncome)" stroke="var(--color-income)" strokeWidth={1.5} stackId="a" />
-                    <Area dataKey="expense" type="natural" fill="url(#fillExpense)" stroke="var(--color-expense)" strokeWidth={1.5} stackId="a" />
-                    <ChartLegend content={<ChartLegendContent />} />
-                  </AreaChart>
-                </ChartContainer>
+                <FinancialChart data={chartData} config={chartConfig} />
               )}
             </CardContent>
           </Card>

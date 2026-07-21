@@ -463,7 +463,7 @@ export function MediaPickerDialog({
                             {/* Thumbnail */}
                             <div className="absolute inset-0 bg-gray-50">
                               {isSvgUrl(thumb) ? (
-                                <img src={thumb} alt={item.name} className="w-full h-full object-cover" />
+                                <img src={thumb} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
                               ) : isImageUrl(thumb) ? (
                                 <Image src={thumb} alt={item.name} fill sizes="200px" className="object-cover" loading="lazy" />
                               ) : isVideoUrl(thumb) ? (
